@@ -28,10 +28,8 @@ authRouter.post('/send-otp', async (req, res) => {
     console.log(`[OTP] ${phoneNumber} -> ${otp}`);
 
     return res.json({ message: 'OTP sent', otp });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('send-otp error:', msg);
-    return res.status(500).json({ error: 'Failed to send OTP', detail: msg });
+  } catch {
+    return res.status(500).json({ error: 'Failed to send OTP' });
   }
 });
 
@@ -63,10 +61,8 @@ authRouter.post('/verify-otp', async (req, res) => {
     );
 
     return res.json({ message: 'OTP verified', token, user });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('verify-otp error:', msg);
-    return res.status(500).json({ error: 'Failed to verify OTP', detail: msg });
+  } catch {
+    return res.status(500).json({ error: 'Failed to verify OTP' });
   }
 });
 
