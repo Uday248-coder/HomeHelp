@@ -22,7 +22,8 @@ authRouter.post('/send-otp', async (req, res) => {
     const otp = generateOtp();
     const redisKey = `otp:${phoneNumber}`;
 
-    await redis.set(redisKey, otp, { ex: OTP_TTL_SECONDS });
+    await redis.set(redisKey, otp);
+    await redis.expire(redisKey, OTP_TTL_SECONDS);
 
     console.log(`[OTP] ${phoneNumber} -> ${otp}`);
 
@@ -41,9 +42,9 @@ authRouter.post('/verify-otp', async (req, res) => {
     }
 
     const redisKey = `otp:${phoneNumber}`;
-    const storedOtp = await redis.get<string>(redisKey);
+    const storedOtp = await redis.get(redisKey);
 
-    if (!storedOtp || storedOtp !== otp) {
+    if (storedOtp === null || storedOtp === undefined || String(storedOtp) !== String(otp)) {
       return res.status(401).json({ error: 'Invalid or expired OTP' });
     }
 
