@@ -77,10 +77,7 @@ export default function Home() {
           <p className="text-gray-600 mb-8">
             We are launching soon. Join the waitlist and be the first to know.
           </p>
-          <form
-            className="flex gap-3"
-            onSubmit={(e) => e.preventDefault()}
-          >
+          <form className="flex gap-3">
             <input
               type="email"
               placeholder="Enter your email"
