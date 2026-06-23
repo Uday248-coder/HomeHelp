@@ -1,0 +1,33 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import * as Sentry from '@sentry/node';
+import { healthRouter } from './routes/health';
+import { authRouter } from './routes/auth';
+import { bookingsRouter } from './routes/bookings';
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || '',
+  environment: process.env.NODE_ENV || 'development',
+  tracesSampleRate: 1.0,
+});
+
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+app.use(Sentry.Handlers.requestHandler());
+
+app.use('/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/bookings', bookingsRouter);
+
+app.use(Sentry.Handlers.errorHandler());
+
+app.listen(PORT, () => {
+  console.log(`API server running on port ${PORT}`);
+});
+
+export default app;
