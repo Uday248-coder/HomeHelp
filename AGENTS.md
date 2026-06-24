@@ -4,15 +4,19 @@
 
 HomeHelp is an on-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP.
 
-## Current State (Day 1 Complete)
+## Current State (Post-Session 2 — 80% MVP Complete)
 
 ### Live URLs
 | App | URL | Status |
 |-----|-----|--------|
-| Marketing website | https://homehelp-website.vercel.app | Live — landing page |
-| Admin dashboard | https://homehelp-admin.vercel.app | Live — skeleton |
-| Backend API | https://homehelp-clbc.onrender.com | Live — OTP auth + health |
+| Marketing website | https://homehelp-website.vercel.app | Live — waitlist + worker registration |
+| Admin dashboard | https://homehelp-admin.vercel.app | Live — OTP login + live data |
+| Backend API | https://homehelp-clbc.onrender.com | Live — full CRUD + stats |
 | GitHub repo | https://github.com/Uday248-coder/HomeHelp | Private |
+
+### Vercel Project Config (already set, do not change)
+- Admin: Root Directory = (empty), NEXT_PUBLIC_API_URL = https://homehelp-clbc.onrender.com ✅
+- Website: Root Directory = (empty), NEXT_PUBLIC_API_URL = https://homehelp-clbc.onrender.com ✅
 
 ### What works
 - OTP send/verify (Upstash Redis) + JWT login
@@ -22,11 +26,12 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - CI/CD GitHub Actions (lint + build on push)
 - **Booking CRUD** — full Prisma-based: create, list, get, cancel, assign, start (OTP), complete (OTP+rating)
 - **Worker routes** — create, list, get, update, filter by mode/availability
-- **Payment routes** — create-order (with 15% platform fee calc), verify/capture, get by booking
+- **Payment routes** — create-order (with 15% platform fee calc, Razorpay SDK installed, auto mock mode when no keys), verify/capture, get by booking
 - **Admin stats** — `/api/stats/dashboard` (active bookings, available workers, revenue, totals, recent bookings), `/api/stats/revenue/weekly`
-- **Admin dashboard** — OTP login, live stats from API, bookings & workers pages
-- **Website** — connected waitlist form, worker registration page (multi-step with OTP verification)
-- **Geist fonts** — loaded via `next/font/local` on website
+- **Admin dashboard** — OTP login, live stats from API, bookings & workers pages, loading skeletons, TypeScript types
+- **Website** — connected waitlist form (POST /api/waitlist), worker registration page (multi-step with OTP verification), Geist fonts via next/font/local
+- **Admin Bookings page** — full table with status badges, amounts, user/worker info
+- **Admin Workers page** — full table with type, availability, verification flags, ratings
 
 ## Tech Stack
 
@@ -95,9 +100,21 @@ See: `services/api/src/routes/`
 | `/api/auth/send-otp` | POST | ✅ Live | Sends OTP via Redis |
 | `/api/auth/verify-otp` | POST | ✅ Live | Verifies OTP, returns JWT |
 | `/api/auth/me` | GET | ✅ Live | Get current user |
-| `/api/bookings` | GET/POST | ⚠️ Stubbed | List/create bookings |
-| `/api/bookings/:id` | GET | ⚠️ Stubbed | Get booking detail |
-| `/api/bookings/:id/cancel` | PATCH | ⚠️ Stubbed | Cancel booking |
+| `/api/bookings` | GET/POST | ✅ Live | List/create bookings (auth) |
+| `/api/bookings/:id` | GET | ✅ Live | Get booking detail |
+| `/api/bookings/:id/cancel` | PATCH | ✅ Live | Cancel booking |
+| `/api/bookings/:id/assign` | PATCH | ✅ Live | Assign worker to booking |
+| `/api/bookings/:id/start` | PATCH | ✅ Live | Start booking (OTP-gated) |
+| `/api/bookings/:id/complete` | PATCH | ✅ Live | Complete booking (OTP+rating) |
+| `/api/bookings/admin/all` | GET | ✅ Live | Admin list all bookings |
+| `/api/workers` | GET/POST | ✅ Live | List/create workers |
+| `/api/workers/:id` | GET/PATCH | ✅ Live | Get/update worker |
+| `/api/workers/available/:mode` | GET | ✅ Live | Filter workers by mode |
+| `/api/payments/create-order` | POST | ✅ Live | Create payment + Razorpay order |
+| `/api/payments/verify` | POST | ✅ Live | Capture payment |
+| `/api/payments/booking/:bookingId` | GET | ✅ Live | Get payment by booking |
+| `/api/stats/dashboard` | GET | ✅ Live | Live admin dashboard stats |
+| `/api/stats/revenue/weekly` | GET | ✅ Live | Last 7 days revenue |
 
 ## How Another AI Can Resume
 
@@ -144,6 +161,12 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 - `.env` files are gitignored — secrets set via Render/Vercel dashboards
 - Build command for API: `npm install && npm run build` (runs `prisma generate && tsc`)
 - Start command: `npm start`
+- Vercel admin project ID: `prj_XfvZvL1JVoQ9YwUuF5J2SmadJSLA`
+- Vercel website project ID: `prj_fWcgKAorruCx8ufNpTbxqb1B6dme`
+- Vercel team ID: `team_BEDXv1boZuZVP4OpExmoekPY`
+- Both Vercel projects have Root Directory cleared (build from each app's own directory)
+- Both have `NEXT_PUBLIC_API_URL` set to `https://homehelp-clbc.onrender.com`
+- Use `npx vercel deploy --prod` from `apps/admin` or `apps/website` to manually deploy
 
 ## Product Context (Key Points from Founder)
 
