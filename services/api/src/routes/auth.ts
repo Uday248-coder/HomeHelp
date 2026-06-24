@@ -19,15 +19,24 @@ authRouter.post('/send-otp', async (req, res) => {
       return res.status(400).json({ error: 'phoneNumber is required' });
     }
 
+    const attemptKey = `otp_attempts:${phoneNumber}`;
+    const attempts = await redis.get(attemptKey);
+    if (attempts && Number(attempts) >= 5) {
+      return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+    }
+
     const otp = generateOtp();
     const redisKey = `otp:${phoneNumber}`;
 
     await redis.set(redisKey, otp);
     await redis.expire(redisKey, OTP_TTL_SECONDS);
 
+    await redis.incr(attemptKey);
+    await redis.expire(attemptKey, 900);
+
     console.log(`[OTP] ${phoneNumber} -> ${otp}`);
 
-    return res.json({ message: 'OTP sent', otp });
+    return res.json({ message: 'OTP sent' });
   } catch {
     return res.status(500).json({ error: 'Failed to send OTP' });
   }

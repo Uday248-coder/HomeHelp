@@ -1,10 +1,16 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
+import { authMiddleware } from '../middleware/auth';
 
 export const statsRouter = Router();
+statsRouter.use(authMiddleware);
 
-statsRouter.get('/dashboard', async (_req, res) => {
+statsRouter.get('/dashboard', async (req, res) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
     const [
       activeBookings,
       availableWorkers,
@@ -47,8 +53,12 @@ statsRouter.get('/dashboard', async (_req, res) => {
   }
 });
 
-statsRouter.get('/revenue/weekly', async (_req, res) => {
+statsRouter.get('/revenue/weekly', async (req, res) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 

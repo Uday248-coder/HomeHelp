@@ -4,7 +4,7 @@
 
 HomeHelp is an on-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP.
 
-## Current State (Post-Session 2 — 80% MVP Complete)
+## Current State (Post-Session 3 — 95% MVP Complete)
 
 ### Live URLs
 | App | URL | Status |
@@ -18,20 +18,51 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - Admin: Root Directory = (empty), NEXT_PUBLIC_API_URL = https://homehelp-clbc.onrender.com ✅
 - Website: Root Directory = (empty), NEXT_PUBLIC_API_URL = https://homehelp-clbc.onrender.com ✅
 
-### What works
-- OTP send/verify (Upstash Redis) + JWT login
-- User auto-creation on first login
-- `/health` endpoint
-- Database schema migrated (all 6 tables)
-- CI/CD GitHub Actions (lint + build on push)
-- **Booking CRUD** — full Prisma-based: create, list, get, cancel, assign, start (OTP), complete (OTP+rating)
-- **Worker routes** — create, list, get, update, filter by mode/availability
-- **Payment routes** — create-order (with 15% platform fee calc, Razorpay SDK installed, auto mock mode when no keys), verify/capture, get by booking
-- **Admin stats** — `/api/stats/dashboard` (active bookings, available workers, revenue, totals, recent bookings), `/api/stats/revenue/weekly`
-- **Admin dashboard** — OTP login, live stats from API, bookings & workers pages, loading skeletons, TypeScript types
-- **Website** — connected waitlist form (POST /api/waitlist), worker registration page (multi-step with OTP verification), Geist fonts via next/font/local
-- **Admin Bookings page** — full table with status badges, amounts, user/worker info
-- **Admin Workers page** — full table with type, availability, verification flags, ratings
+### What's Complete
+
+#### Backend API (`services/api/`)
+- OTP send/verify with rate limiting (max 5/15min, Redis-backed)
+- JWT login with User auto-creation
+- Admin role system (`isAdmin` field on User model)
+- Booking CRUD + lifecycle (create, assign, start with OTP, complete with OTP+rating, cancel)
+- Booking OTP generation endpoint (`PATCH /:id/generate-otp`)
+- Worker CRUD with auth-gated POST/PATCH, open GET
+- Payment create-order (15% platform fee, Razorpay with auto-mock fallback) + verify (fixed signature check) + get by booking
+- Admin stats with auth + role guard (`/dashboard`, `/revenue/weekly`)
+- Waitlist endpoint with DB persistence (Prisma `WaitlistEntry` model)
+- Admin bookings pagination (page/limit/status/search filters) with admin guard
+- Health check endpoint
+- `.env.example` with all documented env vars
+
+#### Admin Dashboard (`apps/admin/`) — Complete Redesign
+- **Professional dark sidebar** with navigation (Dashboard, Bookings, Workers, Payouts, Settings)
+- **Dark mode toggle** — persisted to localStorage, `.dark` class on `<html>`
+- **Dashboard** — 6 stat cards with SVG icons, weekly revenue bar chart (pure SVG), booking status donut chart, recent bookings table, error boundary
+- **Bookings page** — search bar, status filter dropdown, paginated table, action dropdown per row (Assign Worker with modal, Generate Start/End OTP, Cancel), proper loading/empty/error states
+- **Workers page** — search, type filter, availability toggle (inline button), Aadhaar Verify / License Verify actions, rating stars
+- **Login flow** — phone input, OTP display (no alert()), spinners, proper validation
+- **Components** — Sidebar, StatCard, Charts (BarChart + StatsSummary), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
+- **CSS** — HSL variables for theming, dark mode via `.dark` class, smooth transitions
+- **API helper** — centralized `api.ts` with auto auth token injection, buildQuery helper
+
+#### Marketing Website (`apps/website/`) — Enhanced
+- **Waitlist** — now proxied to backend API (persistent storage via Prisma)
+- **Pricing section** — 3 cards (Home Help ₹199/hr, Driver ₹149/hr, Subscription ₹499/mo coming soon)
+- **Testimonials section** — 3 user cards with star ratings
+- **FAQ section** — 5-item accordion with smooth expand/collapse
+- **Sticky header** with backdrop blur
+- **Worker Registration** — 3-step progress indicator, email + experience fields, terms acceptance, phone format validation, in-page OTP display (no alert()), success animation, back button on step 2
+- **Custom CSS animations** — fadeInUp, pulse-dot, smooth scroll
+
+### Critical Fixes Applied
+- Razorpay signature verification bug fixed (was passing paymentId twice instead of orderId+paymentId)
+- OTP no longer returned in send-otp response body (only logged)
+- Admin endpoints now require isAdmin role (403 if not)
+- Worker POST/PATCH now require auth
+- Stats endpoints now require auth + admin role
+- Waitlist data persisted in database (not in-memory)
+- Bookings admin/all has pagination, search, status filter
+- Loading skeletons redesigned for every admin view
 
 ## Tech Stack
 
@@ -84,11 +115,12 @@ These are stored as env vars on Render. For local dev, add to `services/api/.env
 ## Database Schema (Prisma)
 
 All tables in `services/api/prisma/schema.prisma`:
-- **users** — phone login, wallet balance
+- **users** — phone login, wallet balance, isAdmin flag
 - **workers** — type (home_help/driver/both), verification flags, location
 - **bookings** — mode, status, OTPs, ratings
 - **payments** — amounts, Razorpay IDs
 - **worker_payouts** — weekly payouts
+- **waitlist_entries** — email signups with unique constraint
 
 ## Key API Endpoints
 
@@ -97,7 +129,7 @@ See: `services/api/src/routes/`
 | Route | Method | Status | Description |
 |-------|--------|--------|-------------|
 | `/health` | GET | ✅ Live | Health check |
-| `/api/auth/send-otp` | POST | ✅ Live | Sends OTP via Redis |
+| `/api/auth/send-otp` | POST | ✅ Live | Sends OTP via Redis (rate-limited) |
 | `/api/auth/verify-otp` | POST | ✅ Live | Verifies OTP, returns JWT |
 | `/api/auth/me` | GET | ✅ Live | Get current user |
 | `/api/bookings` | GET/POST | ✅ Live | List/create bookings (auth) |
@@ -106,15 +138,17 @@ See: `services/api/src/routes/`
 | `/api/bookings/:id/assign` | PATCH | ✅ Live | Assign worker to booking |
 | `/api/bookings/:id/start` | PATCH | ✅ Live | Start booking (OTP-gated) |
 | `/api/bookings/:id/complete` | PATCH | ✅ Live | Complete booking (OTP+rating) |
-| `/api/bookings/admin/all` | GET | ✅ Live | Admin list all bookings |
+| `/api/bookings/:id/generate-otp` | PATCH | ✅ Live | Generate start/end OTP for booking |
+| `/api/bookings/admin/all` | GET | ✅ Live | Admin list all bookings (paginated) |
 | `/api/workers` | GET/POST | ✅ Live | List/create workers |
-| `/api/workers/:id` | GET/PATCH | ✅ Live | Get/update worker |
+| `/api/workers/:id` | GET/PATCH | ✅ Live | Get/update worker (auth-gated) |
 | `/api/workers/available/:mode` | GET | ✅ Live | Filter workers by mode |
 | `/api/payments/create-order` | POST | ✅ Live | Create payment + Razorpay order |
-| `/api/payments/verify` | POST | ✅ Live | Capture payment |
+| `/api/payments/verify` | POST | ✅ Live | Capture payment (fixed signature check) |
 | `/api/payments/booking/:bookingId` | GET | ✅ Live | Get payment by booking |
-| `/api/stats/dashboard` | GET | ✅ Live | Live admin dashboard stats |
-| `/api/stats/revenue/weekly` | GET | ✅ Live | Last 7 days revenue |
+| `/api/stats/dashboard` | GET | ✅ Live | Live admin dashboard stats (auth+admin) |
+| `/api/stats/revenue/weekly` | GET | ✅ Live | Last 7 days revenue (auth+admin) |
+| `/api/waitlist` | GET/POST | ✅ Live | Waitlist signup with DB persistence |
 
 ## How Another AI Can Resume
 
@@ -149,9 +183,9 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 14. Mode-aware pricing calculator
 
 ### Phase 3 — Driver mode (2+ weeks)
-13. License verification
-14. Outstation booking flow
-15. Mode-aware pricing engine
+15. License verification
+16. Outstation booking flow
+17. Mode-aware pricing engine
 
 ## Deployment Notes
 

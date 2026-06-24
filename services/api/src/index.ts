@@ -8,6 +8,7 @@ import { bookingsRouter } from './routes/bookings';
 import { workersRouter } from './routes/workers';
 import { paymentsRouter } from './routes/payments';
 import { statsRouter } from './routes/stats';
+import { waitlistRouter } from './routes/waitlist';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +30,7 @@ app.use('/api/bookings', bookingsRouter);
 app.use('/api/workers', workersRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/waitlist', waitlistRouter);
 
 Sentry.setupExpressErrorHandler(app);
 

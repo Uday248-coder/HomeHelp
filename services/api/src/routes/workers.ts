@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
+import { authMiddleware } from '../middleware/auth';
 
 export const workersRouter = Router();
 
@@ -15,7 +16,7 @@ workersRouter.get('/', async (_req, res) => {
   }
 });
 
-workersRouter.post('/', async (req, res) => {
+workersRouter.post('/', authMiddleware, async (req, res) => {
   try {
     const { workerType, name, phoneNumber, photoUrl } = req.body;
     if (!workerType || !name || !phoneNumber) {
@@ -49,11 +50,12 @@ workersRouter.get('/:id', async (req, res) => {
   }
 });
 
-workersRouter.patch('/:id', async (req, res) => {
+workersRouter.patch('/:id', authMiddleware, async (req, res) => {
   try {
     const { name, photoUrl, aadhaarVerified, licenseVerified, isAvailable, isActive, currentLat, currentLng } = req.body;
+    const workerId = req.params.id as string;
     const worker = await prisma.worker.update({
-      where: { id: req.params.id },
+      where: { id: workerId },
       data: {
         ...(name !== undefined && { name }),
         ...(photoUrl !== undefined && { photoUrl }),

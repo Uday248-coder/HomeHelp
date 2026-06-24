@@ -73,11 +73,11 @@ paymentsRouter.post('/create-order', async (req, res) => {
 
 paymentsRouter.post('/verify', async (req, res) => {
   try {
-    const { paymentId, razorpayPaymentId, razorpaySignature } = req.body;
+    const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
     if (!paymentId) return res.status(400).json({ error: 'paymentId is required' });
 
-    if (razorpay && razorpayPaymentId && razorpaySignature) {
-      const isValid = verifySignature(razorpayPaymentId, razorpayPaymentId, razorpaySignature);
+    if (razorpay && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
+      const isValid = verifySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
       if (!isValid) {
         return res.status(400).json({ error: 'Invalid payment signature' });
       }
@@ -87,7 +87,7 @@ paymentsRouter.post('/verify', async (req, res) => {
       where: { id: paymentId },
       data: {
         status: 'captured',
-        razorpayPaymentId: razorpayPaymentId || null,
+        razorpayPaymentId: razorpayPaymentId || undefined,
       },
     });
     return res.json({ payment });

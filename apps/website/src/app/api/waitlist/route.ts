@@ -1,29 +1,31 @@
 import { NextResponse } from 'next/server';
 
-interface WaitlistEntry {
-  email: string;
-  createdAt: string;
-}
-
-const waitlist: WaitlistEntry[] = [];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    const body = await request.json();
+    const res = await fetch(`${API_URL}/api/waitlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return NextResponse.json(data, { status: res.status });
     }
-
-    const entry: WaitlistEntry = { email, createdAt: new Date().toISOString() };
-    waitlist.push(entry);
-    console.log('[Waitlist] New signup:', entry);
-
-    return NextResponse.json({ message: 'Signed up successfully' });
+    return NextResponse.json(data);
   } catch {
     return NextResponse.json({ error: 'Failed to process signup' }, { status: 500 });
   }
 }
 
 export async function GET() {
-  return NextResponse.json({ total: waitlist.length, entries: waitlist });
+  try {
+    const res = await fetch(`${API_URL}/api/waitlist`);
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch waitlist' }, { status: 500 });
+  }
 }

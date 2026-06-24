@@ -43,3 +43,36 @@ export interface Worker {
   isAvailable: boolean;
   isActive: boolean;
 }
+
+export interface WeeklyRevenue {
+  date: string;
+  revenue: number;
+  bookings: number;
+}
+
+export interface Payout {
+  id: string;
+  workerId: string;
+  workerName: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  weekStart: string;
+  weekEnd: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface AdminUser {
+  id: string;
+  phoneNumber: string;
+  name?: string;
+  role: 'admin' | 'superadmin';
+  createdAt: string;
+}
