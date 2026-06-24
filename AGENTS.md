@@ -20,11 +20,13 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - `/health` endpoint
 - Database schema migrated (all 6 tables)
 - CI/CD GitHub Actions (lint + build on push)
-
-### What's stubbed
-- `/api/bookings` — returns placeholder data
-- Admin dashboard — shows hardcoded zeros
-- Website waitlist form — not connected to DB
+- **Booking CRUD** — full Prisma-based: create, list, get, cancel, assign, start (OTP), complete (OTP+rating)
+- **Worker routes** — create, list, get, update, filter by mode/availability
+- **Payment routes** — create-order (with 15% platform fee calc), verify/capture, get by booking
+- **Admin stats** — `/api/stats/dashboard` (active bookings, available workers, revenue, totals, recent bookings), `/api/stats/revenue/weekly`
+- **Admin dashboard** — OTP login, live stats from API, bookings & workers pages
+- **Website** — connected waitlist form, worker registration page (multi-step with OTP verification)
+- **Geist fonts** — loaded via `next/font/local` on website
 
 ## Tech Stack
 
@@ -109,23 +111,25 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 
 ## What to Build Next (Priority Order)
 
-### Phase 1a — Make backend real (2-3 days)
-1. Wire up real booking CRUD in `services/api/src/routes/bookings.ts`
-2. Build worker onboarding API (create/verify/list workers)
-3. Connect admin dashboard to live API data
-4. Integrate Razorpay payments (create order, capture, refund)
-5. Add SMS provider for real OTP delivery (currently logged to console)
+### Phase 0 — Polish & Production (1-2 days)
+1. Add SMS provider for real OTP delivery (currently logged to console)
+2. Add Razorpay SDK integration (currently stubbed with mock order IDs)
+3. Set Sentry DSN for error tracking
+4. Add proper loading skeletons to admin dashboard
+5. Set up `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website
 
-### Phase 1b — Worker application flow (1-2 days)
-6. Build public worker registration page (`apps/website` or standalone)
-7. Store applications, Aadhaar verification flow
-8. Admin panel for reviewing/approving workers
+### Phase 1 — Mobile apps (2+ weeks)
+6. Customer Expo app (React Native) with mode switcher
+7. Worker Expo app with availability toggle, job acceptance
+8. Real-time location tracking via Socket.io
+9. Push notifications via FCM
 
-### Phase 2 — Mobile apps (2+ weeks)
-9. Customer Expo app (React Native) with mode switcher
-10. Worker Expo app with availability toggle, job acceptance
-11. Real-time location tracking via Socket.io
-12. Push notifications via FCM
+### Phase 2 — Platform features (1-2 weeks)
+10. Aadhaar verification flow for workers
+11. Admin panel for reviewing/approving workers
+12. Weekly payout automation for workers
+13. Surge pricing engine
+14. Mode-aware pricing calculator
 
 ### Phase 3 — Driver mode (2+ weeks)
 13. License verification

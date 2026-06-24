@@ -1,4 +1,31 @@
+'use client';
+
+import { useState } from 'react';
+
 export default function Home() {
+  const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    try {
+      await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      setSubmitted(true);
+      setEmail('');
+    } catch {
+      // silently fail for now
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b">
@@ -7,6 +34,7 @@ export default function Home() {
           <nav className="flex gap-6 text-sm text-gray-600">
             <a href="#modes" className="hover:text-emerald-600">Services</a>
             <a href="#waitlist" className="hover:text-emerald-600">Join Waitlist</a>
+            <a href="/join" className="hover:text-emerald-600 font-medium text-emerald-600">Work with us</a>
           </nav>
         </div>
       </header>
@@ -77,19 +105,44 @@ export default function Home() {
           <p className="text-gray-600 mb-8">
             We are launching soon. Join the waitlist and be the first to know.
           </p>
-          <form className="flex gap-3">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <button
-              type="submit"
-              className="bg-emerald-600 text-white px-8 py-3 rounded-full font-medium hover:bg-emerald-700 text-sm"
-            >
-              Notify me
-            </button>
-          </form>
+          {submitted ? (
+            <div className="bg-emerald-50 text-emerald-700 px-6 py-4 rounded-xl">
+              Thanks! We&apos;ll notify you when we launch.
+            </div>
+          ) : (
+            <form onSubmit={handleWaitlistSubmit} className="flex gap-3">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-emerald-600 text-white px-8 py-3 rounded-full font-medium hover:bg-emerald-700 text-sm disabled:opacity-50"
+              >
+                {loading ? 'Sending...' : 'Notify me'}
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      <section className="bg-emerald-600 py-16">
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <h3 className="text-3xl font-bold text-white mb-4">Want to work with us?</h3>
+          <p className="text-emerald-100 mb-8">
+            Join as a verified home help professional or driver. Flexible hours, weekly payouts.
+          </p>
+          <a
+            href="/join"
+            className="inline-block bg-white text-emerald-700 px-8 py-3 rounded-full font-medium hover:bg-emerald-50"
+          >
+            Apply Now
+          </a>
         </div>
       </section>
 

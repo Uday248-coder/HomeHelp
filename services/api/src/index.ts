@@ -5,6 +5,9 @@ import * as Sentry from '@sentry/node';
 import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth';
 import { bookingsRouter } from './routes/bookings';
+import { workersRouter } from './routes/workers';
+import { paymentsRouter } from './routes/payments';
+import { statsRouter } from './routes/stats';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,6 +26,9 @@ app.use(express.json());
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/bookings', bookingsRouter);
+app.use('/api/workers', workersRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/stats', statsRouter);
 
 Sentry.setupExpressErrorHandler(app);
 
