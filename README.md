@@ -15,6 +15,25 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 
 ---
 
+## Connected Services
+
+| Service | Purpose | Status | Key Set On Render? |
+|---------|---------|--------|-------------------|
+| **Vercel** | Hosts website + admin dashboard | ✅ **Live & auto-deploying** from `master` branch | N/A |
+| **Render** | Hosts backend API | ✅ **Live & auto-deploying** from `master` branch | N/A |
+| **GitHub** | Source control + CI/CD via Actions | ✅ **Connected** — push to `master` triggers build + deploy | N/A |
+| **Neon Postgres** | Database (serverless PostgreSQL) | ✅ **Connected** — Prisma ORM running migrations | ✅ `DATABASE_URL` |
+| **Upstash Redis** | OTP storage + rate limiting cache | ✅ **Connected** — serverless Redis SDK | ✅ `UPSTASH_REDIS_REST_URL` + `TOKEN` |
+| **Prisma** | ORM for database access | ✅ **Connected** — 6 models, full migrations | N/A |
+| **Razorpay** | Payment processing | ⚠️ **Mock mode** — works with auto-generated mock order IDs, needs live keys for real payments | ❌ `RAZORPAY_KEY_ID` + `SECRET` not set |
+| **Sentry** | Error tracking | 🔌 **Wired in code** — initialized but DSN is empty, no errors being captured | ❌ `SENTRY_DSN` not set |
+| **Twilio / MSG91** | SMS delivery for OTP | ❌ **Not connected** — OTPs only logged to console, no SMS sent | ❌ No env vars set |
+| **Google Maps** | Address autocomplete, geocoding, ETA | ❌ **Not connected** — no API key set | ❌ No env vars set |
+| **Firebase (FCM)** | Push notifications for mobile apps | ❌ **Not connected** — no server key set | ❌ No env vars set |
+| **Socket.io** | Real-time location tracking | ❌ **Not implemented** — planned for mobile app phase | N/A |
+
+---
+
 ## What's Done
 
 ### Backend API (`services/api/`)
@@ -112,13 +131,15 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 | OTP/Cache | Upstash Redis | ✅ Live |
 | Auth | OTP + JWT (custom), 7-day expiry | ✅ Live |
 | Payments | Razorpay with auto-mock fallback | ✅ Live (stubbed) |
-| Web framework | Next.js 14 App Router | ✅ Live |
-| Styling | Tailwind CSS 3.4 | ✅ Live |
-| Mobile | React Native + Expo | ✅ Coded, unlaunched |
-| Deploy (API) | Render | ✅ Auto-deploy from master |
-| Deploy (Web) | Vercel | ✅ Auto-deploy from master |
-| CI/CD | GitHub Actions | ✅ Matrix build |
-| Error tracking | Sentry | 🔌 Wired, DSN not set |
+| Web framework | Next.js 14 App Router (website + admin) | ✅ Live on Vercel |
+| Styling | Tailwind CSS 3.4 with HSL variables | ✅ Live |
+| Mobile (customer) | React Native + Expo | ✅ Coded in `apps/customer-app/`, needs `npx expo start` to run |
+| Mobile (worker) | React Native + Expo | ✅ Coded in `apps/worker-app/`, needs `npx expo start` to run |
+| Deploy (API) | Render (Node.js) | ✅ Auto-deploy from `master` branch |
+| Deploy (website) | Vercel (project: `homehelp-website`) | ✅ Auto-deploy from `master` branch |
+| Deploy (admin) | Vercel (project: `homehelp-admin`) | ✅ Auto-deploy from `master` branch |
+| CI/CD | GitHub Actions | ✅ Matrix build across all 3 workspaces |
+| Error tracking | Sentry (`@sentry/node`) | 🔌 Wired in Express middleware, DSN env var not set |
 
 ---
 
