@@ -25,3 +25,19 @@ export interface WorkerResponse {
 export interface WaitlistResponse {
   message: string;
 }
+
+export interface BookingResponse {
+  booking: {
+    id: string;
+    mode: 'home_help' | 'driver';
+    serviceType: string;
+    status: string;
+    scheduledAt?: string;
+    customerAddress?: string;
+    durationHours?: number;
+    hourlyRate?: number;
+    totalAmount?: number;
+    createdAt: string;
+    user?: { id: string; phoneNumber: string };
+  };
+}

@@ -48,6 +48,7 @@ function PricingCard({
   period, 
   features, 
   cta, 
+  href,
   popular, 
   mode 
 }: { 
@@ -56,6 +57,7 @@ function PricingCard({
   period: string; 
   features: string[];
   cta: string;
+  href: string;
   popular?: boolean;
   mode: 'home' | 'driver' | 'subscription';
 }) {
@@ -101,13 +103,15 @@ function PricingCard({
         ))}
       </ul>
 
-      <Button 
-        className="w-full" 
-        variant={popular ? 'primary' : 'outline'}
-        size="lg"
-      >
-        {cta}
-      </Button>
+      <a href={href}>
+        <Button 
+          className="w-full" 
+          variant={popular ? 'primary' : 'outline'}
+          size="lg"
+        >
+          {cta}
+        </Button>
+      </a>
     </Card>
   );
 }
@@ -211,9 +215,9 @@ export default function HomePage() {
     }
   };
 
-  const scrollToWaitlist = (e: React.MouseEvent) => {
+  const scrollToSection = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
-    const el = document.getElementById('waitlist');
+    const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -247,11 +251,10 @@ export default function HomePage() {
               Work with Us
             </NavLink>
             <a 
-              href="#waitlist" 
-              onClick={scrollToWaitlist}
+              href="/book"
               className="btn-primary text-sm px-5 py-2"
             >
-              Get Started
+              Book Now
             </a>
           </div>
         </nav>
@@ -281,12 +284,16 @@ export default function HomePage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up stagger-2">
-              <Button size="xl" onClick={scrollToWaitlist} className="w-full sm:w-auto">
-                Book Your First Service
-              </Button>
-              <Button size="xl" variant="outline" className="w-full sm:w-auto">
-                How It Works
-              </Button>
+              <a href="/book">
+                <Button size="xl" className="w-full sm:w-auto">
+                  Book Your First Service
+                </Button>
+              </a>
+              <a href="#services" onClick={(e) => { e.preventDefault(); document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                <Button size="xl" variant="outline" className="w-full sm:w-auto">
+                  How It Works
+                </Button>
+              </a>
             </div>
 
             {/* Trust Indicators */}
@@ -389,6 +396,7 @@ export default function HomePage() {
               period="/hour"
               mode="home"
               popular
+              href="/book?mode=home_help"
               features={[
                 "1–4 hour sessions",
                 "15-min billing increments",
@@ -403,6 +411,7 @@ export default function HomePage() {
               price="₹149"
               period="/hour"
               mode="driver"
+              href="/book?mode=driver"
               features={[
                 "4hr minimum for outstation",
                 "Aadhaar & license verified",
@@ -417,6 +426,7 @@ export default function HomePage() {
               price="₹499"
               period="/month"
               mode="subscription"
+              href="#waitlist"
               features={[
                 "Priority booking & dispatch",
                 "15% discounted hourly rates",
