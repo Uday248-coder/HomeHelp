@@ -12,9 +12,9 @@ export default function StatCard({ icon, label, value, trend, trendLabel }: Stat
   const trendPositive = trend !== undefined && trend >= 0;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
+    <div className="bg-card border border-border rounded-xl p-5 hover:shadow-lg hover:border-emerald-500/20 transition-all duration-200 animate-slide-in">
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
           {icon}
         </div>
         {trend !== undefined && (
@@ -37,8 +37,8 @@ export default function StatCard({ icon, label, value, trend, trendLabel }: Stat
           </div>
         )}
       </div>
-      <p className="text-sm text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-sm text-muted-foreground mb-1 font-medium">{label}</p>
+      <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
       {trendLabel && (
         <p className="text-xs text-muted-foreground mt-1">{trendLabel}</p>
       )}

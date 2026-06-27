@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Booking, Worker } from '@/lib/types';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import Modal from '@/components/Modal';
 import { TableSkeleton } from '@/components/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import LoginScreen from '@/components/LoginScreen';
 
 const STATUS_COLORS: Record<string, string> = {
   completed: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
@@ -17,39 +20,26 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function BookingsPage() {
+  const { token, logout } = useAuth();
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [token, setToken] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/bookings');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [actionBooking, setActionBooking] = useState<Booking | null>(null);
-  const [showActions, setShowActions] = useState(false);
   const [assignModal, setAssignModal] = useState<Booking | null>(null);
   const [availableWorkers, setAvailableWorkers] = useState<Worker[]>([]);
   const [assigning, setAssigning] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('admin_token');
-    setToken(saved);
-    const storedDark = localStorage.getItem('admin_dark_mode');
-    if (storedDark === 'true') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
 
   const fetchBookings = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError('');
     try {
-      const data = await api.getBookings({ page, status: statusFilter || undefined, search: search || undefined });
-      setBookings(data.bookings || data.data || []);
+      const data = await api.getBookings({ page, status: statusFilter || undefined, search: search || undefined }) as { bookings: Booking[]; totalPages: number };
+      setBookings(data.bookings || []);
       if (data.totalPages) setTotalPages(data.totalPages);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load bookings');
@@ -62,22 +52,9 @@ export default function BookingsPage() {
     fetchBookings();
   }, [fetchBookings]);
 
-  const toggleDark = () => {
-    const next = !isDark;
-    setIsDark(next);
-    localStorage.setItem('admin_dark_mode', String(next));
-    document.documentElement.classList.toggle('dark', next);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    setToken(null);
-  };
-
   const handleNavigate = (path: string) => {
-    setCurrentPath(path);
-    if (path === currentPath) return;
-    window.location.href = path;
+    if (path === '/bookings') return;
+    router.push(path);
   };
 
   const handleSearch = (value: string) => {
@@ -94,8 +71,8 @@ export default function BookingsPage() {
     setAssignModal(booking);
     setAssigning(true);
     try {
-      const workers = await api.getAvailableWorkers(booking.mode);
-      setAvailableWorkers(workers.workers || workers.data || []);
+      const workers = await api.getAvailableWorkers(booking.mode) as { workers: Worker[] };
+      setAvailableWorkers(workers.workers || []);
     } catch {
       setAvailableWorkers([]);
     } finally {
@@ -117,9 +94,11 @@ export default function BookingsPage() {
   const handleAction = async (action: string, booking: Booking) => {
     try {
       if (action === 'start') {
-        await api.startBooking(booking.id);
+        const otpData = await api.generateBookingOtp(booking.id, 'start');
+        await api.startBooking(booking.id, otpData.otp);
       } else if (action === 'complete') {
-        await api.completeBooking(booking.id);
+        const otpData = await api.generateBookingOtp(booking.id, 'end');
+        await api.completeBooking(booking.id, otpData.otp);
       } else if (action === 'cancel') {
         await api.cancelBooking(booking.id);
       }
@@ -127,25 +106,13 @@ export default function BookingsPage() {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : `Failed to ${action} booking`);
     }
-    setShowActions(false);
   };
 
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Please login first</p>
-          <button onClick={() => handleNavigate('/')} className="text-emerald-600 hover:text-emerald-500 font-medium">
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentPath={currentPath} onNavigate={handleNavigate} isDark={isDark} onToggleDark={toggleDark} onLogout={handleLogout} />
+      <Sidebar currentPath="/bookings" onNavigate={handleNavigate} onLogout={logout} />
       <main className="flex-1 overflow-auto">
         <ErrorBoundary>
           <div className="p-6 lg:p-8">
@@ -243,53 +210,38 @@ export default function BookingsPage() {
                             {new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </td>
                           <td className="px-5 py-3.5">
-                            <div className="relative">
-                              <button
-                                onClick={() => {
-                                  setActionBooking(b);
-                                  setShowActions(showActions && actionBooking?.id === b.id ? false : true);
-                                }}
-                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                              </button>
-                              {showActions && actionBooking?.id === b.id && (
-                                <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-xl z-10 py-1">
-                                  {b.status === 'pending' && (
-                                    <button
-                                      onClick={() => { openAssignModal(b); setShowActions(false); }}
-                                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                    >
-                                      Assign Worker
-                                    </button>
-                                  )}
-                                  {b.status === 'assigned' && (
-                                    <button
-                                      onClick={() => handleAction('start', b)}
-                                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                    >
-                                      Generate Start OTP
-                                    </button>
-                                  )}
-                                  {b.status === 'in_progress' && (
-                                    <button
-                                      onClick={() => handleAction('complete', b)}
-                                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                    >
-                                      Generate End OTP
-                                    </button>
-                                  )}
-                                  {(b.status === 'pending' || b.status === 'assigned') && (
-                                    <button
-                                      onClick={() => handleAction('cancel', b)}
-                                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-muted transition-colors"
-                                    >
-                                      Cancel Booking
-                                    </button>
-                                  )}
-                                </div>
+                            <div className="flex gap-1">
+                              {b.status === 'pending' && (
+                                <button
+                                  onClick={() => openAssignModal(b)}
+                                  className="px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-colors"
+                                >
+                                  Assign
+                                </button>
+                              )}
+                              {b.status === 'assigned' && (
+                                <button
+                                  onClick={() => handleAction('start', b)}
+                                  className="px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                >
+                                  Start
+                                </button>
+                              )}
+                              {b.status === 'in_progress' && (
+                                <button
+                                  onClick={() => handleAction('complete', b)}
+                                  className="px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-colors"
+                                >
+                                  Complete
+                                </button>
+                              )}
+                              {(b.status === 'pending' || b.status === 'assigned') && (
+                                <button
+                                  onClick={() => handleAction('cancel', b)}
+                                  className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
                               )}
                             </div>
                           </td>

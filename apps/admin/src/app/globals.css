@@ -15,25 +15,42 @@
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 45%;
   --ring: 160 84% 39%;
+  --radius: 0.75rem;
 }
 
 .dark {
-  --background: 0 0% 5%;
+  --background: 224 71% 4%;
   --foreground: 0 0% 95%;
-  --card: 0 0% 10%;
+  --card: 224 71% 7%;
   --card-foreground: 0 0% 95%;
-  --border: 0 0% 20%;
-  --muted: 0 0% 12%;
+  --border: 217 33% 12%;
+  --muted: 217 33% 10%;
   --muted-foreground: 0 0% 60%;
 }
 
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl;
   }
 }

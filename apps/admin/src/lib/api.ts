@@ -5,7 +5,8 @@ function getToken(): string | null {
   return localStorage.getItem('admin_token');
 }
 
-async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2): Promise<any> {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -13,15 +14,33 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || `API request failed (${res.status})`);
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}${endpoint}`, {
+        ...options,
+        headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `API request failed (${res.status})`);
+      }
+      return data;
+    } catch (error: unknown) {
+      if (attempt === retries) throw error;
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw error;
+    }
   }
-  return data;
+  throw new Error('Max retries exceeded');
 }
 
 function buildQuery(params?: Record<string, string | number | undefined>): string {
@@ -44,11 +63,14 @@ export const api = {
   assignWorker: (bookingId: string, workerId: string) =>
     fetchAPI(`/api/bookings/${bookingId}/assign`, { method: 'PATCH', body: JSON.stringify({ workerId }) }),
 
-  startBooking: (bookingId: string) =>
-    fetchAPI(`/api/bookings/${bookingId}/start`, { method: 'PATCH', body: JSON.stringify({ otp: '0000' }) }),
+  generateBookingOtp: (bookingId: string, type: 'start' | 'end') =>
+    fetchAPI(`/api/bookings/${bookingId}/generate-otp`, { method: 'PATCH', body: JSON.stringify({ type }) }) as Promise<{ otp: string }>,
 
-  completeBooking: (bookingId: string, rating?: number) =>
-    fetchAPI(`/api/bookings/${bookingId}/complete`, { method: 'PATCH', body: JSON.stringify({ otp: '0000', rating: rating || 5 }) }),
+  startBooking: (bookingId: string, otp: string) =>
+    fetchAPI(`/api/bookings/${bookingId}/start`, { method: 'PATCH', body: JSON.stringify({ otp }) }),
+
+  completeBooking: (bookingId: string, otp: string, rating?: number) =>
+    fetchAPI(`/api/bookings/${bookingId}/complete`, { method: 'PATCH', body: JSON.stringify({ otp, rating: rating || 5 }) }),
 
   cancelBooking: (bookingId: string) =>
     fetchAPI(`/api/bookings/${bookingId}/cancel`, { method: 'PATCH' }),
@@ -65,10 +87,10 @@ export const api = {
     fetchAPI('/api/workers/available' + (mode ? `/${mode}` : '')),
 
   sendOtp: (phoneNumber: string) =>
-    fetchAPI('/api/auth/send-otp', { method: 'POST', body: JSON.stringify({ phoneNumber }) }),
+    fetchAPI('/api/auth/send-otp', { method: 'POST', body: JSON.stringify({ phoneNumber }) }) as Promise<{ otp?: string }>,
 
   verifyOtp: (phoneNumber: string, otp: string) =>
-    fetchAPI('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) }),
+    fetchAPI('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) }) as Promise<{ token: string }>,
 
   getUser: () => fetchAPI('/api/auth/me'),
 

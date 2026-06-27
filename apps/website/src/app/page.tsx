@@ -21,7 +21,7 @@ function PricingCard({
 }) {
   return (
     <div
-      className={`rounded-2xl p-8 border text-center animate-fade-in-up ${disabled ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white shadow-sm border-gray-200'}`}
+      className={`rounded-2xl p-8 border text-center animate-fade-in-up ${disabled ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white shadow-sm border-gray-200 hover:shadow-md hover:border-emerald-200 transition-all duration-200'}`}
       style={{ animationDelay: `${delay}ms` }}
     >
       <h4 className="text-lg font-semibold text-gray-900 mb-1">{title}</h4>
@@ -39,10 +39,10 @@ function PricingCard({
       </ul>
       <button
         disabled={disabled}
-        className={`w-full py-3 rounded-full font-medium text-sm transition-colors ${
+        className={`w-full py-3 rounded-full font-medium text-sm transition-all duration-200 ${
           disabled
             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-md active:scale-[0.98]'
         }`}
       >
         {cta}
@@ -63,14 +63,14 @@ function AccordionItem({
   onToggle: () => void;
 }) {
   return (
-    <div className="border-b border-gray-200">
+    <div className="border-b border-gray-100 last:border-0">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between py-5 text-left text-gray-900 font-medium hover:text-emerald-600 transition-colors"
       >
         <span>{question}</span>
         <svg
-          className={`w-5 h-5 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -127,72 +127,94 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b sticky top-0 bg-white/95 backdrop-blur z-50">
+      <header className="border-b sticky top-0 bg-white/95 backdrop-blur-sm z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-emerald-600">HomeHelp</h1>
-          <nav className="flex gap-6 text-sm text-gray-600">
-            <a href="#modes" className="hover:text-emerald-600">Services</a>
-            <a href="#pricing" className="hover:text-emerald-600">Pricing</a>
-            <a href="#waitlist" className="hover:text-emerald-600">Join Waitlist</a>
-            <a href="/join" className="hover:text-emerald-600 font-medium text-emerald-600">Work with us</a>
+          <nav className="hidden md:flex gap-6 text-sm text-gray-600">
+            <a href="#modes" className="hover:text-emerald-600 transition-colors">Services</a>
+            <a href="#pricing" className="hover:text-emerald-600 transition-colors">Pricing</a>
+            <a href="#waitlist" className="hover:text-emerald-600 transition-colors">Join Waitlist</a>
+            <a href="/join" className="hover:text-emerald-600 font-medium text-emerald-600 transition-colors">Work with us</a>
           </nav>
+          <a href="/join" className="md:hidden bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-emerald-700 transition-colors">
+            Get Started
+          </a>
         </div>
       </header>
 
       <section className="max-w-6xl mx-auto px-4 py-24 text-center">
-        <h2 className="text-5xl font-bold tracking-tight text-gray-900 mb-6">
-          Home services & drivers —<br />whenever you need them
-        </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-10">
-          Book verified home help for cleaning, cooking, and chores, or hire a
-          driver for your own car. Instant or scheduled, hourly billing, no
-          subscription required.
-        </p>
-        <div className="flex gap-4 justify-center flex-wrap">
-          <button
-            onClick={scrollToWaitlist}
-            className="bg-emerald-600 text-white px-8 py-3 rounded-full font-medium hover:bg-emerald-700 transition-colors"
-          >
-            Join the Waitlist
-          </button>
-          <a
-            href="#modes"
-            className="border border-gray-300 text-gray-700 px-8 py-3 rounded-full font-medium hover:border-gray-400 transition-colors"
-          >
-            Learn More
-          </a>
+        <div className="animate-fade-in-up">
+          <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-dot"></span>
+            Launching soon in Bangalore
+          </div>
+          <h2 className="text-5xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 text-balance">
+            Home services & drivers —<br />whenever you need them
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-10 text-balance">
+            Book verified home help for cleaning, cooking, and chores, or hire a
+            driver for your own car. Instant or scheduled, hourly billing, no
+            subscription required.
+          </p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <button onClick={scrollToWaitlist} className="btn-primary text-base">
+              Join the Waitlist
+            </button>
+            <a href="#modes" className="btn-secondary text-base">
+              Learn More
+            </a>
+          </div>
         </div>
       </section>
 
       <section id="modes" className="bg-gray-50 py-20">
         <div className="max-w-6xl mx-auto px-4">
-          <h3 className="text-3xl font-bold text-center mb-12">Two modes, one app</h3>
+          <h3 className="text-3xl font-bold text-center mb-4">Two modes, one app</h3>
+          <p className="text-gray-600 text-center mb-12 max-w-xl mx-auto">
+            Whether you need help at home or a driver for your car, we&apos;ve got you covered.
+          </p>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-2xl p-8 shadow-sm border animate-fade-in-up" style={{ animationDelay: '0ms' }}>
-              <div className="text-3xl mb-4">🧹</div>
+            <div className="card animate-fade-in-up" style={{ animationDelay: '0ms' }}>
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-2xl mb-4">
+                🧹
+              </div>
               <h4 className="text-xl font-semibold mb-2">Home Help</h4>
               <p className="text-gray-600 mb-4">
                 Background-verified domestic workers for cleaning, kitchen work,
                 laundry, ironing, and more. Instant ~10 min arrival or schedule
                 ahead.
               </p>
-              <ul className="text-sm text-gray-500 space-y-1">
-                <li>✓ 1–4 hour sessions</li>
-                <li>✓ Hourly billing</li>
-                <li>✓ Female verified workers</li>
+              <ul className="text-sm text-gray-500 space-y-2">
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> 1–4 hour sessions
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> Hourly billing
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> Female verified workers
+                </li>
               </ul>
             </div>
-            <div className="bg-white rounded-2xl p-8 shadow-sm border animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <div className="text-3xl mb-4">🚗</div>
+            <div className="card animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-2xl mb-4">
+                🚗
+              </div>
               <h4 className="text-xl font-semibold mb-2">Driver Mode</h4>
               <p className="text-gray-600 mb-4">
                 A verified driver for <em>your own car</em>. Daily commute,
                 airport runs, outstation trips, late nights, senior errands.
               </p>
-              <ul className="text-sm text-gray-500 space-y-1">
-                <li>✓ 4-hour minimum for outstation</li>
-                <li>✓ Aadhaar + license verified</li>
-                <li>✓ Instant or scheduled</li>
+              <ul className="text-sm text-gray-500 space-y-2">
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> 4-hour minimum for outstation
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> Aadhaar + license verified
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> Instant or scheduled
+                </li>
               </ul>
             </div>
           </div>
@@ -254,45 +276,36 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4">
           <h3 className="text-3xl font-bold text-center mb-12">What our early users say</h3>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border animate-fade-in-up" style={{ animationDelay: '0ms' }}>
-              <div className="flex items-center gap-1 text-yellow-400 mb-3">
-                {"★★★★★".split('').map((s, i) => <span key={i}>{s}</span>)}
+            {[
+              {
+                name: 'Priya S.',
+                role: 'Early Access User',
+                text: 'This is exactly what our city needs. I can finally get reliable help at home without going through an agency.',
+              },
+              {
+                name: 'Rahul M.',
+                role: 'Early Access User',
+                text: 'Driver mode is genius. I have a car but driving in traffic exhausts me. Having a verified driver is the perfect solution.',
+              },
+              {
+                name: 'Ananya K.',
+                role: 'Early Access User',
+                text: 'As a working parent, I need someone I can trust at home. The verification process here gives me real peace of mind.',
+              },
+            ].map((testimonial, i) => (
+              <div key={i} className="card animate-fade-in-up" style={{ animationDelay: `${i * 100}ms` }}>
+                <div className="flex items-center gap-1 text-yellow-400 mb-3">
+                  {"★★★★★".split('').map((s, j) => <span key={j}>{s}</span>)}
+                </div>
+                <p className="text-gray-600 text-sm mb-4">
+                  &ldquo;{testimonial.text}&rdquo;
+                </p>
+                <div className="text-sm">
+                  <p className="font-medium text-gray-900">{testimonial.name}</p>
+                  <p className="text-gray-500">{testimonial.role}</p>
+                </div>
               </div>
-              <p className="text-gray-600 text-sm mb-4">
-                &ldquo;This is exactly what our city needs. I can finally get reliable help at home without
-                going through an agency.&rdquo;
-              </p>
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">Priya S.</p>
-                <p className="text-gray-500">Early Access User</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <div className="flex items-center gap-1 text-yellow-400 mb-3">
-                {"★★★★★".split('').map((s, i) => <span key={i}>{s}</span>)}
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                &ldquo;Driver mode is genius. I have a car but driving in traffic exhausts me. Having a
-                verified driver is the perfect solution.&rdquo;
-              </p>
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">Rahul M.</p>
-                <p className="text-gray-500">Early Access User</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <div className="flex items-center gap-1 text-yellow-400 mb-3">
-                {"★★★★★".split('').map((s, i) => <span key={i}>{s}</span>)}
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                &ldquo;As a working parent, I need someone I can trust at home. The verification process
-                here gives me real peace of mind.&rdquo;
-              </p>
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">Ananya K.</p>
-                <p className="text-gray-500">Early Access User</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -320,12 +333,12 @@ export default function Home() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="input flex-1"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-emerald-600 text-white px-8 py-3 rounded-full font-medium hover:bg-emerald-700 text-sm disabled:opacity-50 transition-colors flex items-center gap-2"
+                className="btn-primary flex items-center gap-2 whitespace-nowrap"
               >
                 {loading ? (
                   <>
@@ -347,7 +360,7 @@ export default function Home() {
       <section className="bg-gray-50 py-20">
         <div className="max-w-3xl mx-auto px-4">
           <h3 className="text-3xl font-bold text-center mb-12">Frequently asked questions</h3>
-          <div className="bg-white rounded-2xl px-6 shadow-sm border">
+          <div className="bg-white rounded-2xl px-6 shadow-sm border border-gray-100">
             <AccordionItem
               question="What cities do you operate in?"
               answer="We are launching in Bangalore soon. Join the waitlist to be notified when we launch in your city."
@@ -368,7 +381,7 @@ export default function Home() {
             />
             <AccordionItem
               question="How does Driver mode work?"
-              answer="A verified driver comes to your location and drives your own car. You don't need to own a car — just need one available. The driver handles everything from pickup to drop-off."
+              answer="A verified driver comes to your location and drives your own car. You don&apos;t need to own a car — just need one available. The driver handles everything from pickup to drop-off."
               open={openFaq === 3}
               onToggle={() => setOpenFaq(openFaq === 3 ? null : 3)}
             />
@@ -390,7 +403,7 @@ export default function Home() {
           </p>
           <a
             href="/join"
-            className="inline-block bg-white text-emerald-700 px-8 py-3 rounded-full font-medium hover:bg-emerald-50 transition-colors"
+            className="inline-block bg-white text-emerald-700 px-8 py-3 rounded-full font-medium hover:bg-emerald-50 transition-all duration-200 hover:shadow-md"
           >
             Apply Now
           </a>

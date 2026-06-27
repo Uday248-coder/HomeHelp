@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
 
 interface NavItem {
   label: string;
@@ -60,13 +61,12 @@ const navItems: NavItem[] = [
 interface SidebarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
-  isDark: boolean;
-  onToggleDark: () => void;
   onLogout: () => void;
 }
 
-export default function Sidebar({ currentPath, onNavigate, isDark, onToggleDark, onLogout }: SidebarProps) {
+export default function Sidebar({ currentPath, onNavigate, onLogout }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isDark, toggleDark } = useAuth();
 
   const handleNav = (path: string) => {
     onNavigate(path);
@@ -139,7 +139,7 @@ export default function Sidebar({ currentPath, onNavigate, isDark, onToggleDark,
 
         <div className="p-4 border-t border-sidebar-accent space-y-2">
           <button
-            onClick={onToggleDark}
+            onClick={toggleDark}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all"
           >
             {isDark ? (

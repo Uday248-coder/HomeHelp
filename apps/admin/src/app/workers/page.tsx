@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Worker } from '@/lib/types';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import { TableSkeleton } from '@/components/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import LoginScreen from '@/components/LoginScreen';
 
 function Badge({ active, label }: { active: boolean; label: string }) {
   return (
@@ -22,32 +25,21 @@ function Badge({ active, label }: { active: boolean; label: string }) {
 }
 
 export default function WorkersPage() {
+  const { token, logout } = useAuth();
+  const router = useRouter();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [token, setToken] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/workers');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('admin_token');
-    setToken(saved);
-    const storedDark = localStorage.getItem('admin_dark_mode');
-    if (storedDark === 'true') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
 
   const fetchWorkers = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError('');
     try {
-      const data = await api.getWorkers({ mode: typeFilter || undefined });
-      setWorkers(data.workers || data.data || []);
+      const data = await api.getWorkers({ mode: typeFilter || undefined }) as { workers: Worker[] };
+      setWorkers(data.workers || []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load workers');
     } finally {
@@ -59,22 +51,9 @@ export default function WorkersPage() {
     fetchWorkers();
   }, [fetchWorkers]);
 
-  const toggleDark = () => {
-    const next = !isDark;
-    setIsDark(next);
-    localStorage.setItem('admin_dark_mode', String(next));
-    document.documentElement.classList.toggle('dark', next);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    setToken(null);
-  };
-
   const handleNavigate = (path: string) => {
-    setCurrentPath(path);
-    if (path === currentPath) return;
-    window.location.href = path;
+    if (path === '/workers') return;
+    router.push(path);
   };
 
   const handleToggleAvailability = async (worker: Worker) => {
@@ -113,22 +92,11 @@ export default function WorkersPage() {
     );
   });
 
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Please login first</p>
-          <button onClick={() => handleNavigate('/')} className="text-emerald-600 hover:text-emerald-500 font-medium">
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentPath={currentPath} onNavigate={handleNavigate} isDark={isDark} onToggleDark={toggleDark} onLogout={handleLogout} />
+      <Sidebar currentPath="/workers" onNavigate={handleNavigate} onLogout={logout} />
       <main className="flex-1 overflow-auto">
         <ErrorBoundary>
           <div className="p-6 lg:p-8">

@@ -9,6 +9,7 @@ import { workersRouter } from './routes/workers';
 import { paymentsRouter } from './routes/payments';
 import { statsRouter } from './routes/stats';
 import { waitlistRouter } from './routes/waitlist';
+import { requestLogger } from './middleware/validation';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,8 +22,17 @@ Sentry.init({
 });
 
 app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://homehelp-admin.vercel.app',
+    'https://homehelp-website.vercel.app',
+  ],
+  credentials: true,
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use(requestLogger);
 
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
