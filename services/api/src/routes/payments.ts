@@ -2,7 +2,7 @@ import { Router } from 'express';
 import Razorpay from 'razorpay';
 import { createHmac } from 'crypto';
 import { prisma } from '../lib/prisma';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 export const paymentsRouter = Router();
 paymentsRouter.use(authMiddleware);
@@ -61,7 +61,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
         platformFee,
         workerPayout,
         status: 'pending',
-        razorpayPaymentId: razorpayOrderId,
+        razorpayOrderId,
       },
     });
 
@@ -73,10 +73,22 @@ paymentsRouter.post('/create-order', async (req, res) => {
 
 paymentsRouter.post('/verify', async (req, res) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user?.isAdmin) {
+      const payment = await prisma.payment.findUnique({ where: { id: req.body.paymentId } });
+      if (!payment) return res.status(404).json({ error: 'Payment not found' });
+      const booking = await prisma.booking.findUnique({ where: { id: payment.bookingId } });
+      if (!booking || booking.userId !== req.user!.userId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
     const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
     if (!paymentId) return res.status(400).json({ error: 'paymentId is required' });
 
-    if (razorpay && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
+    if (!razorpay) {
+      console.warn('[Payments] Razorpay not configured - skipping signature verification');
+    } else if (razorpayOrderId && razorpayPaymentId && razorpaySignature) {
       const isValid = verifySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
       if (!isValid) {
         return res.status(400).json({ error: 'Invalid payment signature' });

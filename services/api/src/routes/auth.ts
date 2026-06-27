@@ -2,8 +2,9 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { redis } from '../lib/redis';
 import { prisma } from '../lib/prisma';
+import { JWT_SECRET } from '../lib/constants';
+import { validatePhoneNumber } from '../middleware/validation';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'homehelp-dev-secret';
 const OTP_TTL_SECONDS = 300;
 
 export const authRouter = Router();
@@ -18,6 +19,9 @@ authRouter.post('/send-otp', async (req, res) => {
     if (!phoneNumber) {
       return res.status(400).json({ error: 'phoneNumber is required' });
     }
+    if (!validatePhoneNumber(phoneNumber)) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
+    }
 
     const attemptKey = `otp_attempts:${phoneNumber}`;
     const attempts = await redis.get(attemptKey);
@@ -28,11 +32,12 @@ authRouter.post('/send-otp', async (req, res) => {
     const otp = generateOtp();
     const redisKey = `otp:${phoneNumber}`;
 
-    await redis.set(redisKey, otp);
-    await redis.expire(redisKey, OTP_TTL_SECONDS);
+    await redis.set(redisKey, otp, { ex: OTP_TTL_SECONDS });
 
-    await redis.incr(attemptKey);
-    await redis.expire(attemptKey, 900);
+    const newCount = await redis.incr(attemptKey);
+    if (newCount <= 1) {
+      await redis.expire(attemptKey, 900);
+    }
 
     console.log(`[OTP] ${phoneNumber} -> ${otp}`);
 
@@ -58,10 +63,11 @@ authRouter.post('/verify-otp', async (req, res) => {
 
     await redis.del(redisKey);
 
-    let user = await prisma.user.findUnique({ where: { phoneNumber } });
-    if (!user) {
-      user = await prisma.user.create({ data: { phoneNumber } });
-    }
+    const user = await prisma.user.upsert({
+      where: { phoneNumber },
+      update: {},
+      create: { phoneNumber },
+    });
 
     const token = jwt.sign(
       { userId: user.id, phoneNumber: user.phoneNumber },
@@ -90,4 +96,8 @@ authRouter.get('/me', async (req, res) => {
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
+});
+
+authRouter.post('/logout', async (_req, res) => {
+  return res.json({ message: 'Logged out successfully' });
 });

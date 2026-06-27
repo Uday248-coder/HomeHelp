@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'homehelp-dev-secret';
+import { JWT_SECRET } from '../lib/constants';
+import { prisma } from '../lib/prisma';
 
 export interface AuthPayload {
   userId: string;
@@ -29,5 +29,20 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+export async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  } catch {
+    return res.status(500).json({ error: 'Failed to verify admin status' });
   }
 }

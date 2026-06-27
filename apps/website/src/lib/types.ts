@@ -4,7 +4,7 @@ export interface ApiError {
 
 export interface SendOtpResponse {
   message: string;
-  otp: string;
+  otp?: string;
 }
 
 export interface VerifyOtpResponse {

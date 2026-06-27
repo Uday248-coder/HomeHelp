@@ -12,19 +12,24 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function getInitialDark(): boolean {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('admin_dark_mode');
+    if (stored === 'true') {
+      document.documentElement.classList.add('dark');
+      return true;
+    }
+  }
+  return false;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(getInitialDark);
 
   useEffect(() => {
     const saved = localStorage.getItem('admin_token');
     if (saved) setToken(saved);
-
-    const storedDark = localStorage.getItem('admin_dark_mode');
-    if (storedDark === 'true') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
   }, []);
 
   const login = useCallback((newToken: string) => {

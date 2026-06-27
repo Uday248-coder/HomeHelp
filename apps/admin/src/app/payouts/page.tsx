@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import { TableSkeleton } from '@/components/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import LoginScreen from '@/components/LoginScreen';
+import { api } from '@/lib/api';
 
 interface Payout {
   id: string;
@@ -32,12 +33,8 @@ export default function PayoutsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com'}/api/stats/revenue/weekly`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch payouts');
-      const data = await res.json();
-      setPayouts(data.payouts || []);
+      const data = await api.getPayouts({ page: 1, limit: 20 });
+      setPayouts(data.payouts || data.data || []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load payouts');
     } finally {

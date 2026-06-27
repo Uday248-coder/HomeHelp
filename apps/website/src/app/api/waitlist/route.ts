@@ -19,13 +19,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to process signup' }, { status: 500 });
   }
 }
-
-export async function GET() {
-  try {
-    const res = await fetch(`${API_URL}/api/waitlist`);
-    const data = await res.json();
-    return NextResponse.json(data);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch waitlist' }, { status: 500 });
-  }
-}

@@ -9,17 +9,20 @@ import { workersRouter } from './routes/workers';
 import { paymentsRouter } from './routes/payments';
 import { statsRouter } from './routes/stats';
 import { waitlistRouter } from './routes/waitlist';
+import { payoutsRouter } from './routes/payouts';
 import { requestLogger } from './middleware/validation';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-Sentry.init({
-  dsn: process.env.SENTRY_DSN || '',
-  environment: process.env.NODE_ENV || 'development',
-  tracesSampleRate: 1.0,
-  integrations: [Sentry.expressIntegration()],
-});
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 1.0,
+    integrations: [Sentry.expressIntegration()],
+  });
+}
 
 app.use(helmet());
 app.use(cors({
@@ -41,8 +44,11 @@ app.use('/api/workers', workersRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/waitlist', waitlistRouter);
+app.use('/api/payouts', payoutsRouter);
 
 Sentry.setupExpressErrorHandler(app);
+
+app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 
 app.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);

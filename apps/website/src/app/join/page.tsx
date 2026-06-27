@@ -62,7 +62,7 @@ export default function JoinPage() {
       });
       const data: SendOtpResponse & ApiError = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
-      setOtpDisplay(data.otp || '');
+      setOtpDisplay('sent');
       setStep(2);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to send OTP');
@@ -187,8 +187,8 @@ export default function JoinPage() {
 
           {otpDisplay && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-6 text-sm animate-fade-in-up">
-              <span className="font-medium">OTP sent:</span> <code className="text-emerald-800 font-mono">{otpDisplay}</code>
-              <span className="block text-emerald-500 text-xs mt-1">(Use this OTP to verify your phone number)</span>
+              A verification code has been sent to <span className="font-medium">{form.phoneNumber}</span>
+              <span className="block text-emerald-500 text-xs mt-1">(In development, check the server console for the OTP)</span>
             </div>
           )}
 

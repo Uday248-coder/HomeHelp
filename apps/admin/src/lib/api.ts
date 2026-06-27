@@ -5,6 +5,19 @@ function getToken(): string | null {
   return localStorage.getItem('admin_token');
 }
 
+function clearToken(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('admin_token');
+  }
+}
+
+function buildQuery(params?: Record<string, string | number | undefined>): string {
+  if (!params) return '';
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
+  if (entries.length === 0) return '';
+  return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2): Promise<any> {
   const token = getToken();
@@ -16,44 +29,80 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
         headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
-        signal: AbortSignal.timeout(15000),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `API request failed (${res.status})`);
+
+      clearTimeout(timeoutId);
+
+      if (res.status === 401) {
+        clearToken();
+        throw new Error('Unauthorized - please login again');
       }
+
+      let data;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        data = await res.text();
+        try { data = JSON.parse(data); } catch { /* keep as text */ }
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || `API request failed (${res.status})`);
+      }
+
       return data;
     } catch (error: unknown) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.message === 'Unauthorized - please login again') {
+        throw error;
+      }
+
       if (attempt === retries) throw error;
-      if (error instanceof Error && error.name === 'TimeoutError') {
+
+      const isRetryable = error instanceof Error && (
+        error.name === 'AbortError' ||
+        error.name === 'TimeoutError' ||
+        error.message.includes('fetch') ||
+        error.message.includes('Failed to fetch')
+      );
+
+      if (isRetryable) {
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        continue;
-      }
-      throw error;
+
+      await new Promise(r => setTimeout(r, 500));
+      continue;
     }
   }
   throw new Error('Max retries exceeded');
 }
 
-function buildQuery(params?: Record<string, string | number | undefined>): string {
-  if (!params) return '';
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
-  if (entries.length === 0) return '';
-  return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
-}
-
 export const api = {
+  get: (endpoint: string) => fetchAPI(endpoint),
+
+  post: (endpoint: string, data?: Record<string, unknown>) =>
+    fetchAPI(endpoint, { method: 'POST', body: data ? JSON.stringify(data) : undefined }),
+
+  patch: (endpoint: string, data?: Record<string, unknown>) =>
+    fetchAPI(endpoint, { method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),
+
   getDashboard: () => fetchAPI('/api/stats/dashboard'),
 
   getWeeklyRevenue: () => fetchAPI('/api/stats/revenue/weekly'),
+
+  getPayouts: (params?: { page?: number; limit?: number }) =>
+    fetchAPI('/api/payouts' + buildQuery(params as Record<string, string | number>)),
 
   getBookings: (params?: { page?: number; status?: string; search?: string }) =>
     fetchAPI('/api/bookings/admin/all' + buildQuery(params as Record<string, string | number>)),

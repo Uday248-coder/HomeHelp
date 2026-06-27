@@ -10,13 +10,11 @@ export default function LoginScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [otpDisplay, setOtpDisplay] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   const handleSendOtp = async () => {
     setLoginError('');
-    setOtpDisplay('');
     if (!phone || phone.length < 10) {
       setLoginError('Please enter a valid phone number');
       return;
@@ -25,7 +23,9 @@ export default function LoginScreen() {
     try {
       const data = await api.sendOtp(phone);
       setOtpSent(true);
-      if (data.otp) setOtpDisplay(`OTP: ${data.otp}`);
+      if (data.otp) {
+        console.log('[LoginScreen] Dev OTP:', data.otp);
+      }
     } catch (e: unknown) {
       setLoginError(e instanceof Error ? e.message : 'Failed to send OTP');
     } finally {
@@ -65,12 +65,6 @@ export default function LoginScreen() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             {loginError}
-          </div>
-        )}
-
-        {otpDisplay && (
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-4 py-2.5 rounded-lg mb-4 text-sm font-mono text-center">
-            {otpDisplay}
           </div>
         )}
 
@@ -140,7 +134,7 @@ export default function LoginScreen() {
               )}
             </button>
             <button
-              onClick={() => { setOtpSent(false); setOtp(''); setLoginError(''); setOtpDisplay(''); }}
+              onClick={() => { setOtpSent(false); setOtp(''); setLoginError(''); }}
               className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Change phone number

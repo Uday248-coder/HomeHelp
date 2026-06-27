@@ -52,6 +52,11 @@ workersRouter.get('/:id', async (req, res) => {
 
 workersRouter.patch('/:id', authMiddleware, async (req, res) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
     const { name, photoUrl, aadhaarVerified, licenseVerified, isAvailable, isActive, currentLat, currentLng } = req.body;
     const workerId = req.params.id as string;
     const worker = await prisma.worker.update({
@@ -70,6 +75,39 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
     return res.json({ worker });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to update worker' });
+  }
+});
+
+workersRouter.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const worker = await prisma.worker.findUnique({
+      where: { phoneNumber: req.user!.phoneNumber },
+      include: { bookings: true, payouts: true },
+    });
+    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
+    return res.json({ worker });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch worker profile' });
+  }
+});
+
+workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
+  try {
+    const { isAvailable } = req.body;
+    if (isAvailable === undefined) return res.status(400).json({ error: 'isAvailable is required' });
+
+    const worker = await prisma.worker.findUnique({
+      where: { phoneNumber: req.user!.phoneNumber },
+    });
+    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
+
+    const updated = await prisma.worker.update({
+      where: { id: worker.id },
+      data: { isAvailable },
+    });
+    return res.json({ worker: updated });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to update availability' });
   }
 });
 

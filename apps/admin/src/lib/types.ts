@@ -55,7 +55,7 @@ export interface Payout {
   workerId: string;
   workerName: string;
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'processed' | 'failed';
   weekStart: string;
   weekEnd: string;
   paidAt?: string;

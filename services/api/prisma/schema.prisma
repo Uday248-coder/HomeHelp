@@ -118,6 +118,7 @@ model Payment {
   platformFee      Decimal       @default(0) @map("platform_fee")
   workerPayout     Decimal       @default(0) @map("worker_payout")
   paymentMethod    String?       @map("payment_method")
+  razorpayOrderId   String?       @map("razorpay_order_id")
   razorpayPaymentId String?       @map("razorpay_payment_id")
   status           PaymentStatus @default(pending)
   createdAt        DateTime      @default(now()) @map("created_at")

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { Prisma } from '@prisma/client';
 
 export const bookingsRouter = Router();
@@ -8,7 +8,7 @@ export const bookingsRouter = Router();
 bookingsRouter.use(authMiddleware);
 
 function getId(req: Request): string {
-  return getId(req) as string;
+  return req.params.id as string;
 }
 
 bookingsRouter.get('/', async (req: Request, res: Response) => {
@@ -97,6 +97,46 @@ bookingsRouter.get('/admin/all', async (req: Request, res: Response) => {
   }
 });
 
+bookingsRouter.get('/available', async (req: Request, res: Response) => {
+  try {
+    const mode = req.query.mode as string | undefined;
+    const where: Prisma.BookingWhereInput = {
+      status: 'pending',
+      workerId: null,
+    };
+    if (mode && ['home_help', 'driver'].includes(mode)) {
+      where.mode = mode as Prisma.BookingWhereInput['mode'];
+    }
+    const bookings = await prisma.booking.findMany({
+      where,
+      include: { user: { select: { id: true, name: true, phoneNumber: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return res.json({ bookings });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch available bookings' });
+  }
+});
+
+bookingsRouter.get('/worker', async (req: Request, res: Response) => {
+  try {
+    const worker = await prisma.worker.findUnique({
+      where: { phoneNumber: req.user!.phoneNumber },
+    });
+    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
+
+    const bookings = await prisma.booking.findMany({
+      where: { workerId: worker.id },
+      include: { user: { select: { id: true, name: true, phoneNumber: true } }, payment: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return res.json({ bookings });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch worker bookings' });
+  }
+});
+
 bookingsRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const booking = await prisma.booking.findUnique({
@@ -115,7 +155,9 @@ bookingsRouter.get('/:id', async (req: Request, res: Response) => {
 bookingsRouter.patch('/:id/cancel', async (req: Request, res: Response) => {
   try {
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
-    if (!booking || booking.userId !== req.user!.userId) {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    const isAdmin = user?.isAdmin ?? false;
+    if (!booking || (booking.userId !== req.user!.userId && !isAdmin)) {
       return res.status(404).json({ error: 'Booking not found' });
     }
     if (!['pending', 'assigned'].includes(booking.status)) {
@@ -133,6 +175,11 @@ bookingsRouter.patch('/:id/cancel', async (req: Request, res: Response) => {
 
 bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
     const { workerId } = req.body;
     if (!workerId) return res.status(400).json({ error: 'workerId is required' });
 
@@ -161,7 +208,7 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (booking.status !== 'assigned') return res.status(400).json({ error: 'Booking not in assigned state' });
-    if (booking.startOtp && booking.startOtp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
+    if (!booking.startOtp || booking.startOtp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
 
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
@@ -181,7 +228,7 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (booking.status !== 'in_progress') return res.status(400).json({ error: 'Booking not in progress' });
-    if (booking.endOtp && booking.endOtp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
+    if (!booking.endOtp || booking.endOtp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
 
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
@@ -211,6 +258,11 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
 
 bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
     const { type } = req.body;
     if (!type || !['start', 'end'].includes(type)) {
       return res.status(400).json({ error: 'type must be start or end' });
@@ -229,7 +281,7 @@ bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) =>
 
     console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP: ${otp}`);
 
-    return res.json({ message: `${type} OTP generated`, otp });
+    return res.json({ message: `${type} OTP generated` });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to generate OTP' });
   }

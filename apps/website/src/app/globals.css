@@ -2,95 +2,136 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --border: #e5e5e5;
-  --emerald-50: #ecfdf5;
-  --emerald-100: #d1fae5;
-  --emerald-500: #10b981;
-  --emerald-600: #059669;
-  --emerald-700: #047857;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-*:focus-visible {
-  outline: 2px solid var(--emerald-600);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+@layer base {
+  :root {
+    --color-brand-50: #ecfdf5;
+    --color-brand-100: #d1fae5;
+    --color-brand-200: #a7f3d0;
+    --color-brand-300: #6ee7b7;
+    --color-brand-400: #34d399;
+    --color-brand-500: #10b981;
+    --color-brand-600: #059669;
+    --color-brand-700: #047857;
+    --color-brand-800: #065f46;
+    --color-brand-900: #064e3b;
+    --color-brand-950: #022c22;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+  * {
+    @apply border-gray-200 dark:border-gray-800;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-@keyframes pulse-dot {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
+  html {
+    @apply scroll-smooth;
+  }
 
-@keyframes checkmark {
-  0% { stroke-dashoffset: 50; }
-  100% { stroke-dashoffset: 0; }
-}
+  body {
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 font-body antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
 
-@layer utilities {
-  .animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out forwards;
+  ::selection {
+    @apply bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100;
   }
-  .animate-slide-in {
-    animation: slideIn 0.4s ease-out forwards;
-  }
-  .animate-pulse-dot {
-    animation: pulse-dot 1.4s ease-in-out infinite;
-  }
-  .text-balance {
-    text-wrap: balance;
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-950;
   }
 }
 
 @layer components {
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
   .btn-primary {
-    @apply bg-emerald-600 text-white px-6 py-3 rounded-full font-medium hover:bg-emerald-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98];
+    @apply inline-flex items-center justify-center px-6 py-3 text-base font-medium text-white bg-emerald-600 rounded-xl
+           hover:bg-emerald-700 active:bg-emerald-800 shadow-sm hover:shadow-md
+           transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:pointer-events-none;
   }
+
   .btn-secondary {
-    @apply border border-gray-300 text-gray-700 px-6 py-3 rounded-full font-medium hover:border-gray-400 hover:bg-gray-50 transition-all duration-200;
+    @apply inline-flex items-center justify-center px-6 py-3 text-base font-medium text-gray-700 bg-gray-100 rounded-xl
+           hover:bg-gray-200 active:bg-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:active:bg-gray-600
+           transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
   }
-  .card {
-    @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100;
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-6 py-3 text-base font-medium text-gray-700 border border-gray-300 rounded-xl
+           hover:bg-gray-50 active:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800 dark:active:bg-gray-900
+           transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
   }
-  .input {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all;
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-300 bg-white
+           text-gray-900 placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
+           disabled:bg-gray-100 disabled:cursor-not-allowed
+           dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500
+           transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 300ms ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 400ms ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 300ms ease-out forwards;
+  }
+
+  .stagger-1 { animation-delay: 100ms; }
+  .stagger-2 { animation-delay: 200ms; }
+  .stagger-3 { animation-delay: 300ms; }
+  .stagger-4 { animation-delay: 400ms; }
+  .stagger-5 { animation-delay: 500ms; }
+  .stagger-6 { animation-delay: 600ms; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
   }
 }
