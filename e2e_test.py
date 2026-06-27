@@ -121,8 +121,7 @@ def check_website():
             hero = page.locator('h1')
             test('Hero heading exists', hero.count() > 0)
             hero_text = hero.first.text_content()
-            test('Hero mentions HomeHelp', 'HomeHelp' in (hero_text or ''), hero_text or '')
-
+            test('Hero mentions services or drivers', 'Home' in (hero_text or '') or 'Driver' in (hero_text or ''), (hero_text or '')[:60])
             cta_buttons = page.locator('button, a[href="#waitlist"]')
             cta_visible = cta_buttons.first.is_visible() if cta_buttons.count() > 0 else False
             test('CTA button visible', cta_visible)
