@@ -35,7 +35,13 @@ statsRouter.get('/dashboard', async (req, res) => {
       prisma.booking.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
-        include: { user: true, worker: true },
+        select: {
+          id: true, mode: true, serviceType: true, status: true,
+          createdAt: true, completedAt: true,
+          user: { select: { id: true, name: true } },
+          worker: { select: { id: true, name: true, averageRating: true } },
+          payment: { select: { amount: true, status: true } },
+        },
       }),
     ]);
 

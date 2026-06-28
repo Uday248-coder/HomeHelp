@@ -100,7 +100,7 @@ export default function AuthScreen() {
               <Text style={styles.otpHint}>
                 OTP sent to +91 {phone}
               </Text>
-              {devOtp ? (
+              {__DEV__ && devOtp ? (
                 <Text style={styles.devOtp}>Dev OTP: {devOtp}</Text>
               ) : null}
               <TextInput

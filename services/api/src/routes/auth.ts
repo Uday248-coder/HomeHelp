@@ -69,6 +69,10 @@ authRouter.post('/verify-otp', async (req, res) => {
       if (newCount <= 1) {
         await redis.expire(attemptKey, 900);
       }
+      if (newCount >= 5) {
+        await redis.del(redisKey);
+        await redis.del(attemptKey);
+      }
       return res.status(401).json({ error: 'Invalid or expired OTP' });
     }
 

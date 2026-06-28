@@ -12,11 +12,22 @@ function getId(req: Request): string {
   return req.params.id as string;
 }
 
+const BOOKING_SAFE_FIELDS = {
+  id: true, userId: true, mode: true, serviceType: true, status: true,
+  scheduledAt: true, startedAt: true, completedAt: true,
+  durationHours: true, hourlyRate: true, customerAddress: true,
+  ratingByUser: true, reviewText: true, createdAt: true, updatedAt: true,
+} as const;
+
 bookingsRouter.get('/', async (req: Request, res: Response) => {
   try {
     const bookings = await prisma.booking.findMany({
       where: { userId: req.user!.userId },
-      include: { worker: true, payment: true },
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return res.json({ bookings });
@@ -53,7 +64,11 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
         hourlyRate,
         status: 'pending',
       },
-      include: { worker: true, payment: true },
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+      },
     });
     return res.status(201).json({ booking });
   } catch (error) {
@@ -89,7 +104,12 @@ bookingsRouter.get('/admin/all', async (req: Request, res: Response) => {
     const [bookings, total] = await Promise.all([
       prisma.booking.findMany({
         where,
-        include: { worker: true, user: true, payment: true },
+        select: {
+          ...BOOKING_SAFE_FIELDS,
+          user: { select: { id: true, name: true } },
+          worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+          payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -122,7 +142,10 @@ bookingsRouter.get('/available', async (req: Request, res: Response) => {
     }
     const bookings = await prisma.booking.findMany({
       where,
-      include: { user: { select: { id: true, name: true, phoneNumber: true } } },
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        user: { select: { id: true, name: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
@@ -141,7 +164,11 @@ bookingsRouter.get('/worker', async (req: Request, res: Response) => {
 
     const bookings = await prisma.booking.findMany({
       where: { workerId: worker.id },
-      include: { user: { select: { id: true, name: true, phoneNumber: true } }, payment: true },
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        user: { select: { id: true, name: true } },
+        payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return res.json({ bookings });
@@ -154,7 +181,12 @@ bookingsRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: getId(req) },
-      include: { worker: true, payment: true, user: true },
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+        user: { select: { id: true, name: true } },
+      },
     });
     if (!booking || booking.userId !== req.user!.userId) {
       return res.status(404).json({ error: 'Booking not found' });
@@ -179,6 +211,7 @@ bookingsRouter.patch('/:id/cancel', async (req: Request, res: Response) => {
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
       data: { status: 'cancelled' },
+      select: BOOKING_SAFE_FIELDS,
     });
     return res.json({ booking: updated });
   } catch (error) {
@@ -206,7 +239,11 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
       data: { workerId, status: 'assigned' },
-      include: { worker: true, payment: true },
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+      },
     });
     return res.json({ booking: updated });
   } catch (error) {
@@ -233,6 +270,7 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
       data: { status: 'in_progress', startedAt: new Date() },
+      select: BOOKING_SAFE_FIELDS,
     });
     return res.json({ booking: updated });
   } catch (error) {
@@ -264,6 +302,7 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
         ratingByUser: rating ? Math.min(Math.max(Math.round(rating), 1), 5) : null,
         reviewText: reviewText || null,
       },
+      select: BOOKING_SAFE_FIELDS,
     });
 
     if (booking.workerId) {

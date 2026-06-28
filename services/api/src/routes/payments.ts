@@ -37,6 +37,10 @@ paymentsRouter.post('/create-order', async (req, res) => {
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
+    if (booking.userId !== req.user!.userId) {
+      return res.status(403).json({ error: 'You can only create payments for your own bookings' });
+    }
+
     const rate = booking.hourlyRate ? Number(booking.hourlyRate) : 0;
     const hours = booking.durationHours ? Number(booking.durationHours) : 1;
     const amount = parseFloat((rate * hours).toFixed(2));

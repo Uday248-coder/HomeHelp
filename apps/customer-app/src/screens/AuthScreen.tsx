@@ -165,7 +165,7 @@ export default function AuthScreen() {
                 onChangeText={setOtp}
               />
 
-              {devOtp ? (
+              {__DEV__ && devOtp ? (
                 <View style={styles.devHint}>
                   <Text style={styles.devHintText}>Dev hint: {devOtp}</Text>
                 </View>

@@ -55,7 +55,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Waitlist** — proxied to backend API (persistent storage via Prisma)
 - **Pricing section** — 3 cards (Home Help ₹199/hr, Driver ₹149/hr, Subscription ₹499/mo coming soon)
 - **Testimonials section** — 3 user cards with star ratings
-- **FAQ section** — 5-item accordion with smooth expand/collapse
+- **FAQ section** — 6-item accordion with smooth expand/collapse
 - **Sticky header** with backdrop blur
 - **Worker Registration** — 3-step progress indicator, email + experience fields, terms acceptance, phone format validation, **Firebase phone auth with invisible reCAPTCHA**, success animation, back button on step 2
 - **Design system** — Newsreader (display serif) + Work Sans (body sans) via next/font/google; palette: deep pine (#1A3C34), warm clay (#C4774B), warm off-white (#F6F4EF)
@@ -63,10 +63,11 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Reduced-motion support**; dark mode removed for focused light-mode execution
 - **Kolkata-specific** copy throughout
 
-#### Mobile Apps (`apps/customer-app/`, `apps/worker-app/`) — Expo 56 Skeletons
+#### Mobile Apps (`apps/customer-app/`, `apps/worker-app/`) — Expo 56 (Fully Built)
+- **6 screens each** — Customer: Auth, Home, Bookings, BookingDetail, Profile; Worker: Auth, Dashboard, Jobs, ActiveJob, Earnings, Profile
 - **AuthContext** — token storage via `expo-secure-store` (not AsyncStorage)
 - **API clients** — use secure store for token retrieval
-- **TypeScript** — strict mode, no errors
+- **Mobile apps have tsconfig.json with strict mode** — `tsc --noEmit` catches type errors
 - Ready for Firebase Auth migration (currently use legacy OTP flow)
 
 ### Critical Fixes Applied
@@ -74,7 +75,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - OTP no longer returned in send-otp response body (only logged)
 - Admin endpoints now require isAdmin role (403 if not)
 - Worker POST/PATCH now require auth
-- Worker GET `/workers` + `/workers/available/:mode` exclude phone/coordinates
+| Worker GET `/workers` excludes phone/coordinates; `/workers/available/:mode` is auth-gated with select |
 - Worker GET `/workers/:id` returns full profile data only to owner or admin
 - Stats endpoints now require auth + admin role
 - Waitlist data persisted in database (not in-memory)
@@ -86,7 +87,13 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Worker identity verification** on PATCH `/bookings/:id/start` and `/complete`
 - **Active worker check** on GET `/bookings/available`
 - **JWT_SECRET startup throw** (no hardcoded fallback)
-- **Server-side pricing** via `RATE_TABLE` in constants.ts
+- **Server-side pricing via `RATE_TABLE`** in constants.ts
+- **Booking response shaping** — all booking routes now use `select` to exclude OTPs and sensitive user data
+- **Stats response shaping** — dashboard recent bookings exclude user phone/email
+- **OTP verify auto-reset** — 5 failed attempts deletes the OTP, requiring fresh send
+- **Payment ownership check** — `POST /payments/create-order` validates caller owns the booking
+- **`POST /api/workers` admin-gated** — worker creation now requires admin role
+- **`GET /api/workers/available/:mode` auth-gated** with field select (phone/coordinates excluded)
 - **Global + auth rate limiting** in `index.ts`
 
 ## Tech Stack

@@ -121,7 +121,7 @@ export const api = {
     fetchAPI(`/api/bookings/${bookingId}/start`, { method: 'PATCH', body: JSON.stringify({ otp }) }),
 
   completeBooking: (bookingId: string, otp: string, rating?: number) =>
-    fetchAPI(`/api/bookings/${bookingId}/complete`, { method: 'PATCH', body: JSON.stringify({ otp, rating: rating || 5 }) }),
+    fetchAPI(`/api/bookings/${bookingId}/complete`, { method: 'PATCH', body: JSON.stringify({ otp, rating }) }),
 
   cancelBooking: (bookingId: string) =>
     fetchAPI(`/api/bookings/${bookingId}/cancel`, { method: 'PATCH' }),

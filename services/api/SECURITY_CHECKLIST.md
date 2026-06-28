@@ -10,8 +10,8 @@ Every change to this API must satisfy the following checks before merging:
 
 ## Data Exposure
 
-- [ ] **Every response uses a Prisma `select`** — never return a full model row (`.findMany()` or `.findUnique()`) by default. Explicitly list the fields the client needs
-- [ ] **Phone numbers and coordinates** are never returned from list routes (`GET /api/workers`, `GET /api/workers/available/:mode`)
+- [ ] **Every response uses a Prisma `select`** — never return a full model row (`.findMany()` or `.findUnique()`) by default. Explicitly list the fields the client needs. **Booking OTP fields (`startOtp`, `endOtp`) must always be excluded from responses**
+- [ ] **Phone numbers and coordinates** are never returned from list routes (`GET /api/workers`, `GET /api/workers/available/:mode`, `GET /api/bookings/available`, `GET /api/bookings/worker`)
 - [ ] **Booking OTPs** are never returned in response bodies — only logged server-side
 
 ## Payment & Pricing
@@ -23,7 +23,7 @@ Every change to this API must satisfy the following checks before merging:
 ## Rate Limiting & Abuse
 
 - [ ] **OTP send is rate-limited** (5/15min per phone, Redis-backed)
-- [ ] **OTP verify is rate-limited** (5 failed attempts resets OTP, requires fresh send)
+- [ ] **OTP verify is rate-limited** (5 failed attempts deletes the OTP and counter, requires fresh send)
 - [ ] **Global rate limit** (100 req/min per IP) is applied in `index.ts`
 - [ ] **Auth routes** have tighter limit (10 req/min per IP)
 

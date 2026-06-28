@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 export const workersRouter = Router();
 
@@ -24,7 +24,7 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
   }
 });
 
-workersRouter.post('/', authMiddleware, async (req, res) => {
+workersRouter.post('/', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { workerType, name, phoneNumber, photoUrl } = req.body;
     if (!workerType || !name || !phoneNumber) {
@@ -38,6 +38,11 @@ workersRouter.post('/', authMiddleware, async (req, res) => {
 
     const worker = await prisma.worker.create({
       data: { workerType, name, phoneNumber, photoUrl },
+      select: {
+        id: true, name: true, workerType: true,
+        phoneNumber: true, photoUrl: true, isAvailable: true,
+        averageRating: true, createdAt: true,
+      },
     });
     return res.status(201).json({ worker });
   } catch (error) {
@@ -137,7 +142,7 @@ workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
   }
 });
 
-workersRouter.get('/available/:mode', async (req, res) => {
+workersRouter.get('/available/:mode', authMiddleware, async (req, res) => {
   try {
     const mode = req.params.mode;
     const workers = await prisma.worker.findMany({
@@ -145,6 +150,14 @@ workersRouter.get('/available/:mode', async (req, res) => {
         isAvailable: true,
         isActive: true,
         workerType: mode === 'driver' ? { in: ['driver', 'both'] } : { in: ['home_help', 'both'] },
+      },
+      select: {
+        id: true,
+        name: true,
+        workerType: true,
+        averageRating: true,
+        photoUrl: true,
+        isAvailable: true,
       },
     });
     return res.json({ workers });
