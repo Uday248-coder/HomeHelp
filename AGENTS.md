@@ -2,15 +2,15 @@
 
 ## Project Overview
 
-HomeHelp is an on-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP.
+HomeHelp is an on-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP (Kolkata).
 
-## Current State (Post-Session 3 — 95% MVP Complete)
+## Current State (Post-Session 4 — 95% MVP Complete + Security Hardening)
 
 ### Live URLs
 | App | URL | Status |
 |-----|-----|--------|
-| Marketing website | https://homehelp-website.vercel.app | Live — waitlist + worker registration |
-| Admin dashboard | https://homehelp-admin.vercel.app | Live — OTP login + live data |
+| Marketing website | https://homehelp-website.vercel.app | Live — waitlist + worker registration (Firebase Auth) |
+| Admin dashboard | https://homehelp-admin.vercel.app | Live — Firebase phone auth + live data |
 | Backend API | https://homehelp-clbc.onrender.com | Live — full CRUD + stats |
 | GitHub repo | https://github.com/Uday248-coder/HomeHelp | Private |
 
@@ -23,16 +23,21 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 #### Backend API (`services/api/`)
 - OTP send/verify with rate limiting (max 5/15min, Redis-backed)
 - JWT login with User auto-creation
+- **Firebase Auth integration** — `POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT
 - Admin role system (`isAdmin` field on User model)
 - Booking CRUD + lifecycle (create, assign, start with OTP, complete with OTP+rating, cancel)
 - Booking OTP generation endpoint (`PATCH /:id/generate-otp`)
-- Worker CRUD with auth-gated POST/PATCH, open GET
+- Worker CRUD with auth-gated POST/PATCH, open GET (with field restrictions)
 - Payment create-order (15% platform fee, Razorpay with auto-mock fallback) + verify (fixed signature check) + get by booking
+- **Server-side pricing** — `RATE_TABLE` in constants.ts is single source of truth; clients cannot supply `amount` or `hourlyRate`
+- **Payment access guard** — GET `/payments/booking/:bookingId` validates caller owns booking or is admin
 - Admin stats with auth + role guard (`/dashboard`, `/revenue/weekly`)
-- Waitlist endpoint with DB persistence (Prisma `WaitlistEntry` model)
+- Waitlist endpoint with DB persistence (Prisma `WaitlistEntry` model) + **email validation**
 - Admin bookings pagination (page/limit/status/search filters) with admin guard
 - Health check endpoint
+- **Global rate limiting** (100 req/min per IP) + tighter auth routes (10 req/min)
 - `.env.example` with all documented env vars
+- **SECURITY_CHECKLIST.md** — 15 standing security requirements for all future changes
 
 #### Admin Dashboard (`apps/admin/`) — Complete Redesign
 - **Professional dark sidebar** with navigation (Dashboard, Bookings, Workers, Payouts, Settings)
@@ -40,29 +45,49 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Dashboard** — 6 stat cards with SVG icons, weekly revenue bar chart (pure SVG), booking status donut chart, recent bookings table, error boundary
 - **Bookings page** — search bar, status filter dropdown, paginated table, action dropdown per row (Assign Worker with modal, Generate Start/End OTP, Cancel), proper loading/empty/error states
 - **Workers page** — search, type filter, availability toggle (inline button), Aadhaar Verify / License Verify actions, rating stars
-- **Login flow** — phone input, OTP display (no alert()), spinners, proper validation
+- **Login flow** — **Firebase phone auth with invisible reCAPTCHA** (no custom OTP, no alert()), spinners, proper validation
 - **Components** — Sidebar, StatCard, Charts (BarChart + StatsSummary), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
 - **CSS** — HSL variables for theming, dark mode via `.dark` class, smooth transitions
-- **API helper** — centralized `api.ts` with auto auth token injection, buildQuery helper
+- **API helper** — centralized `api.ts` with auto auth token injection, buildQuery helper, retry logic
+- **Security notes** — TODO comments in `auth-context.tsx` and `api.ts` documenting localStorage vs httpOnly cookie tradeoff
 
-#### Marketing Website (`apps/website/`) — Enhanced
-- **Waitlist** — now proxied to backend API (persistent storage via Prisma)
+#### Marketing Website (`apps/website/`) — Redesigned for Kolkata
+- **Waitlist** — proxied to backend API (persistent storage via Prisma)
 - **Pricing section** — 3 cards (Home Help ₹199/hr, Driver ₹149/hr, Subscription ₹499/mo coming soon)
 - **Testimonials section** — 3 user cards with star ratings
 - **FAQ section** — 5-item accordion with smooth expand/collapse
 - **Sticky header** with backdrop blur
-- **Worker Registration** — 3-step progress indicator, email + experience fields, terms acceptance, phone format validation, in-page OTP display (no alert()), success animation, back button on step 2
-- **Custom CSS animations** — fadeInUp, pulse-dot, smooth scroll
+- **Worker Registration** — 3-step progress indicator, email + experience fields, terms acceptance, phone format validation, **Firebase phone auth with invisible reCAPTCHA**, success animation, back button on step 2
+- **Design system** — Newsreader (display serif) + Work Sans (body sans) via next/font/google; palette: deep pine (#1A3C34), warm clay (#C4774B), warm off-white (#F6F4EF)
+- **Hero** — dark pine split layout (headline + live-status card showing workers/drivers/rating)
+- **Reduced-motion support**; dark mode removed for focused light-mode execution
+- **Kolkata-specific** copy throughout
+
+#### Mobile Apps (`apps/customer-app/`, `apps/worker-app/`) — Expo 56 Skeletons
+- **AuthContext** — token storage via `expo-secure-store` (not AsyncStorage)
+- **API clients** — use secure store for token retrieval
+- **TypeScript** — strict mode, no errors
+- Ready for Firebase Auth migration (currently use legacy OTP flow)
 
 ### Critical Fixes Applied
 - Razorpay signature verification bug fixed (was passing paymentId twice instead of orderId+paymentId)
 - OTP no longer returned in send-otp response body (only logged)
 - Admin endpoints now require isAdmin role (403 if not)
 - Worker POST/PATCH now require auth
+- Worker GET `/workers` + `/workers/available/:mode` exclude phone/coordinates
+- Worker GET `/workers/:id` returns full profile data only to owner or admin
 - Stats endpoints now require auth + admin role
 - Waitlist data persisted in database (not in-memory)
 - Bookings admin/all has pagination, search, status filter
 - Loading skeletons redesigned for every admin view
+- **Payment access guard** on GET `/payments/booking/:bookingId`
+- **Waitlist email validation** on POST `/api/waitlist`
+- **Booking status guard** on PATCH `/bookings/:id/assign` (must be `pending`)
+- **Worker identity verification** on PATCH `/bookings/:id/start` and `/complete`
+- **Active worker check** on GET `/bookings/available`
+- **JWT_SECRET startup throw** (no hardcoded fallback)
+- **Server-side pricing** via `RATE_TABLE` in constants.ts
+- **Global + auth rate limiting** in `index.ts`
 
 ## Tech Stack
 
@@ -72,7 +97,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma |
 | OTP/Cache | Upstash Redis |
-| Auth | OTP + JWT (custom) |
+| Auth | **Firebase Auth (phone) + JWT (custom)** |
 | Error tracking | Sentry (wired, no DSN) |
 | Deploy (API) | Render |
 | Deploy (web) | Vercel |
@@ -109,7 +134,7 @@ These are stored as env vars on Render. For local dev, add to `services/api/.env
 | `RAZORPAY_KEY_ID` | Razorpay dashboard | ❌ Not set |
 | `RAZORPAY_KEY_SECRET` | Razorpay dashboard | ❌ Not set |
 | `GOOGLE_MAPS_API_KEY` | Google Cloud Console | ❌ Not set |
-| `TWILIO_SID` / `MSG91_KEY` | Twilio/MSG91 dashboard | ❌ Not set |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | Firebase Console → Service Account → Generate Key | ❌ Not set on Render |
 | `FCM_SERVER_KEY` | Firebase project settings | ❌ Not set |
 
 ## Database Schema (Prisma)
@@ -132,6 +157,7 @@ See: `services/api/src/routes/`
 | `/api/auth/send-otp` | POST | ✅ Live | Sends OTP via Redis (rate-limited) |
 | `/api/auth/verify-otp` | POST | ✅ Live | Verifies OTP, returns JWT |
 | `/api/auth/me` | GET | ✅ Live | Get current user |
+| `/api/auth/firebase` | POST | ✅ Live | Verify Firebase ID token, return JWT |
 | `/api/bookings` | GET/POST | ✅ Live | List/create bookings (auth) |
 | `/api/bookings/:id` | GET | ✅ Live | Get booking detail |
 | `/api/bookings/:id/cancel` | PATCH | ✅ Live | Cancel booking |
@@ -168,24 +194,26 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 3. Set Sentry DSN for error tracking
 4. Add proper loading skeletons to admin dashboard
 5. Set up `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website
+6. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render**
+7. **Add Vercel URLs to Firebase authorized domains**
 
 ### Phase 1 — Mobile apps (2+ weeks)
-6. Customer Expo app (React Native) with mode switcher
-7. Worker Expo app with availability toggle, job acceptance
-8. Real-time location tracking via Socket.io
-9. Push notifications via FCM
+8. Customer Expo app (React Native) with mode switcher
+9. Worker Expo app with availability toggle, job acceptance
+10. Real-time location tracking via Socket.io
+11. Push notifications via FCM
 
 ### Phase 2 — Platform features (1-2 weeks)
-10. Aadhaar verification flow for workers
-11. Admin panel for reviewing/approving workers
-12. Weekly payout automation for workers
-13. Surge pricing engine
-14. Mode-aware pricing calculator
+12. Aadhaar verification flow for workers
+13. Admin panel for reviewing/approving workers
+14. Weekly payout automation for workers
+15. Surge pricing engine
+16. Mode-aware pricing calculator
 
 ### Phase 3 — Driver mode (2+ weeks)
-15. License verification
-16. Outstation booking flow
-17. Mode-aware pricing engine
+17. License verification
+18. Outstation booking flow
+19. Mode-aware pricing engine
 
 ## Deployment Notes
 
