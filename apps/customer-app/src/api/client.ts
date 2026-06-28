@@ -1,9 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
 async function getToken(): Promise<string | null> {
-  return AsyncStorage.getItem('auth_token');
+  return SecureStore.getItemAsync('auth_token');
 }
 
 async function request(endpoint: string, options: RequestInit = {}): Promise<any> {

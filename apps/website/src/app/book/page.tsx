@@ -152,7 +152,6 @@ export default function BookPage() {
         serviceType,
         customerAddress: address,
         durationHours: duration,
-        hourlyRate: selectedMode?.price,
       };
       if (scheduleType === 'later' && scheduledDate && scheduledTime) {
         body.scheduledAt = `${scheduledDate}T${scheduledTime}:00.000Z`;
