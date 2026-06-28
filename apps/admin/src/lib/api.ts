@@ -143,6 +143,9 @@ export const api = {
   verifyOtp: (phoneNumber: string, otp: string) =>
     fetchAPI('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) }) as Promise<{ token: string }>,
 
+  firebaseAuth: (idToken: string) =>
+    fetchAPI('/api/auth/firebase', { method: 'POST', body: JSON.stringify({ idToken }) }) as Promise<{ token: string }>,
+
   getUser: () => fetchAPI('/api/auth/me'),
 
   getPayment: (bookingId: string) => fetchAPI(`/api/payments/booking/${bookingId}`),

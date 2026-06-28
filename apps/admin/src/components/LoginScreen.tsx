@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { auth } from '@/lib/firebase';
+import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -12,6 +14,17 @@ export default function LoginScreen() {
   const [loginError, setLoginError] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+
+  useEffect(() => {
+    if (!(window as unknown as Record<string, boolean>).recaptchaVerifier) {
+      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current!, {
+        size: 'invisible',
+      });
+      (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier = verifier;
+    }
+  }, []);
 
   const handleSendOtp = async () => {
     setLoginError('');
@@ -21,13 +34,15 @@ export default function LoginScreen() {
     }
     setSendingOtp(true);
     try {
-      const data = await api.sendOtp(phone);
+      const verifier = (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier;
+      const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
+      confirmationRef.current = confirmation;
       setOtpSent(true);
-      if (data.otp) {
-        console.log('[LoginScreen] Dev OTP:', data.otp);
-      }
     } catch (e: unknown) {
-      setLoginError(e instanceof Error ? e.message : 'Failed to send OTP');
+      const msg = e instanceof Error ? e.message : 'Failed to send OTP';
+      const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
+      setLoginError(cleanMsg || 'Failed to send OTP');
     } finally {
       setSendingOtp(false);
     }
@@ -37,10 +52,14 @@ export default function LoginScreen() {
     setLoginError('');
     setVerifyingOtp(true);
     try {
-      const data = await api.verifyOtp(phone, otp);
+      const result = await confirmationRef.current!.confirm(otp);
+      const idToken = await result.user.getIdToken();
+      const data = await api.firebaseAuth(idToken);
       login(data.token);
     } catch (e: unknown) {
-      setLoginError(e instanceof Error ? e.message : 'Failed to verify OTP');
+      const msg = e instanceof Error ? e.message : 'Failed to verify OTP';
+      const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
+      setLoginError(cleanMsg || 'Invalid OTP');
     } finally {
       setVerifyingOtp(false);
     }
@@ -141,6 +160,8 @@ export default function LoginScreen() {
             </button>
           </div>
         )}
+
+        <div ref={recaptchaRef} />
       </div>
     </div>
   );

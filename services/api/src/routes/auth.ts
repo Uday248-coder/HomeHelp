@@ -4,6 +4,7 @@ import { redis } from '../lib/redis';
 import { prisma } from '../lib/prisma';
 import { JWT_SECRET } from '../lib/constants';
 import { validatePhoneNumber } from '../middleware/validation';
+import { firebaseAuth } from '../lib/firebase';
 
 const OTP_TTL_SECONDS = 300;
 
@@ -111,4 +112,36 @@ authRouter.get('/me', async (req, res) => {
 
 authRouter.post('/logout', async (_req, res) => {
   return res.json({ message: 'Logged out successfully' });
+});
+
+authRouter.post('/firebase', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ error: 'idToken is required' });
+    }
+
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const phoneNumber = decoded.phone_number;
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'Firebase token does not contain a phone number' });
+    }
+
+    const user = await prisma.user.upsert({
+      where: { phoneNumber },
+      update: {},
+      create: { phoneNumber },
+    });
+
+    const token = jwt.sign(
+      { userId: user.id, phoneNumber: user.phoneNumber },
+      JWT_SECRET,
+      { expiresIn: '7d' },
+    );
+
+    return res.json({ message: 'Authenticated', token, user });
+  } catch (err) {
+    console.error('[Firebase Auth]', err);
+    return res.status(401).json({ error: 'Invalid Firebase ID token' });
+  }
 });

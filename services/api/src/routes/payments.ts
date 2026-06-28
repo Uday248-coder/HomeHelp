@@ -47,7 +47,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
 
     const platformFee = parseFloat((amount * 0.15).toFixed(2));
     const workerPayout = parseFloat((amount - platformFee).toFixed(2));
-    const amountInPaise = Math.round(parseFloat(amount) * 100);
+    const amountInPaise = Math.round(Number(amount) * 100);
 
     let razorpayOrderId: string | null = null;
 
@@ -65,7 +65,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
     const payment = await prisma.payment.create({
       data: {
         bookingId,
-        amount: parseFloat(amount),
+        amount: Number(amount),
         platformFee,
         workerPayout,
         status: 'pending',

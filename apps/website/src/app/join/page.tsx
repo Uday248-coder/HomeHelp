@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import type { SendOtpResponse, VerifyOtpResponse, WorkerResponse, ApiError } from '@/lib/types';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { auth } from '@/lib/firebase';
+import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -40,7 +41,17 @@ export default function JoinPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [otpDisplay, setOtpDisplay] = useState('');
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+
+  useEffect(() => {
+    if (!(window as unknown as Record<string, boolean>).recaptchaVerifier) {
+      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current!, {
+        size: 'invisible',
+      });
+      (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier = verifier;
+    }
+  }, []);
 
   const updateField = useCallback((field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -52,20 +63,17 @@ export default function JoinPage() {
   const handleSendOtp = async () => {
     if (!form.phoneNumber) { setError('Phone number is required'); return; }
     setError('');
-    setOtpDisplay('');
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: form.phoneNumber }),
-      });
-      const data: SendOtpResponse & ApiError = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
-      setOtpDisplay('sent');
+      const verifier = (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier;
+      const formattedPhone = form.phoneNumber.startsWith('+') ? form.phoneNumber : `+${form.phoneNumber}`;
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
+      confirmationRef.current = confirmation;
       setStep(2);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to send OTP');
+      const msg = e instanceof Error ? e.message : 'Failed to send OTP';
+      const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
+      setError(cleanMsg || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -79,19 +87,22 @@ export default function JoinPage() {
     setError('');
     setLoading(true);
     try {
-      const verifyRes = await fetch(`${API_URL}/api/auth/verify-otp`, {
+      const result = await confirmationRef.current!.confirm(form.otp);
+      const idToken = await result.user.getIdToken();
+
+      const authRes = await fetch(`${API_URL}/api/auth/firebase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: form.phoneNumber, otp: form.otp }),
+        body: JSON.stringify({ idToken }),
       });
-      const verifyData: VerifyOtpResponse & ApiError = await verifyRes.json();
-      if (!verifyRes.ok) throw new Error(verifyData.error || 'OTP verification failed');
+      const authData = await authRes.json();
+      if (!authRes.ok) throw new Error(authData.error || 'Authentication failed');
 
       const workerRes = await fetch(`${API_URL}/api/workers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${verifyData.token}`,
+          Authorization: `Bearer ${authData.token}`,
         },
         body: JSON.stringify({
           name: form.name,
@@ -101,12 +112,14 @@ export default function JoinPage() {
           experience: form.experience,
         }),
       });
-      const workerData: WorkerResponse & ApiError = await workerRes.json();
+      const workerData = await workerRes.json();
       if (!workerRes.ok) throw new Error(workerData.error || 'Failed to create worker');
 
       setForm(prev => ({ ...prev, submitted: true }));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      const msg = e instanceof Error ? e.message : 'Something went wrong';
+      const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
+      setError(cleanMsg || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -185,13 +198,6 @@ export default function JoinPage() {
             <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-6 text-sm animate-fade-in-up">{error}</div>
           )}
 
-          {otpDisplay && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-6 text-sm animate-fade-in-up">
-              A verification code has been sent to <span className="font-medium">{form.phoneNumber}</span>
-              <span className="block text-emerald-500 text-xs mt-1">(In development, check the server console for the OTP)</span>
-            </div>
-          )}
-
           <div className="space-y-5">
             {step === 1 && (
               <>
@@ -204,9 +210,6 @@ export default function JoinPage() {
                     onChange={e => updateField('name', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  {form.name && form.name.trim().length === 0 && (
-                    <p className="text-red-500 text-xs mt-1">Name is required</p>
-                  )}
                 </div>
 
                 <div>
@@ -218,9 +221,6 @@ export default function JoinPage() {
                     onChange={e => updateField('email', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  {form.email && !form.email.includes('@') && (
-                    <p className="text-red-500 text-xs mt-1">Enter a valid email address</p>
-                  )}
                 </div>
 
                 <div>
@@ -232,9 +232,6 @@ export default function JoinPage() {
                     onChange={e => updateField('phoneNumber', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  {form.phoneNumber && !/^\+?[1-9]\d{9,14}$/.test(form.phoneNumber) && (
-                    <p className="text-red-500 text-xs mt-1">Enter a valid phone number (10-15 digits)</p>
-                  )}
                 </div>
 
                 <div>
@@ -341,6 +338,8 @@ export default function JoinPage() {
             )}
           </div>
         </div>
+
+        <div ref={recaptchaRef} />
       </main>
     </div>
   );
