@@ -14,8 +14,8 @@ jobs:
         workspace: [services/api, apps/website, apps/admin]
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -31,11 +31,12 @@ jobs:
       SITE_URL: ${{ vars.SITE_URL || 'https://homehelp-website.vercel.app' }}
       ADMIN_URL: ${{ vars.ADMIN_URL || 'https://homehelp-admin.vercel.app' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install chromium
-      - run: python e2e_test.py
+      - run: pip install playwright
+      - run: python3 -m playwright install chromium
+      - run: python3 e2e_test.py
