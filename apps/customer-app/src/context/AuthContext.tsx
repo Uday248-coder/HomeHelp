@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { api } from '../api/client';
 import { User } from '../types';
 
@@ -26,28 +26,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadStoredAuth() {
     try {
-      const storedToken = await AsyncStorage.getItem('auth_token');
+      const storedToken = await SecureStore.getItemAsync('auth_token');
       if (storedToken) {
         setToken(storedToken);
         const userData = await api.getMe();
         setUser(userData);
       }
     } catch {
-      await AsyncStorage.removeItem('auth_token');
+      await SecureStore.deleteItemAsync('auth_token');
     } finally {
       setIsLoading(false);
     }
   }
 
   const login = useCallback(async (newToken: string) => {
-    await AsyncStorage.setItem('auth_token', newToken);
+    await SecureStore.setItemAsync('auth_token', newToken);
     setToken(newToken);
     const userData = await api.getMe();
     setUser(userData);
   }, []);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem('auth_token');
+    await SecureStore.deleteItemAsync('auth_token');
     setToken(null);
     setUser(null);
   }, []);

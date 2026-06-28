@@ -8,13 +8,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4774B] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
 
 const variants = {
-  primary: 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 shadow-sm hover:shadow-md',
-  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 dark:active:bg-gray-600',
-  outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 active:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800 dark:active:bg-gray-900',
-  ghost: 'bg-transparent hover:bg-gray-100 active:bg-gray-200 dark:hover:bg-gray-800 dark:active:bg-gray-900',
+  primary: 'bg-[#C4774B] text-white hover:bg-[#B06840] active:bg-[#9C5A36] shadow-sm hover:shadow-md',
+  secondary: 'bg-[#1A3C34] text-[#F0EBE4] hover:bg-[#2A5C50] active:bg-[#1A3C34]',
+  outline: 'border border-[#E4DFD6] bg-transparent hover:bg-[#F6F4EF] active:bg-[#E4DFD6] text-[#1C1C1C]',
+  ghost: 'bg-transparent hover:bg-[#F6F4EF] active:bg-[#E4DFD6] text-[#1C1C1C]',
   destructive: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm hover:shadow-md',
 };
 

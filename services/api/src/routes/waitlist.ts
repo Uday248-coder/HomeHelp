@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 export const waitlistRouter = Router();
 
@@ -22,7 +23,7 @@ waitlistRouter.post('/', async (req, res) => {
   }
 });
 
-waitlistRouter.get('/', async (_req, res) => {
+waitlistRouter.get('/', authMiddleware, adminMiddleware, async (_req, res) => {
   try {
     const entries = await prisma.waitlistEntry.findMany({ orderBy: { createdAt: 'desc' } });
     return res.json({ total: entries.length, entries });

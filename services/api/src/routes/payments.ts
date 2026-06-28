@@ -29,13 +29,21 @@ function verifySignature(orderId: string, paymentId: string, signature: string):
 
 paymentsRouter.post('/create-order', async (req, res) => {
   try {
-    const { bookingId, amount } = req.body;
-    if (!bookingId || !amount) {
-      return res.status(400).json({ error: 'bookingId and amount are required' });
+    const { bookingId } = req.body;
+    if (!bookingId) {
+      return res.status(400).json({ error: 'bookingId is required' });
     }
 
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const rate = booking.hourlyRate ? Number(booking.hourlyRate) : 0;
+    const hours = booking.durationHours ? Number(booking.durationHours) : 1;
+    const amount = parseFloat((rate * hours).toFixed(2));
+
+    if (amount <= 0) {
+      return res.status(400).json({ error: 'Cannot create payment: booking has no hourly rate or duration' });
+    }
 
     const platformFee = parseFloat((amount * 0.15).toFixed(2));
     const workerPayout = parseFloat((amount - platformFee).toFixed(2));

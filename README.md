@@ -1,6 +1,6 @@
 # HomeHelp
 
-On-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP (Bangalore).
+On-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP (Kolkata).
 
 ---
 
@@ -19,9 +19,9 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 
 | Service | Purpose | Status | Key Set On Render? |
 |---------|---------|--------|-------------------|
-| **Vercel** | Hosts website + admin dashboard | ✅ **Live & auto-deploying** from `master` branch | N/A |
-| **Render** | Hosts backend API | ✅ **Live & auto-deploying** from `master` branch | N/A |
-| **GitHub** | Source control + CI/CD via Actions | ✅ **Connected** — push to `master` triggers build + deploy | N/A |
+| **Vercel** | Hosts website + admin dashboard | ✅ **Live & auto-deploying** from `main` branch | N/A |
+| **Render** | Hosts backend API | ✅ **Live & auto-deploying** from `main` branch | N/A |
+| **GitHub** | Source control + CI/CD via Actions | ✅ **Connected** — push to `main` triggers build + deploy | N/A |
 | **Neon Postgres** | Database (serverless PostgreSQL) | ✅ **Connected** — Prisma ORM running migrations | ✅ `DATABASE_URL` |
 | **Upstash Redis** | OTP storage + rate limiting cache | ✅ **Connected** — serverless Redis SDK | ✅ `UPSTASH_REDIS_REST_URL` + `TOKEN` |
 | **Prisma** | ORM for database access | ✅ **Connected** — 6 models, full migrations | N/A |
@@ -63,7 +63,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 
 ### Marketing Website (`apps/website/`)
 - **Booking flow** (`/book`) — 4-step wizard: mode selection (Home Help / Driver), service details with type/address/schedule/duration/price, phone OTP auth, confirmation with booking creation
-- **Hero** — "Now Live in Bangalore", trust indicators, CTAs linked to `/book`
+- **Hero** — "Now Live in Kolkata", trust indicators, CTAs linked to `/book`
 - **Services** — Feature cards for both modes
 - **Pricing** — 3 cards (Home Help ₹199/hr, Driver ₹149/hr, Subscription ₹499/mo) with links to `/book`
 - **Testimonials** — 3 user cards with star ratings
@@ -135,9 +135,9 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 | Styling | Tailwind CSS 3.4 with HSL variables | ✅ Live |
 | Mobile (customer) | React Native + Expo | ✅ Coded in `apps/customer-app/`, needs `npx expo start` to run |
 | Mobile (worker) | React Native + Expo | ✅ Coded in `apps/worker-app/`, needs `npx expo start` to run |
-| Deploy (API) | Render (Node.js) | ✅ Auto-deploy from `master` branch |
-| Deploy (website) | Vercel (project: `homehelp-website`) | ✅ Auto-deploy from `master` branch |
-| Deploy (admin) | Vercel (project: `homehelp-admin`) | ✅ Auto-deploy from `master` branch |
+| Deploy (API) | Render (Node.js) | ✅ Auto-deploy from `main` branch |
+| Deploy (website) | Vercel (project: `homehelp-website`) | ✅ Auto-deploy from `main` branch |
+| Deploy (admin) | Vercel (project: `homehelp-admin`) | ✅ Auto-deploy from `main` branch |
 | CI/CD | GitHub Actions | ✅ Matrix build across all 3 workspaces |
 | Error tracking | Sentry (`@sentry/node`) | 🔌 Wired in Express middleware, DSN env var not set |
 
@@ -241,7 +241,7 @@ Set these on Render (API) and Vercel (website + admin):
 
 ## Deployment
 
-All services auto-deploy from `master` branch:
+All services auto-deploy from `main` branch:
 - **API**: Render (build: `npm install && npm run build`, start: `npm start`)
 - **Website**: Vercel (Root Directory: cleared, builds from `apps/website`)
 - **Admin**: Vercel (Root Directory: cleared, builds from `apps/admin`)

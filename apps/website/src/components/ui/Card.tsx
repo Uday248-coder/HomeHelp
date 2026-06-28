@@ -9,9 +9,9 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const variants = {
-  default: 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800',
-  outlined: 'bg-transparent border-2 border-gray-200 dark:border-gray-700',
-  elevated: 'bg-white dark:bg-gray-900 shadow-lg border-none',
+  default: 'bg-white border border-[#E4DFD6]',
+  outlined: 'bg-transparent border-2 border-[#E4DFD6]',
+  elevated: 'bg-white shadow-lg border-none',
 };
 
 const paddings = {
@@ -52,7 +52,7 @@ CardHeader.displayName = 'CardHeader';
 
 export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className = '', children, ...props }, ref) => (
-    <h3 ref={ref} className={`text-xl font-semibold text-gray-900 dark:text-white ${className}`} {...props}>
+        <h3 ref={ref} className={`text-xl font-semibold text-[#1C1C1C] ${className}`} {...props}>
       {children}
     </h3>
   )
@@ -61,7 +61,7 @@ CardTitle.displayName = 'CardTitle';
 
 export const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
   ({ className = '', children, ...props }, ref) => (
-    <p ref={ref} className={`text-gray-600 dark:text-gray-400 mt-1 ${className}`} {...props}>{children}</p>
+    <p ref={ref} className={`text-[#8C847C] mt-1 ${className}`} {...props}>{children}</p>
   )
 );
 CardDescription.displayName = 'CardDescription';
@@ -75,7 +75,7 @@ CardContent.displayName = 'CardContent';
 
 export const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = '', children, ...props }, ref) => (
-    <div ref={ref} className={`mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 flex items-center gap-3 ${className}`} {...props}>
+    <div ref={ref} className={`mt-6 pt-4 border-t border-[#E4DFD6] flex items-center gap-3 ${className}`} {...props}>
       {children}
     </div>
   )

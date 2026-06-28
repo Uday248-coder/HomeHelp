@@ -4,11 +4,19 @@ import { authMiddleware } from '../middleware/auth';
 
 export const workersRouter = Router();
 
-workersRouter.get('/', async (_req, res) => {
+workersRouter.get('/', authMiddleware, async (_req, res) => {
   try {
     const workers = await prisma.worker.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,
+      select: {
+        id: true,
+        name: true,
+        workerType: true,
+        averageRating: true,
+        photoUrl: true,
+        isAvailable: true,
+      },
     });
     return res.json({ workers });
   } catch (error) {
@@ -37,13 +45,31 @@ workersRouter.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-workersRouter.get('/:id', async (req, res) => {
+workersRouter.get('/:id', authMiddleware, async (req, res) => {
   try {
     const worker = await prisma.worker.findUnique({
       where: { id: req.params.id },
       include: { bookings: true, payouts: true },
     });
     if (!worker) return res.status(404).json({ error: 'Worker not found' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    const isOwnProfile = req.user!.phoneNumber === worker.phoneNumber;
+    const isAdmin = user?.isAdmin ?? false;
+
+    if (!isOwnProfile && !isAdmin) {
+      return res.json({
+        worker: {
+          id: worker.id,
+          name: worker.name,
+          workerType: worker.workerType,
+          averageRating: worker.averageRating,
+          photoUrl: worker.photoUrl,
+          isAvailable: worker.isAvailable,
+        },
+      });
+    }
+
     return res.json({ worker });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch worker' });

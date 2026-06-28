@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
 import * as Sentry from '@sentry/node';
@@ -15,6 +16,22 @@ import { requestLogger } from './middleware/validation';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many auth requests, please try again later' },
+});
+
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
@@ -25,6 +42,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 app.use(helmet());
+app.use(generalLimiter);
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:3000',
@@ -38,7 +56,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 
 app.use('/health', healthRouter);
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/workers', workersRouter);
 app.use('/api/payments', paymentsRouter);

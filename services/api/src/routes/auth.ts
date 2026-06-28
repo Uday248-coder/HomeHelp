@@ -54,14 +54,25 @@ authRouter.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ error: 'phoneNumber and otp are required' });
     }
 
+    const attemptKey = `otp_verify_attempts:${phoneNumber}`;
+    const attempts = await redis.get(attemptKey);
+    if (attempts && Number(attempts) >= 5) {
+      return res.status(429).json({ error: 'Too many failed attempts. Request a new OTP.' });
+    }
+
     const redisKey = `otp:${phoneNumber}`;
     const storedOtp = await redis.get(redisKey);
 
     if (storedOtp === null || storedOtp === undefined || String(storedOtp) !== String(otp)) {
+      const newCount = await redis.incr(attemptKey);
+      if (newCount <= 1) {
+        await redis.expire(attemptKey, 900);
+      }
       return res.status(401).json({ error: 'Invalid or expired OTP' });
     }
 
     await redis.del(redisKey);
+    await redis.del(attemptKey);
 
     const user = await prisma.user.upsert({
       where: { phoneNumber },

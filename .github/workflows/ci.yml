@@ -22,3 +22,20 @@ jobs:
       - run: npm ci
       - run: npm run lint --workspace=${{ matrix.workspace }}
       - run: npm run build --workspace=${{ matrix.workspace }}
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-build
+    env:
+      API_URL: ${{ vars.API_URL || 'https://homehelp-clbc.onrender.com' }}
+      SITE_URL: ${{ vars.SITE_URL || 'https://homehelp-website.vercel.app' }}
+      ADMIN_URL: ${{ vars.ADMIN_URL || 'https://homehelp-admin.vercel.app' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: python e2e_test.py

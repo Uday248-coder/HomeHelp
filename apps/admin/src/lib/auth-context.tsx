@@ -33,6 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback((newToken: string) => {
+    // TODO(security): Token stored in plain localStorage — XSS-readable.
+    // Migrate to httpOnly cookie session when possible after setting up a
+    // session endpoint. localStorage was chosen for simplicity in MVP but
+    // the admin dashboard holds the most sensitive data access.
     localStorage.setItem('admin_token', newToken);
     setToken(newToken);
   }, []);

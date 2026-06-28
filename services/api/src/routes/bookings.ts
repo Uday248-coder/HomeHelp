@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { RATE_TABLE } from '../lib/constants';
 import { Prisma } from '@prisma/client';
 
 export const bookingsRouter = Router();
@@ -26,12 +27,17 @@ bookingsRouter.get('/', async (req: Request, res: Response) => {
 
 bookingsRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { mode, serviceType, scheduledAt, customerAddress, customerLat, customerLng, durationHours, hourlyRate } = req.body;
+    const { mode, serviceType, scheduledAt, customerAddress, customerLat, customerLng, durationHours } = req.body;
     if (!mode || !serviceType) {
       return res.status(400).json({ error: 'mode and serviceType are required' });
     }
     if (!['home_help', 'driver'].includes(mode)) {
       return res.status(400).json({ error: 'mode must be home_help or driver' });
+    }
+
+    const hourlyRate = RATE_TABLE[mode];
+    if (!hourlyRate) {
+      return res.status(400).json({ error: 'Invalid mode for pricing' });
     }
 
     const booking = await prisma.booking.create({
@@ -44,7 +50,7 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
         customerLat: customerLat ? parseFloat(customerLat) : null,
         customerLng: customerLng ? parseFloat(customerLng) : null,
         durationHours: durationHours ? parseFloat(durationHours) : null,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        hourlyRate,
         status: 'pending',
       },
       include: { worker: true, payment: true },
@@ -99,6 +105,13 @@ bookingsRouter.get('/admin/all', async (req: Request, res: Response) => {
 
 bookingsRouter.get('/available', async (req: Request, res: Response) => {
   try {
+    const worker = await prisma.worker.findUnique({
+      where: { phoneNumber: req.user!.phoneNumber },
+    });
+    if (!worker || !worker.isActive) {
+      return res.status(403).json({ error: 'Only active workers can view available bookings' });
+    }
+
     const mode = req.query.mode as string | undefined;
     const where: Prisma.BookingWhereInput = {
       status: 'pending',
@@ -185,6 +198,7 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
 
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.status !== 'pending') return res.status(400).json({ error: 'Booking must be pending to assign' });
 
     const worker = await prisma.worker.findUnique({ where: { id: workerId } });
     if (!worker) return res.status(404).json({ error: 'Worker not found' });
@@ -205,8 +219,14 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
     const { otp } = req.body;
     if (!otp) return res.status(400).json({ error: 'OTP is required' });
 
+    const worker = await prisma.worker.findUnique({
+      where: { phoneNumber: req.user!.phoneNumber },
+    });
+    if (!worker) return res.status(403).json({ error: 'Worker profile not found' });
+
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.workerId !== worker.id) return res.status(403).json({ error: 'You are not the assigned worker' });
     if (booking.status !== 'assigned') return res.status(400).json({ error: 'Booking not in assigned state' });
     if (!booking.startOtp || booking.startOtp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
 
@@ -225,8 +245,14 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
     const { otp, rating, reviewText } = req.body;
     if (!otp) return res.status(400).json({ error: 'OTP is required' });
 
+    const worker = await prisma.worker.findUnique({
+      where: { phoneNumber: req.user!.phoneNumber },
+    });
+    if (!worker) return res.status(403).json({ error: 'Worker profile not found' });
+
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.workerId !== worker.id) return res.status(403).json({ error: 'You are not the assigned worker' });
     if (booking.status !== 'in_progress') return res.status(400).json({ error: 'Booking not in progress' });
     if (!booking.endOtp || booking.endOtp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
 

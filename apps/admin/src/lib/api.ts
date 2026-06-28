@@ -2,6 +2,8 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onren
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
+  // TODO(security): Token read from plain localStorage — XSS-readable.
+  // Migrate to httpOnly cookie session when possible. See auth-context.tsx.
   return localStorage.getItem('admin_token');
 }
 

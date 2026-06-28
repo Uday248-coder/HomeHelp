@@ -1,11 +1,12 @@
 """HomeHelp E2E Tests — Backend API + Website + Admin"""
+import os
 import sys
 import json
 from playwright.sync_api import sync_playwright
 
-API_URL = 'https://homehelp-clbc.onrender.com'
-SITE_URL = 'https://homehelp-website.vercel.app'
-ADMIN_URL = 'https://homehelp-admin.vercel.app'
+API_URL = os.environ.get('API_URL', 'https://homehelp-clbc.onrender.com')
+SITE_URL = os.environ.get('SITE_URL', 'https://homehelp-website.vercel.app')
+ADMIN_URL = os.environ.get('ADMIN_URL', 'https://homehelp-admin.vercel.app')
 
 passed = 0
 failed = 0

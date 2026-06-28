@@ -189,9 +189,9 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 
 ## Deployment Notes
 
-- **API auto-deploys** from `master` branch via Render (linked repo)
-- **Website auto-deploys** from `master` branch via Vercel (linked repo)
-- **Admin auto-deploys** from `master` branch via Vercel (linked repo)
+- **API auto-deploys** from `main` branch via Render (linked repo)
+- **Website auto-deploys** from `main` branch via Vercel (linked repo)
+- **Admin auto-deploys** from `main` branch via Vercel (linked repo)
 - `.env` files are gitignored — secrets set via Render/Vercel dashboards
 - Build command for API: `npm install && npm run build` (runs `prisma generate && tsc`)
 - Start command: `npm start`
@@ -210,3 +210,9 @@ Full context in `HomeHelp_Bud101_Prompt.md`. TL;DR:
 - Launch city: TBD (need density analysis)
 - Revenue: 15-20% commission, ₹499-999/mo subscription, surge pricing
 - Risk: worker no-shows (10% standby pool), trust/safety (OTP gating), competition (differentiate on Driver mode)
+
+---
+
+## Required Reading for Future Sessions
+
+Before making any changes to `services/api/`, read **`services/api/SECURITY_CHECKLIST.md`** — it contains the standing security requirements every route change must satisfy. Failure to follow these rules will reintroduce the same vulnerabilities this session fixed.

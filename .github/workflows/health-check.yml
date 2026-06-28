@@ -1,0 +1,19 @@
+name: Health Check
+
+on:
+  schedule:
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://homehelp-clbc.onrender.com/health)
+          if [ "$response" != "200" ]; then
+            echo "Health check failed with status $response"
+            exit 1
+          fi
+          echo "Health check passed (status 200)"

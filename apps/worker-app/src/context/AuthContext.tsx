@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { api } from '../api/client';
 import { Worker } from '../types';
 
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadToken() {
     try {
-      const storedToken = await AsyncStorage.getItem('worker_token');
+      const storedToken = await SecureStore.getItemAsync('worker_token');
       if (storedToken) {
         setToken(storedToken);
         await fetchProfile(storedToken);
@@ -43,19 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await api.getWorkerProfile();
       setWorker(me);
     } catch {
-      await AsyncStorage.removeItem('worker_token');
+      await SecureStore.deleteItemAsync('worker_token');
       setToken(null);
     }
   }
 
   const login = useCallback(async (newToken: string) => {
-    await AsyncStorage.setItem('worker_token', newToken);
+    await SecureStore.setItemAsync('worker_token', newToken);
     setToken(newToken);
     await fetchProfile(newToken);
   }, []);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem('worker_token');
+    await SecureStore.deleteItemAsync('worker_token');
     setToken(null);
     setWorker(null);
   }, []);
