@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { validateEmail } from '../middleware/validation';
 
 export const waitlistRouter = Router();
 
@@ -9,6 +10,9 @@ waitlistRouter.post('/', async (req, res) => {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
     const existing = await prisma.waitlistEntry.findUnique({ where: { email } });

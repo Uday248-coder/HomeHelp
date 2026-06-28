@@ -118,6 +118,17 @@ paymentsRouter.post('/verify', async (req, res) => {
 
 paymentsRouter.get('/booking/:bookingId', async (req, res) => {
   try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: req.params.bookingId },
+    });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    const isAdmin = user?.isAdmin ?? false;
+    if (booking.userId !== req.user!.userId && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     const payment = await prisma.payment.findUnique({
       where: { bookingId: req.params.bookingId },
     });

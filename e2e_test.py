@@ -95,12 +95,13 @@ def check_api():
             pass
     test('Rate limit triggers after 5 attempts', rate_limited)
 
-    # Worker endpoints (public read)
+    # Worker endpoints (auth required — expect 401 for unauthenticated)
     try:
-        resp = urllib.request.urlopen(f'{API_URL}/api/workers', timeout=10)
-        data = json.loads(resp.read())
-        test('List workers returns 200', resp.status == 200)
-        test('List workers has workers array', 'workers' in data)
+        req = urllib.request.Request(f'{API_URL}/api/workers')
+        resp = urllib.request.urlopen(req, timeout=10)
+        test('List workers should require auth', False, 'unauthenticated request succeeded')
+    except urllib.error.HTTPError as e:
+        test('List workers rejected without auth', e.code == 401, f'got {e.code}')
     except Exception as e:
         test('List workers endpoint reachable', False, str(e))
 
@@ -122,7 +123,7 @@ def check_website():
             hero = page.locator('h1')
             test('Hero heading exists', hero.count() > 0)
             hero_text = hero.first.text_content()
-            test('Hero mentions services or drivers', 'Home' in (hero_text or '') or 'Driver' in (hero_text or ''), (hero_text or '')[:60])
+            test('Hero mentions services or drivers', 'cleaning' in (hero_text or '') or 'driving' in (hero_text or '') or 'Home' in (hero_text or '') or 'Driver' in (hero_text or ''), (hero_text or '')[:60])
             cta_buttons = page.locator('button, a[href="#waitlist"]')
             cta_visible = cta_buttons.first.is_visible() if cta_buttons.count() > 0 else False
             test('CTA button visible', cta_visible)
