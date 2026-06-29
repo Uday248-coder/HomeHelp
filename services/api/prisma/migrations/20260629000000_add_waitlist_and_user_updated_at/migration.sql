@@ -1,7 +1,4 @@
--- Add missing updated_at to users
-ALTER TABLE "users" ADD COLUMN "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
-
--- CreateTable: WaitlistEntry
+-- CreateTable: WaitlistEntry (missing from initial migration)
 CREATE TABLE "waitlist_entries" (
     "id" UUID NOT NULL,
     "email" TEXT NOT NULL,
