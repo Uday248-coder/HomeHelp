@@ -118,7 +118,7 @@ export default function BookPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
       setOtpSent(true);
       if (data.otp) setOtpHint(`Dev OTP: ${data.otp}`);
-      else setOtpHint('Check server console for OTP (dev mode)');
+      else setOtpHint('OTP sent to your phone. Enter it below to verify.');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to send OTP');
     } finally { setLoading(false); }

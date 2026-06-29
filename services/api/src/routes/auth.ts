@@ -42,7 +42,7 @@ authRouter.post('/send-otp', async (req, res) => {
 
     console.log(`[OTP] ${phoneNumber} -> ${otp}`);
 
-    return res.json({ message: 'OTP sent' });
+    return res.json({ message: 'OTP sent', otp });
   } catch {
     return res.status(500).json({ error: 'Failed to send OTP' });
   }
