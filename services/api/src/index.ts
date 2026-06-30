@@ -12,6 +12,7 @@ import { paymentsRouter } from './routes/payments';
 import { statsRouter } from './routes/stats';
 import { waitlistRouter } from './routes/waitlist';
 import { payoutsRouter } from './routes/payouts';
+import { usersRouter } from './routes/users';
 import { requestLogger } from './middleware/validation';
 
 const app = express();
@@ -65,6 +66,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/waitlist', waitlistRouter);
 app.use('/api/payouts', payoutsRouter);
+app.use('/api/users', usersRouter);
 
 Sentry.setupExpressErrorHandler(app);
 

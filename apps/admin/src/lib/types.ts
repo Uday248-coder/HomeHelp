@@ -76,3 +76,43 @@ export interface AdminUser {
   role: 'admin' | 'superadmin';
   createdAt: string;
 }
+
+export interface Customer {
+  id: string;
+  phoneNumber: string;
+  name?: string | null;
+  email?: string | null;
+  isAdmin: boolean;
+  bookingCount: number;
+  totalSpent: number;
+  createdAt: string;
+}
+
+export interface AnalyticsData {
+  dailyRevenue: { date: string; revenue: number }[];
+  bookingFunnel: { status: string; count: number }[];
+  totalRevenueThisPeriod: number;
+  topWorkers: {
+    id: string;
+    name: string;
+    workerType: string;
+    totalJobs: number;
+    completedJobs: number;
+    averageRating: number;
+    isAvailable: boolean;
+  }[];
+  modeBreakdown: { homeHelp: number; driver: number };
+  workerStats: { total: number; available: number };
+}
+
+export interface CustomerBooking {
+  id: string;
+  mode: string;
+  serviceType: string;
+  status: string;
+  totalAmount?: number | null;
+  createdAt: string;
+  completedAt?: string | null;
+  worker?: { name: string } | null;
+  payment?: { amount: number; status: string } | null;
+}

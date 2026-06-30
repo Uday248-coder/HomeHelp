@@ -49,6 +49,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Login flow** — **Firebase phone auth with invisible reCAPTCHA**, ambient gradient background, `card-dashboard` glass card, spinners, proper validation
 - **Security** — Authentication handled via `httpOnly` cookies (managed automatically by API client)
 - **Components** — Sidebar (gradient logo, hover-state refinements), StatCard (group-hover icon scale), BarChart (gradient bar fills, hover highlight), DonutChart (brightness hover), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
+- **Pages** — Dashboard, Customers (searchable table + booking history modal), Bookings, Analytics (date range picker, revenue chart, booking funnel, top workers), Workers, Payouts (status filter + process/mark-paid actions), Settings
 - **Semantic CSS** — HSL design tokens with `--accent`, `--accent-hover`, `--border-hover`, `card-dashboard`, `fade-in`/`slide-in`/`scale-in` utilities
 - **API helper** — centralized `api.ts` with `credentials: 'include'` for automatic cookie handling, buildQuery helper, retry logic
 
@@ -241,7 +242,7 @@ All tables in `services/api/prisma/schema.prisma`:
 
 ## Key API Endpoints
 
-See: `services/api/src/routes/`
+See: `services/api/src/routes/` (new: `users.ts`, enhanced: `payouts.ts` + `stats.ts`)
 
 | Route | Method | Status | Description |
 |-------|--------|--------|-------------|
@@ -267,7 +268,14 @@ See: `services/api/src/routes/`
 | `/api/stats/dashboard` | GET | ✅ Live | Live admin dashboard stats (auth+admin) |
 | `/api/stats/revenue/weekly` | GET | ✅ Live | Last 7 days revenue (auth+admin) |
 | `/api/waitlist` | GET/POST | ✅ Live | Waitlist signup with DB persistence |
-| `/api/payouts` | GET | ✅ Live | List payouts (admin) |
+| `/api/payouts` | GET | ✅ Live | List payouts (admin, filterable by status) |
+| `/api/payouts/process` | POST | ✅ Live | Create payout batches for a week range (admin) |
+| `/api/payouts/:id/mark-paid` | POST | ✅ Live | Mark payout as processed (admin) |
+| `/api/payouts/:id` | GET | ✅ Live | Get payout detail (admin) |
+| `/api/users` | GET | ✅ Live | List all customers (admin, paginated, searchable) |
+| `/api/users/:id` | GET | ✅ Live | Get customer detail (admin) |
+| `/api/users/:id/bookings` | GET | ✅ Live | Get customer booking history (admin) |
+| `/api/stats/analytics` | GET | ✅ Live | Deep analytics with date range, funnel, mode breakdown (admin) |
 
 ## How Another AI Can Resume
 
@@ -282,12 +290,12 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 ## What to Build Next (Priority Order)
 
 ### Phase 0 — Polish & Production (In Progress)
-1. Add SMS provider for real OTP delivery (currently logged to console)
-2. Set Sentry DSN for error tracking
-3. Add proper loading skeletons to admin dashboard
+1. Add SMS provider for real OTP delivery — ✅ Code ready (MSG91), set `MSG91_API_KEY` + `MSG91_TEMPLATE_ID` on Render
+2. Set Sentry DSN — ✅ Code wired, set `SENTRY_DSN` on Render
+3. Loading skeleton polish for admin dashboard — ✅ Done in Session 6
 4. **Set `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website** ✅
-5. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render**
-6. **Add Vercel URLs to Firebase authorized domains**
+5. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render** — ✅ Code reads from env, just need to set it
+6. **Add Vercel URLs to Firebase authorized domains** — Config only
 
 ### Phase 1 — Mobile apps (2+ weeks)
 7. Customer Expo app (React Native) with mode switcher

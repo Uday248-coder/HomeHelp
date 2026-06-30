@@ -86,8 +86,14 @@ export const api = {
 
   getWeeklyRevenue: () => fetchAPI('/api/stats/revenue/weekly'),
 
-  getPayouts: (params?: { page?: number; limit?: number }) =>
+  getPayouts: (params?: { page?: number; limit?: number; status?: string }) =>
     fetchAPI('/api/payouts' + buildQuery(params as Record<string, string | number>)),
+
+  processPayouts: (weekStartDate: string, weekEndDate: string) =>
+    fetchAPI('/api/payouts/process', { method: 'POST', body: JSON.stringify({ weekStartDate, weekEndDate }) }),
+
+  markPayoutPaid: (id: string, razorpayPayoutId?: string) =>
+    fetchAPI(`/api/payouts/${id}/mark-paid`, { method: 'POST', body: JSON.stringify({ razorpayPayoutId }) }),
 
   getBookings: (params?: { page?: number; status?: string; search?: string }) =>
     fetchAPI('/api/bookings/admin/all' + buildQuery(params as Record<string, string | number>)),
@@ -132,4 +138,14 @@ export const api = {
   getUser: () => fetchAPI('/api/auth/me'),
 
   getPayment: (bookingId: string) => fetchAPI(`/api/payments/booking/${bookingId}`),
+
+  getAnalytics: (params?: { startDate?: string; endDate?: string }) =>
+    fetchAPI('/api/stats/analytics' + buildQuery(params as Record<string, string | number>)),
+
+  getCustomers: (params?: { page?: number; q?: string }) =>
+    fetchAPI('/api/users' + buildQuery(params as Record<string, string | number>)),
+
+  getCustomer: (id: string) => fetchAPI(`/api/users/${id}`),
+
+  getCustomerBookings: (id: string) => fetchAPI(`/api/users/${id}/bookings`),
 };
