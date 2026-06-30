@@ -220,6 +220,42 @@ cd apps/worker-app   && npx expo start
 
 ---
 
+## Firebase Test Phone Auth Setup (Zero-Cost)
+
+Auth uses **Firebase Phone Authentication with test numbers** — no SMS gateway needed, zero cost.
+
+### Step 1: Set up Firebase project (one-time)
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Select project `homehelp-cdb69` (or create new)
+3. Enable **Authentication** → **Sign-in method** → **Phone** → **Enable**
+4. Go to **Service accounts** → **Generate new private key** → download JSON
+5. Set the JSON as `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render
+
+### Step 2: Add test phone numbers (for unlimited free OTP)
+1. Firebase Console → **Authentication** → **Sign-in method** → **Phone** → **Test phone numbers**
+2. Click **Add phone number**
+3. Enter `+91 9999988888` with test code `123456`
+4. Add any other development numbers you need
+5. These numbers will **not** send real SMS — OTP `123456` always works
+
+### Step 3: Add authorized domains
+Firebase Console → **Authentication** → **Settings** → **Authorized domains**:
+```
+homehelp-admin.vercel.app
+homehelp-website.vercel.app
+localhost
+```
+
+### How it works
+| Step | Detail | Cost |
+|------|--------|------|
+| User enters phone | Frontend calls Firebase `signInWithPhoneNumber` | Free (reCAPTCHA) |
+| Firebase processes | If whitelisted as test → no SMS sent, OTP is known | **$0** |
+| User enters OTP | `confirmation.confirm(otp)` → Firebase ID token | Free |
+| Backend verifies | `POST /api/auth/firebase` → Firebase Admin SDK verifies → JWT cookie | Free |
+
+---
+
 ## Environment Variables
 
 Set these on Render (API) and Vercel (website + admin):

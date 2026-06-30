@@ -213,6 +213,17 @@ HomeHelp/
 └── HomeHelp_Bud101_Prompt.md  # Full product brief
 ```
 
+## Firebase Test Phone Auth (Zero-Cost Setup)
+
+Auth uses Firebase Phone Authentication with test numbers — no real SMS, no paid gateway.
+
+**Console setup:** Firebase Console → Authentication → Sign-in method → Phone → Enable
+**Test numbers:** Add `+91 9999988888` with test OTP `123456` under Test phone numbers
+**Authorized domains:** Add `homehelp-admin.vercel.app`, `homehelp-website.vercel.app`, `localhost`
+**Service key:** Generate from Service accounts tab → set `FIREBASE_SERVICE_ACCOUNT_KEY` on Render
+
+**UI hints:** LoginScreen and `/join` page show test number hints in development mode.
+
 ## Credentials Needed
 
 These are stored as env vars on Render. For local dev, add to `services/api/.env`.
@@ -284,6 +295,8 @@ See: `services/api/src/routes/` (new: `users.ts`, enhanced: `payouts.ts` + `stat
 3. **Set env vars**: Copy `.env.example` to `.env`, fill in credentials
 4. **Run migrations**: `npm run db:migrate` in `services/api`
 5. **Start dev**: `npm run dev:api` for backend, `npm run dev:website` for frontend
+
+**Firebase setup:** Enable Phone sign-in in Firebase Console → add test number `+91 9999988888` with OTP `123456`. No real SMS, unlimited free OTP.
 
 No special setup needed. The workspace config, TypeScript, Prisma, and all dependencies are ready.
 
