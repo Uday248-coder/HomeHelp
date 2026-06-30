@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,18 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../constants/theme';
-import { api } from '../api/client';
-import { Payout } from '../types';
+import { colors, spacing, borderRadius, fontSize, shadow } from '../../src/constants/theme';
+import { api } from '../../src/api/client';
+import { Payout } from '../../src/types';
 
 export default function EarningsScreen() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEarnings();
-    }, [])
-  );
+  useEffect(() => {
+    loadEarnings();
+  }, []);
 
   async function loadEarnings() {
     try {

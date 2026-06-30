@@ -122,7 +122,11 @@ export default function BookPage() {
     setError(''); setLoading(true);
     try {
       const fullPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-      const result = await sendPhoneOTP(fullPhone);
+      const verifier = recaptchaVerifierRef.current;
+      if (!verifier) {
+        throw new Error('Recaptcha not initialized. Please try again.');
+      }
+      const result = await sendPhoneOTP(fullPhone, verifier);
       if (!result.success) throw new Error(result.error || 'Failed to send OTP');
       setVerificationId(result.verificationId || null);
       setOtpSent(true);

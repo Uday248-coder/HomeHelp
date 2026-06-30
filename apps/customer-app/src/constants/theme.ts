@@ -1,21 +1,21 @@
 export const colors = {
-  primary: '#059669',
-  primaryDark: '#047857',
-  secondary: '#0d9488',
-  background: '#f9fafb',
-  card: '#ffffff',
-  text: '#111827',
-  textMuted: '#6b7280',
-  error: '#dc2626',
-  warning: '#f59e0b',
-  border: '#e5e7eb',
-  white: '#ffffff',
+  primary: '#1A3C34',
+  primaryDark: '#122D26',
+  secondary: '#C4774B',
+  background: '#F6F4EF',
+  card: '#FFFFFF',
+  text: '#1A2C2B',
+  textMuted: '#6B7280',
+  error: '#DC2626',
+  warning: '#F59E0B',
+  border: '#E5E7EB',
+  white: '#FFFFFF',
   black: '#000000',
-  statusPending: '#f59e0b',
-  statusAssigned: '#3b82f6',
-  statusInProgress: '#10b981',
-  statusCompleted: '#6b7280',
-  statusCancelled: '#ef4444',
+  statusPending: '#F59E0B',
+  statusAssigned: '#3B82F6',
+  statusInProgress: '#10B981',
+  statusCompleted: '#6B7280',
+  statusCancelled: '#EF4444',
 };
 
 export const spacing = {
@@ -42,9 +42,9 @@ export const fonts = {
 
 export const borderRadius = {
   sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  md: 16,
+  lg: 24,
+  xl: 32,
   full: 9999,
 };
 

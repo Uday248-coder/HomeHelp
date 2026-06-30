@@ -8,16 +8,17 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../constants/theme';
-import { api } from '../api/client';
-import { Booking } from '../types';
+import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
+import { api } from '../../src/api/client';
+import { Booking } from '../../src/types';
+import { useRouter } from 'expo-router';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: '#fef3c7', text: '#92400e', label: 'Pending' },
-  assigned: { bg: '#dbeafe', text: '#1e40af', label: 'Assigned' },
-  in_progress: { bg: '#d1fae5', text: '#065f46', label: 'In Progress' },
-  completed: { bg: '#f3f4f6', text: '#374151', label: 'Completed' },
-  cancelled: { bg: '#fee2e2', text: '#991b1b', label: 'Cancelled' },
+  pending: { bg: '#FEF3C7', text: '#92400E', label: 'Pending' },
+  assigned: { bg: '#DBEAFE', text: '#1E40AF', label: 'Assigned' },
+  in_progress: { bg: '#D1FAE5', text: '#065F46', label: 'In Progress' },
+  completed: { bg: '#F3F4F6', text: '#374151', label: 'Completed' },
+  cancelled: { bg: '#FEE2E2', text: '#991B1B', label: 'Cancelled' },
 };
 
 function formatDate(dateStr: string) {
@@ -50,24 +51,32 @@ function BookingItem({
           </View>
         </View>
         <Text style={styles.modeText}>
-          {item.mode === 'home_help' ? '🧹 Home Help' : '🚗 Driver'}
+          {item.mode === 'home_help' ? 'Home Help' : 'Driver'}
         </Text>
       </View>
 
       <View style={styles.bookingDetails}>
-        <Text style={styles.detailText}>📅 {formatDate(item.createdAt)}</Text>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Date</Text>
+          <Text style={styles.detailValue}>{formatDate(item.createdAt)}</Text>
+        </View>
         {item.durationHours && (
-          <Text style={styles.detailText}>⏱ {item.durationHours}h</Text>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Duration</Text>
+            <Text style={styles.detailValue}>{item.durationHours}h</Text>
+          </View>
         )}
-        {item.totalAmount != null && (
-          <Text style={styles.amountText}>₹{item.totalAmount}</Text>
-        )}
+        <View style={styles.amountContainer}>
+          <Text style={styles.amountLabel}>Total</Text>
+          <Text style={styles.amountText}>₹{item.totalAmount ?? '0'}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
 }
 
-export default function BookingsScreen({ navigation }: any) {
+export default function BookingsScreen() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,18 +97,16 @@ export default function BookingsScreen({ navigation }: any) {
     fetchBookings();
   }, [fetchBookings]);
 
-  useEffect(() => {
-    const unsubscribe = navigation?.addListener?.('focus', fetchBookings);
-    return unsubscribe;
-  }, [navigation, fetchBookings]);
-
   function handleRefresh() {
     setRefreshing(true);
     fetchBookings();
   }
 
   function handlePress(id: string) {
-    navigation.navigate('BookingDetail', { bookingId: id });
+    router.push({
+      pathname: '/booking/[id]',
+      params: { id },
+    });
   }
 
   if (loading) {
@@ -127,10 +134,10 @@ export default function BookingsScreen({ navigation }: any) {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <View style={styles.emptyIconCircle} />
             <Text style={styles.emptyTitle}>No bookings yet</Text>
             <Text style={styles.emptySubtitle}>
-              Book a home help or driver service to get started
+              Your upcoming service bookings will appear here.
             </Text>
           </View>
         }
@@ -161,13 +168,13 @@ const styles = StyleSheet.create({
   },
   bookingCard: {
     backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadows.card,
   },
   bookingHeader: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   bookingTitleRow: {
     flexDirection: 'row',
@@ -177,46 +184,76 @@ const styles = StyleSheet.create({
   },
   serviceType: {
     fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightSemiBold,
+    fontWeight: fonts.weightBold,
     color: colors.text,
     flex: 1,
   },
   statusBadge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: borderRadius.full,
     marginLeft: spacing.sm,
   },
   statusText: {
-    fontSize: fonts.sizeSm,
-    fontWeight: fonts.weightMedium,
+    fontSize: 11,
+    fontWeight: fonts.weightSemiBold,
   },
   modeText: {
     fontSize: fonts.sizeSm,
     color: colors.textMuted,
+    fontWeight: fonts.weightMedium,
   },
   bookingDetails: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  detailText: {
-    fontSize: fonts.sizeSm,
+  detailItem: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 10,
     color: colors.textMuted,
+    textTransform: 'uppercase',
+    fontWeight: fonts.weightSemiBold,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: fonts.sizeSm,
+    color: colors.text,
+    fontWeight: fonts.weightMedium,
+  },
+  amountContainer: {
+    alignItems: 'flex-end',
+  },
+  amountLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    fontWeight: fonts.weightSemiBold,
+    marginBottom: 2,
   },
   amountText: {
     fontSize: fonts.sizeMd,
     fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginLeft: 'auto',
+    color: colors.primary,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+    ...shadows.card,
   },
   emptyTitle: {
     fontSize: fonts.sizeXl,
@@ -228,5 +265,8 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizeMd,
     color: colors.textMuted,
     textAlign: 'center',
+    paddingHorizontal: spacing.xl,
   },
 });
+
+(End of file - total 232 lines)

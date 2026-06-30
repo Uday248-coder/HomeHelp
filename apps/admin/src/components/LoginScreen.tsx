@@ -15,14 +15,15 @@ export default function LoginScreen() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const recaptchaRef = useRef<HTMLDivElement>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   useEffect(() => {
-    if (!(window as unknown as Record<string, boolean>).recaptchaVerifier) {
-      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current!, {
+    if (!recaptchaVerifierRef.current && recaptchaRef.current) {
+      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current, {
         size: 'invisible',
       });
-      (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier = verifier;
+      recaptchaVerifierRef.current = verifier;
     }
   }, []);
 
@@ -34,7 +35,10 @@ export default function LoginScreen() {
     }
     setSendingOtp(true);
     try {
-      const verifier = (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier;
+      const verifier = recaptchaVerifierRef.current;
+      if (!verifier) {
+        throw new Error('Recaptcha not initialized. Please try again.');
+      }
       const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
       const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
       confirmationRef.current = confirmation;

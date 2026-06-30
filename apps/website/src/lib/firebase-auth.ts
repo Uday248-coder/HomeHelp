@@ -3,7 +3,7 @@ import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, PhoneAuthProvider, s
 import type { UserCredential } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB6lB9V3e4d7f2g1h0j9k8l7m6n5o4p3q2",
+  apiKey: "AIzaSyARrlLoEYiVhJoBTVMMpGPO8mJzTpGhRUI",
   authDomain: "homehelp-cdb69.firebaseapp.com",
   projectId: "homehelp-cdb69",
   storageBucket: "homehelp-cdb69.firebasestorage.app",
@@ -21,17 +21,26 @@ export interface AuthResult {
   userCredential?: UserCredential;
 }
 
-export async function sendPhoneOTP(phoneNumber: string): Promise<AuthResult> {
+export async function sendPhoneOTP(phoneNumber: string, verifierOrId?: RecaptchaVerifier | string): Promise<AuthResult> {
   try {
     // Format phone number for India
     const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber.replace(/\D/g, '')}`;
     
-    // Create invisible reCAPTCHA verifier
-    const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-    });
+    let verifier: RecaptchaVerifier;
+    if (typeof verifierOrId === 'string') {
+      verifier = new RecaptchaVerifier(auth, verifierOrId, {
+        size: 'invisible',
+      });
+    } else if (verifierOrId instanceof RecaptchaVerifier) {
+      verifier = verifierOrId;
+    } else {
+      // Default to 'recaptcha-container' if nothing is provided
+      verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+      });
+    }
     
-    const confirmation = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
+    const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
     
     return {
       success: true,

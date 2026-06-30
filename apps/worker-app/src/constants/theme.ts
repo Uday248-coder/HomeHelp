@@ -1,16 +1,16 @@
 export const colors = {
-  primary: '#059669',
-  primaryDark: '#047857',
-  secondary: '#0d9488',
-  background: '#f9fafb',
-  card: '#ffffff',
-  text: '#111827',
-  textMuted: '#6b7280',
-  success: '#16a34a',
-  warning: '#f59e0b',
-  error: '#dc2626',
-  border: '#e5e7eb',
-  white: '#ffffff',
+  primary: '#1A3C34',
+  primaryDark: '#122D26',
+  secondary: '#C4774B',
+  background: '#F6F4EF',
+  card: '#FFFFFF',
+  text: '#1A2C2B',
+  textMuted: '#6B7280',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  error: '#DC2626',
+  border: '#E5E7EB',
+  white: '#FFFFFF',
   black: '#000000',
 };
 
@@ -25,23 +25,27 @@ export const spacing = {
 
 export const borderRadius = {
   sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
+  md: 16,
+  lg: 24,
+  xl: 32,
   full: 999,
 };
 
-export const fontSize = {
-  xs: 12,
-  sm: 14,
-  md: 16,
-  lg: 18,
-  xl: 22,
-  xxl: 28,
-  xxxl: 34,
+export const fonts = {
+  sizeXs: 12,
+  sizeSm: 14,
+  sizeMd: 16,
+  sizeLg: 18,
+  sizeXl: 22,
+  sizeXxl: 28,
+  sizeXxxl: 34,
+  weightRegular: '400' as const,
+  weightMedium: '500' as const,
+  weightSemiBold: '600' as const,
+  weightBold: '700' as const,
 };
 
-export const shadow = {
+export const shadows = {
   card: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

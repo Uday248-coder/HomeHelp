@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,9 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../constants/theme';
-import { api } from '../api/client';
-import { Booking } from '../types';
+import { colors, spacing, borderRadius, fontSize, shadow } from '../src/constants/theme';
+import { api } from '../src/api/client';
+import { Booking } from '../src/types';
 
 type ActionType = 'start' | 'complete' | null;
 
@@ -28,11 +27,9 @@ export default function ActiveJobScreen() {
   const [rating, setRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadActiveJobs();
-    }, [])
-  );
+  useEffect(() => {
+    loadActiveJobs();
+  }, []);
 
   async function loadActiveJobs() {
     try {

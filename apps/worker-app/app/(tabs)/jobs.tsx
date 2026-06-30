@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,9 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../constants/theme';
-import { api } from '../api/client';
-import { Booking } from '../types';
+import { colors, spacing, borderRadius, fontSize, shadow } from '../../src/constants/theme';
+import { api } from '../../src/api/client';
+import { Booking } from '../../src/types';
 
 export default function JobsScreen() {
   const [jobs, setJobs] = useState<Booking[]>([]);
@@ -20,11 +19,9 @@ export default function JobsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadJobs();
-    }, [])
-  );
+  useEffect(() => {
+    loadJobs();
+  }, []);
 
   async function loadJobs() {
     try {

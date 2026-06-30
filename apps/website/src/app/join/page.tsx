@@ -66,6 +66,9 @@ export default function JoinPage() {
     setLoading(true);
     try {
       const verifier = (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier;
+      if (!verifier) {
+        throw new Error('Recaptcha not initialized. Please try again.');
+      }
       const formattedPhone = form.phoneNumber.startsWith('+') ? form.phoneNumber : `+${form.phoneNumber}`;
       const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
       confirmationRef.current = confirmation;

@@ -11,8 +11,8 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../constants/theme';
-import { useAuth } from '../context/AuthContext';
+import { colors, spacing, fonts, borderRadius, shadows } from '../src/constants/theme';
+import { useAuth } from '../src/context/AuthContext';
 
 const OTP_EXPIRY_SECONDS = 300;
 

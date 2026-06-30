@@ -8,9 +8,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../constants/theme';
-import { api } from '../api/client';
-import { Booking } from '../types';
+import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
+import { api } from '../../src/api/client';
+import { Booking } from '../../src/types';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   pending: { bg: '#fef3c7', text: '#92400e', label: 'Pending' },
@@ -64,8 +65,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function BookingDetailScreen({ route, navigation }: any) {
-  const { bookingId } = route.params;
+export default function BookingDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -73,17 +75,17 @@ export default function BookingDetailScreen({ route, navigation }: any) {
 
   useEffect(() => {
     fetchBooking();
-  }, [bookingId]);
+  }, [id]);
 
   async function fetchBooking() {
     setLoading(true);
     try {
-      const data = await api.getBooking(bookingId);
+      const data = await api.getBooking(id);
       setBooking(data);
       setLocalRating(data.ratingByUser || 0);
     } catch {
       Alert.alert('Error', 'Failed to load booking details');
-      navigation.goBack();
+      router.back();
     } finally {
       setLoading(false);
     }
@@ -98,7 +100,7 @@ export default function BookingDetailScreen({ route, navigation }: any) {
         onPress: async () => {
           setActionLoading(true);
           try {
-            await api.cancelBooking(bookingId);
+            await api.cancelBooking(id);
             await fetchBooking();
           } catch (err: any) {
             Alert.alert('Error', err.message);
@@ -116,7 +118,7 @@ export default function BookingDetailScreen({ route, navigation }: any) {
   }
 
   function handleBookAgain() {
-    navigation.navigate('Home');
+    router.replace('/');
   }
 
   if (loading) {

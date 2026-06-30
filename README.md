@@ -72,7 +72,9 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **FAQ** — 6-item accordion with smooth animations
 - **UI** — Sticky header, backdrop blur, custom animations (fadeInUp, slideUp, scaleIn), responsive design
 
-### Mobile Apps
+### Mobile Apps (Premium Design)
+- **Design System**: Implemented a unified brand identity using Deep Pine (#1A3C34) and Warm Clay (#C4774B) with a Warm Off-white background.
+- **UI Polish**: High-end look with generous border-radius (up to 32px), soft shadows, and refined typography, removing all cartoonish elements for a professional feel.
 
 #### Customer App (`apps/customer-app/`) — Expo/React Native
 - **Auth** — Phone → OTP login with AsyncStorage persistence
