@@ -4,7 +4,7 @@
 
 HomeHelp is an on-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP (Kolkata).
 
-## Current State (Post-Session 5 — 98% MVP Complete + Security Hardening)
+## Current State (Post-Session 6 — Design System Overhaul + Premium UI)
 
 ### Live URLs
 | App | URL | Status |
@@ -40,16 +40,16 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - `.env.example` with all documented env vars
 - **SECURITY_CHECKLIST.md** — 15 standing security requirements for all future changes
 
-#### Admin Dashboard (`apps/admin/`) — Complete Redesign
+#### Admin Dashboard (`apps/admin/`) — Premium UI
 - **Professional dark sidebar** with navigation (Dashboard, Bookings, Workers, Payouts, Settings)
-- **Dark mode toggle** — persisted to localStorage, `.dark` class on `<html>`
-- **Dashboard** — 6 stat cards with SVG icons, weekly revenue bar chart (pure SVG), booking status donut chart, recent bookings table, error boundary
+- **Dark mode toggle** — persisted to localStorage, `.dark` class on `<html>`, flash-prevention inline script
+- **Dashboard** — 6 stat cards with SVG icons, gradient-filled weekly revenue bar chart (pure SVG with hover tooltips), booking status donut chart, recent bookings table, error boundary
 - **Bookings page** — search bar, status filter dropdown, paginated table, action dropdown per row (Assign Worker with modal, Generate Start/End OTP, Cancel), proper loading/empty/error states
 - **Workers page** — search, type filter, availability toggle (inline button), Aadhaar Verify / License Verify actions, rating stars
-- **Login flow** — **Firebase phone auth with invisible reCAPTCHA** (no custom OTP, no alert()), spinners, proper validation
+- **Login flow** — **Firebase phone auth with invisible reCAPTCHA**, ambient gradient background, `card-dashboard` glass card, spinners, proper validation
 - **Security** — Authentication handled via `httpOnly` cookies (managed automatically by API client)
-- **Components** — Sidebar, StatCard, Charts (BarChart + StatsSummary), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
-- **CSS** — HSL variables for theming, dark mode via `.dark` class, smooth transitions
+- **Components** — Sidebar (gradient logo, hover-state refinements), StatCard (group-hover icon scale), BarChart (gradient bar fills, hover highlight), DonutChart (brightness hover), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
+- **Semantic CSS** — HSL design tokens with `--accent`, `--accent-hover`, `--border-hover`, `card-dashboard`, `fade-in`/`slide-in`/`scale-in` utilities
 - **API helper** — centralized `api.ts` with `credentials: 'include'` for automatic cookie handling, buildQuery helper, retry logic
 
 #### Marketing Website (`apps/website/`) — Redesigned for Kolkata
@@ -59,9 +59,9 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **FAQ section** — 6-item accordion with smooth expand/collapse
 - **Sticky header** with backdrop blur
 - **Worker Registration** — 3-step progress indicator, email + experience fields, terms acceptance, phone format validation, **Firebase phone auth with invisible reCAPTCHA**, success animation, back button on step 2
-- **Design system** — Newsreader (display serif) + Work Sans (body sans) via next/font/google; palette: deep pine (#1A3C34), warm clay (#C4774B), warm off-white (#F6F4EF)
+- **Design system** — Newsreader (display serif) + Inter (body sans) via next/font/google; palette: neutral slate + emerald accent + warm clay accent
 - **Hero** — dark pine split layout (headline + live-status card showing workers/drivers/rating)
-- **Reduced-motion support**; dark mode removed for focused light-mode execution
+- **Reduced-motion support**; dark mode added back (system preference + manual toggle)
 - **Kolkata-specific** copy throughout
 
 #### Mobile Apps (`apps/customer-app/`, `apps/worker-app/`) — Expo 56 (Fully Built)
@@ -70,6 +70,88 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **API clients** — use secure store for token retrieval
 - **Mobile apps have tsconfig.json with strict mode** — `tsc --noEmit` catches type errors
 - Ready for Firebase Auth migration (currently use legacy OTP flow)
+
+## Design System (Session 6 — HSL Tokens + Premium UI)
+
+### Token Architecture
+Both website and admin use HSL CSS custom properties for theming. The shared pattern:
+
+```css
+/* Website: apps/website/src/app/globals.css */
+:root {
+  --accent: 160 84% 39%;        /* emerald green */
+  --accent-hover: 160 72% 34%;
+  --warm: 18 48% 54%;           /* clay accent */
+  --surface: 0 0% 100%;         /* light mode surface */
+  --surface-secondary: 210 20% 98%;
+  --foreground: 210 16% 10%;
+  --foreground-secondary: 210 10% 36%;
+  --border: 210 14% 89%;
+  --border-hover: 210 10% 62%;
+  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.08);
+}
+
+.dark {
+  --surface: 210 18% 8%;
+  --foreground: 210 17% 93%;
+  --border: 210 14% 18%;
+}
+```
+
+```css
+/* Admin: apps/admin/src/app/globals.css */
+:root {
+  --sidebar: 224 18% 10%;
+  --sidebar-primary: 160 84% 45%;
+  --accent: 160 84% 45%;
+  --card: 0 0% 100%;
+  --muted: 224 8% 94%;
+}
+```
+
+### Motion System
+All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out curve for premium feel without bounce:
+- Micro feedback: 120–180ms (hover, active, focus)
+- Standard transition: 180–260ms (card lift, nav scroll)
+- Entry animation: 300–500ms (fade-in-up, scale-in)
+- Only `transform` and `opacity` are animated — never layout properties
+
+### Key Utility Classes (website globals.css)
+| Class | Purpose |
+|-------|---------|
+| `card-base` | Surface + border + radius + hover border/shadow transition |
+| `card-lift` | Hover: `translateY(-2px)` + `shadow-lg` |
+| `btn-base` | Shared button sizing, font, focus ring, active scale(0.97), disabled |
+| `btn-primary` | Accent bg + green shadow + hover depth |
+| `btn-secondary` | Surface border + hover bg |
+| `input-base` | Border + focus ring + error state via `aria-invalid` |
+| `nav-blur` | backdrop-filter: blur(16px) saturate(1.4) |
+| `text-gradient` | Accent-to-warm gradient text fill |
+
+### Component Architecture
+| Component | Location | Key Features |
+|-----------|----------|--------------|
+| Button | `website/src/components/ui/Button.tsx` | 5 variants (primary, secondary, ghost, outline, destructive), 3 sizes, loading spinner, active scale |
+| Card | `website/src/components/ui/Card.tsx` | 3 variants (default, elevated, ghost), semantic CardHeader/CardTitle/CardDescription/CardContent/CardFooter sub-components |
+| Badge | `website/src/components/ui/Badge.tsx` | 6 variants, optional dot indicator, 2 sizes |
+| Input | `website/src/components/ui/Input.tsx` | label, error, helperText, aria-invalid, aria-describedby |
+| Sidebar | `admin/src/components/Sidebar.tsx` | Gradient logo, collapsible mobile, dark/light toggle, logout |
+| LoginScreen | `admin/src/components/LoginScreen.tsx` | Ambient glow bg, Firebase phone auth, reCAPTCHA, OTP flow |
+| StatCard | `admin/src/components/dashboard/StatCard.tsx` | 5 color themes, group-hover icon scale, trend text |
+| BarChart | `admin/src/components/dashboard/BarChart.tsx` | Gradient bars, hover highlight + tooltip, empty state |
+| DonutChart | `admin/src/components/dashboard/DonutChart.tsx` | SVG arc segments, hover brightness, legend |
+
+### Dark Mode Implementation
+- **Website**: System preference detection via `prefers-color-scheme: dark` + manual toggle button. Flash prevention via inline `<script>` in `layout.tsx` before hydration. Persisted to `localStorage.homehelp_theme`.
+- **Admin**: Same approach using `localStorage.admin_dark_mode`. Toggle in sidebar.
+- Both use `.dark` class on `<html>` element.
+
+### Performance Constraints
+- No JS animation libraries (Framer Motion, GSAP) — CSS-native only
+- Reduced motion respected (`prefers-reduced-motion: reduce` disables all animations)
+- SVG icons inline (no icon library dependency)
+- All interactive elements have `:focus-visible` outlines
+- `scroll-behavior: smooth` with `prefers-reduced-motion: reduce` fallback
 
 ### Critical Fixes Applied
 - **Authentication Hardening** — Transitioned to `httpOnly` cookies and implemented logout to prevent XSS-based token theft.
@@ -118,10 +200,10 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 ```
 HomeHelp/
 ├── apps/
-│   ├── customer-app/     # NOT STARTED — React Native / Expo
-│   ├── worker-app/       # NOT STARTED — React Native / Expo
+│   ├── customer-app/     # React Native / Expo ✅
+│   ├── worker-app/       # React Native / Expo ✅
 │   ├── website/          # Next.js 14 marketing site ✅
-│   └── admin/            # Next.js 14 admin dashboard ✅ (skeleton)
+│   └── admin/            # Next.js 14 admin dashboard ✅
 ├── services/
 │   └── api/              # Express + TypeScript backend ✅
 ├── .github/workflows/    # CI/CD ✅
@@ -203,27 +285,27 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 1. Add SMS provider for real OTP delivery (currently logged to console)
 2. Set Sentry DSN for error tracking
 3. Add proper loading skeletons to admin dashboard
-4. Set up `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website
+4. **Set `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website** ✅
 5. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render**
 6. **Add Vercel URLs to Firebase authorized domains**
 
 ### Phase 1 — Mobile apps (2+ weeks)
-8. Customer Expo app (React Native) with mode switcher
-9. Worker Expo app with availability toggle, job acceptance
-10. Real-time location tracking via Socket.io
-11. Push notifications via FCM
+7. Customer Expo app (React Native) with mode switcher
+8. Worker Expo app with availability toggle, job acceptance
+9. Real-time location tracking via Socket.io
+10. Push notifications via FCM
 
 ### Phase 2 — Platform features (1-2 weeks)
-12. Aadhaar verification flow for workers
-13. Admin panel for reviewing/approving workers
-14. Weekly payout automation for workers
-15. Surge pricing engine
-16. Mode-aware pricing calculator
+11. Aadhaar verification flow for workers
+12. Admin panel for reviewing/approving workers
+13. Weekly payout automation for workers
+14. Surge pricing engine
+15. Mode-aware pricing calculator
 
 ### Phase 3 — Driver mode (2+ weeks)
-17. License verification
-18. Outstation booking flow
-19. Mode-aware pricing engine
+16. License verification
+17. Outstation booking flow
+18. Mode-aware pricing engine
 
 ## Deployment Notes
 

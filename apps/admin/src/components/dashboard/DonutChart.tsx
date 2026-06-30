@@ -30,7 +30,7 @@ export function DonutChart({ data }: DonutChartProps) {
   return (
     <div className="flex items-center justify-center gap-8">
       <div className="relative w-32 h-32">
-        <svg viewBox="0 0 100 100" className="transform -rotate-90">
+        <svg viewBox="0 0 100 100" className="transform -rotate-90" aria-label="Booking status donut chart">
           {segments.map((segment, index) => {
             const x1 = center + radius * Math.cos((Math.PI * segment.startAngle) / 180);
             const y1 = center + radius * Math.sin((Math.PI * segment.startAngle) / 180);
@@ -50,7 +50,10 @@ export function DonutChart({ data }: DonutChartProps) {
                 key={index}
                 d={pathData}
                 fill={segment.color}
-                className="transition-opacity duration-150 hover:opacity-80 cursor-pointer"
+                className="transition-all duration-200 hover:opacity-80 hover:brightness-110 cursor-pointer"
+                style={{
+                  transformOrigin: 'center',
+                }}
               />
             );
           })}
@@ -64,6 +67,7 @@ export function DonutChart({ data }: DonutChartProps) {
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ backgroundColor: segment.color }}
+              aria-hidden="true"
             />
             <span className="text-sm text-muted-foreground">{segment.label}</span>
             <span className="text-sm font-semibold text-foreground ml-auto tabular-nums">

@@ -80,12 +80,13 @@ export default function Sidebar({ currentPath, onNavigate, onLogout }: SidebarPr
         onClick={() => setMobileOpen(!mobileOpen)}
         className="lg:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-sidebar text-sidebar-foreground shadow-lg border border-sidebar-accent"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={mobileOpen}
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden="true">
           {mobileOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           )}
         </svg>
       </button>
@@ -94,6 +95,7 @@ export default function Sidebar({ currentPath, onNavigate, onLogout }: SidebarPr
         <div
           className="lg:hidden fixed inset-0 bg-black/60 z-40 animate-fade-in"
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
@@ -103,22 +105,23 @@ export default function Sidebar({ currentPath, onNavigate, onLogout }: SidebarPr
           'transition-transform duration-200 ease-out',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
+        aria-label="Main navigation"
       >
-        <div className="px-5 pt-5 pb-4 border-b border-sidebar-accent">
+        <div className="px-5 pt-5 pb-4 border-b border-sidebar-accent/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z" />
               </svg>
             </div>
             <div>
               <h1 className="text-sm font-semibold tracking-tight">HomeHelp</h1>
-              <p className="text-[11px] text-sidebar-foreground/50 font-medium">Admin Dashboard</p>
+              <p className="text-[11px] text-sidebar-foreground/40 font-medium">Admin Dashboard</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto scrollbar-thin" aria-label="Main navigation">
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
           {navItems.map((item) => {
             const isActive = currentPath === item.path;
             return (
@@ -128,44 +131,42 @@ export default function Sidebar({ currentPath, onNavigate, onLogout }: SidebarPr
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
                   isActive
-                    ? 'bg-sidebar-primary/15 text-sidebar-primary'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+                    ? 'bg-sidebar-primary/12 text-sidebar-primary'
+                    : 'text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent'
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <span className={cn('shrink-0', isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/40')}>
+                <span className={cn('shrink-0', isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/30')}>
                   {item.icon}
                 </span>
                 <span>{item.label}</span>
-                {isActive && (
-                  <span className="ml-auto w-1 h-1 rounded-full bg-sidebar-primary" />
-                )}
               </button>
             );
           })}
         </nav>
 
-        <div className="p-3 border-t border-sidebar-accent space-y-0.5">
+        <div className="p-3 border-t border-sidebar-accent/50 space-y-0.5">
           <button
             onClick={toggleDark}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-150"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-150"
           >
             {isDark ? (
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
               </svg>
             ) : (
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
               </svg>
             )}
             <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
+
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-danger/60 hover:text-danger hover:bg-danger/10 transition-all duration-150"
           >
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
             </svg>
             <span>Logout</span>

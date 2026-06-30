@@ -10,13 +10,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          hover: "hsl(var(--accent-hover))",
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          hover: "hsl(var(--border-hover))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -28,18 +35,21 @@ const config: Config = {
           accent: "hsl(var(--sidebar-accent))",
         },
         ring: "hsl(var(--ring))",
-        chart: {
-          1: "hsl(var(--chart-1))",
-          2: "hsl(var(--chart-2))",
-          3: "hsl(var(--chart-3))",
-          4: "hsl(var(--chart-4))",
-          5: "hsl(var(--chart-5))",
-        },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        danger: "hsl(var(--danger))",
+        info: "hsl(var(--info))",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+        "2xl": "var(--radius-2xl)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        xl: "var(--shadow-xl)",
       },
       keyframes: {
         "fade-in": {
@@ -66,17 +76,23 @@ const config: Config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        "bar-grow": {
+          "0%": { transform: "scaleY(0)" },
+          "100%": { transform: "scaleY(1)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.2s ease-out",
-        "slide-in": "slide-in 0.25s ease-out",
+        "slide-in": "slide-in 0.25s cubic-bezier(0.16,1,0.3,1)",
         "slide-in-right": "slide-in-right 0.2s ease-out",
-        "scale-in": "scale-in 0.2s cubic-bezier(.16,1,.3,1)",
+        "scale-in": "scale-in 0.2s cubic-bezier(0.16,1,0.3,1)",
         "shimmer": "shimmer 2s linear infinite",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
+        "bar-grow": "bar-grow 0.6s cubic-bezier(0.16,1,0.3,1) forwards",
       },
     },
   },
   plugins: [],
 };
+
 export default config;
