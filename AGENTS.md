@@ -4,7 +4,7 @@
 
 HomeHelp is an on-demand platform with two booking modes: **home help** (cleaners, domestic workers) and **driver booking** (someone to drive your own car). Full-stack model — we hire, train, verify, and manage workers ourselves. Launching as a single-city MVP (Kolkata).
 
-## Current State (Post-Session 4 — 95% MVP Complete + Security Hardening)
+## Current State (Post-Session 5 — 98% MVP Complete + Security Hardening)
 
 ### Live URLs
 | App | URL | Status |
@@ -22,12 +22,13 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 
 #### Backend API (`services/api/`)
 - OTP send/verify with rate limiting (max 5/15min, Redis-backed)
-- JWT login with User auto-creation
-- **Firebase Auth integration** — `POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT
+- **Security Hardening** — JWT authentication using `httpOnly`, `secure`, `sameSite: 'lax'` cookies (prevents XSS theft)
+- **Authentication** — Logout implementation and Firebase Auth integration (`POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT in cookie)
 - Admin role system (`isAdmin` field on User model)
 - Booking CRUD + lifecycle (create, assign, start with OTP, complete with OTP+rating, cancel)
 - Booking OTP generation endpoint (`PATCH /:id/generate-otp`)
 - Worker CRUD with auth-gated POST/PATCH, open GET (with field restrictions)
+- **Hardened Payments** — Razorpay signature verification using database-stored `razorpayOrderId` to prevent tampering
 - Payment create-order (15% platform fee, Razorpay with auto-mock fallback) + verify (fixed signature check) + get by booking
 - **Server-side pricing** — `RATE_TABLE` in constants.ts is single source of truth; clients cannot supply `amount` or `hourlyRate`
 - **Payment access guard** — GET `/payments/booking/:bookingId` validates caller owns booking or is admin
@@ -46,10 +47,10 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Bookings page** — search bar, status filter dropdown, paginated table, action dropdown per row (Assign Worker with modal, Generate Start/End OTP, Cancel), proper loading/empty/error states
 - **Workers page** — search, type filter, availability toggle (inline button), Aadhaar Verify / License Verify actions, rating stars
 - **Login flow** — **Firebase phone auth with invisible reCAPTCHA** (no custom OTP, no alert()), spinners, proper validation
+- **Security** — Authentication handled via `httpOnly` cookies (managed automatically by API client)
 - **Components** — Sidebar, StatCard, Charts (BarChart + StatsSummary), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
 - **CSS** — HSL variables for theming, dark mode via `.dark` class, smooth transitions
-- **API helper** — centralized `api.ts` with auto auth token injection, buildQuery helper, retry logic
-- **Security notes** — TODO comments in `auth-context.tsx` and `api.ts` documenting localStorage vs httpOnly cookie tradeoff
+- **API helper** — centralized `api.ts` with `credentials: 'include'` for automatic cookie handling, buildQuery helper, retry logic
 
 #### Marketing Website (`apps/website/`) — Redesigned for Kolkata
 - **Waitlist** — proxied to backend API (persistent storage via Prisma)
@@ -71,6 +72,8 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - Ready for Firebase Auth migration (currently use legacy OTP flow)
 
 ### Critical Fixes Applied
+- **Authentication Hardening** — Transitioned to `httpOnly` cookies and implemented logout to prevent XSS-based token theft.
+- **Payment Verification Hardening** — Switched to database-backed signature verification to prevent `razorpayOrderId` tampering.
 - Razorpay signature verification bug fixed (was passing paymentId twice instead of orderId+paymentId)
 - OTP no longer returned in send-otp response body (only logged)
 - Admin endpoints now require isAdmin role (403 if not)
@@ -91,9 +94,9 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Booking response shaping** — all booking routes now use `select` to exclude OTPs and sensitive user data
 - **Stats response shaping** — dashboard recent bookings exclude user phone/email
 - **OTP verify auto-reset** — 5 failed attempts deletes the OTP, requiring fresh send
-- **Payment ownership check** — `POST /payments/create-order` validates caller owns the booking
-- **`POST /api/workers` admin-gated** — worker creation now requires admin role
-- **`GET /api/workers/available/:mode` auth-gated** with field select (phone/coordinates excluded)
+- **Payment ownership check** — `POST `/payments/create-order` validates caller owns the booking
+- **`POST `/api/workers` admin-gated** — worker creation now requires admin role
+- **`GET `/api/workers/available/:mode` auth-gated** with field select (phone/coordinates excluded)
 - **Global + auth rate limiting** in `index.ts`
 
 ## Tech Stack
@@ -104,7 +107,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma |
 | OTP/Cache | Upstash Redis |
-| Auth | **Firebase Auth (phone) + JWT (custom)** |
+| Auth | **Firebase Auth (phone) + JWT (custom/httpOnly cookies)** |
 | Error tracking | Sentry (wired, no DSN) |
 | Deploy (API) | Render |
 | Deploy (web) | Vercel |
@@ -162,9 +165,9 @@ See: `services/api/src/routes/`
 |-------|--------|--------|-------------|
 | `/health` | GET | ✅ Live | Health check |
 | `/api/auth/send-otp` | POST | ✅ Live | Sends OTP via Redis (rate-limited) |
-| `/api/auth/verify-otp` | POST | ✅ Live | Verifies OTP, returns JWT |
+| `/api/auth/verify-otp` | POST | ✅ Live | Verifies OTP, returns JWT in cookie |
 | `/api/auth/me` | GET | ✅ Live | Get current user |
-| `/api/auth/firebase` | POST | ✅ Live | Verify Firebase ID token, return JWT |
+| `/api/auth/firebase` | POST | ✅ Live | Verify Firebase ID token, return JWT in cookie |
 | `/api/bookings` | GET/POST | ✅ Live | List/create bookings (auth) |
 | `/api/bookings/:id` | GET | ✅ Live | Get booking detail |
 | `/api/bookings/:id/cancel` | PATCH | ✅ Live | Cancel booking |
@@ -182,6 +185,7 @@ See: `services/api/src/routes/`
 | `/api/stats/dashboard` | GET | ✅ Live | Live admin dashboard stats (auth+admin) |
 | `/api/stats/revenue/weekly` | GET | ✅ Live | Last 7 days revenue (auth+admin) |
 | `/api/waitlist` | GET/POST | ✅ Live | Waitlist signup with DB persistence |
+| `/api/payouts` | GET | ✅ Live | List payouts (admin) |
 
 ## How Another AI Can Resume
 
@@ -195,14 +199,13 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 
 ## What to Build Next (Priority Order)
 
-### Phase 0 — Polish & Production (1-2 days)
+### Phase 0 — Polish & Production (In Progress)
 1. Add SMS provider for real OTP delivery (currently logged to console)
-2. Add Razorpay SDK integration (currently stubbed with mock order IDs)
-3. Set Sentry DSN for error tracking
-4. Add proper loading skeletons to admin dashboard
-5. Set up `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website
-6. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render**
-7. **Add Vercel URLs to Firebase authorized domains**
+2. Set Sentry DSN for error tracking
+3. Add proper loading skeletons to admin dashboard
+4. Set up `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website
+5. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render**
+6. **Add Vercel URLs to Firebase authorized domains**
 
 ### Phase 1 — Mobile apps (2+ weeks)
 8. Customer Expo app (React Native) with mode switcher

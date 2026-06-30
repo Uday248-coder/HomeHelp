@@ -18,12 +18,19 @@ declare global {
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  let token: string | undefined;
+
+  if (header?.startsWith('Bearer ')) {
+    token = header.slice(7);
+  } else if (req.cookies?.auth_token) {
+    token = req.cookies.auth_token;
+  }
+
+  if (!token) {
     return res.status(401).json({ error: 'Missing authorization token' });
   }
 
   try {
-    const token = header.slice(7);
     const payload = jwt.verify(token, JWT_SECRET) as AuthPayload;
     req.user = payload;
     next();

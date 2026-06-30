@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { redis } from '../lib/redis';
 import { prisma } from '../lib/prisma';
@@ -8,6 +8,7 @@ import { firebaseAuth } from '../lib/firebase';
 import { sendSMS } from '../lib/sms';
 
 const OTP_TTL_SECONDS = 300;
+const isProduction = process.env.NODE_ENV === 'production';
 
 export const authRouter = Router();
 
@@ -15,7 +16,7 @@ function generateOtp(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-authRouter.post('/send-otp', async (req, res) => {
+authRouter.post('/send-otp', async (req: Request, res: Response) => {
   try {
     const { phoneNumber } = req.body;
     if (!phoneNumber) {
@@ -57,7 +58,7 @@ authRouter.post('/send-otp', async (req, res) => {
   }
 });
 
-authRouter.post('/verify-otp', async (req, res) => {
+authRouter.post('/verify-otp', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, otp } = req.body;
     if (!phoneNumber || !otp) {
@@ -100,13 +101,19 @@ authRouter.post('/verify-otp', async (req, res) => {
       { expiresIn: '7d' },
     );
 
-    return res.json({ message: 'OTP verified', token, user });
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+    });
+
+    return res.json({ message: 'OTP verified', user });
   } catch {
     return res.status(500).json({ error: 'Failed to verify OTP' });
   }
 });
 
-authRouter.get('/me', async (req, res) => {
+authRouter.get('/me', async (req: Request, res: Response) => {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing token' });
@@ -123,11 +130,12 @@ authRouter.get('/me', async (req, res) => {
   }
 });
 
-authRouter.post('/logout', async (_req, res) => {
+authRouter.post('/logout', async (_req: Request, res: Response) => {
+  res.clearCookie('auth_token');
   return res.json({ message: 'Logged out successfully' });
 });
 
-authRouter.post('/firebase', async (req, res) => {
+authRouter.post('/firebase', async (req: Request, res: Response) => {
   try {
     const { idToken } = req.body;
     if (!idToken) {
@@ -152,7 +160,13 @@ authRouter.post('/firebase', async (req, res) => {
       { expiresIn: '7d' },
     );
 
-    return res.json({ message: 'Authenticated', token, user });
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+    });
+
+    return res.json({ message: 'Authenticated', user });
   } catch (err) {
     console.error('[Firebase Auth]', err);
     return res.status(401).json({ error: 'Invalid Firebase ID token' });

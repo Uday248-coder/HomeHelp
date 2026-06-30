@@ -1,18 +1,5 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  // TODO(security): Token read from plain localStorage — XSS-readable.
-  // Migrate to httpOnly cookie session when possible. See auth-context.tsx.
-  return localStorage.getItem('admin_token');
-}
-
-function clearToken(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('admin_token');
-  }
-}
-
 function buildQuery(params?: Record<string, string | number | undefined>): string {
   if (!params) return '';
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
@@ -22,13 +9,9 @@ function buildQuery(params?: Record<string, string | number | undefined>): strin
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2): Promise<any> {
-  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController();
@@ -38,13 +21,13 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
         headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
+        credentials: 'include',
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       if (res.status === 401) {
-        clearToken();
         throw new Error('Unauthorized - please login again');
       }
 

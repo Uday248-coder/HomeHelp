@@ -56,13 +56,19 @@ paymentsRouter.post('/create-order', async (req, res) => {
     let razorpayOrderId: string | null = null;
 
     if (razorpay) {
-      const order = await razorpay.orders.create({
-        amount: amountInPaise,
-        currency: 'INR',
-        receipt: `booking_${bookingId.slice(0, 8)}`,
-      });
-      razorpayOrderId = order.id;
+      try {
+        const order = await razorpay.orders.create({
+          amount: amountInPaise,
+          currency: 'INR',
+          receipt: `booking_${bookingId.slice(0, 8)}`,
+        });
+        razorpayOrderId = order.id;
+      } catch (err) {
+        console.error('[Payments] Razorpay order creation failed:', err);
+        throw new Error('Razorpay order creation failed');
+      }
     } else {
+      console.warn('[Payments] Razorpay not configured - using mock order ID');
       razorpayOrderId = `order_mock_${Date.now()}`;
     }
 
@@ -85,37 +91,65 @@ paymentsRouter.post('/create-order', async (req, res) => {
 
 paymentsRouter.post('/verify', async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-    if (!user?.isAdmin) {
-      const payment = await prisma.payment.findUnique({ where: { id: req.body.paymentId } });
-      if (!payment) return res.status(404).json({ error: 'Payment not found' });
-      const booking = await prisma.booking.findUnique({ where: { id: payment.bookingId } });
-      if (!booking || booking.userId !== req.user!.userId) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
+    const { paymentId, razorpayPaymentId, razorpaySignature } = req.body;
+
+    if (!paymentId) {
+      return res.status(400).json({ error: 'paymentId is required' });
     }
 
-    const { paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-    if (!paymentId) return res.status(400).json({ error: 'paymentId is required' });
+    // 1. Fetch payment from DB first
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { booking: true }
+    });
 
+    if (!payment) {
+      console.error(`[Payments] Verification failed: Payment ${paymentId} not found`);
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    // 2. Access Control
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    const isAdmin = user?.isAdmin ?? false;
+
+    if (!isAdmin && (!payment.booking || payment.booking.userId !== req.user!.userId)) {
+      console.error(`[Payments] Access denied for user ${req.user!.userId} on payment ${paymentId}`);
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // 3. Signature Verification
     if (!razorpay) {
       console.warn('[Payments] Razorpay not configured - skipping signature verification');
-    } else if (razorpayOrderId && razorpayPaymentId && razorpaySignature) {
-      const isValid = verifySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+    } else {
+      if (!razorpayPaymentId || !razorpaySignature) {
+        return res.status(400).json({ error: 'razorpayPaymentId and razorpaySignature are required' });
+      }
+
+      if (!payment.razorpayOrderId) {
+        console.error(`[Payments] Verification failed: No razorpayOrderId for payment ${paymentId}`);
+        return res.status(400).json({ error: 'No razorpay order ID found for this payment' });
+      }
+
+      const isValid = verifySignature(payment.razorpayOrderId, razorpayPaymentId, razorpaySignature);
       if (!isValid) {
+        console.error(`[Payments] Invalid signature for payment ${paymentId}. OrderID: ${payment.razorpayOrderId}, PaymentID: ${razorpayPaymentId}`);
         return res.status(400).json({ error: 'Invalid payment signature' });
       }
     }
 
-    const payment = await prisma.payment.update({
+    // 4. Update payment
+    const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
       data: {
         status: 'captured',
         razorpayPaymentId: razorpayPaymentId || undefined,
       },
     });
-    return res.json({ payment });
+
+    console.log(`[Payments] Payment ${paymentId} successfully verified and captured`);
+    return res.json({ payment: updatedPayment });
   } catch (error) {
+    console.error('[Payments] Error during verification:', error);
     return res.status(500).json({ error: 'Failed to verify payment' });
   }
 });

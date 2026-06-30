@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import * as Sentry from '@sentry/node';
 import { healthRouter } from './routes/health';
 import { authRouter } from './routes/auth';
@@ -53,6 +54,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 app.use(requestLogger);
 
 app.use('/health', healthRouter);
