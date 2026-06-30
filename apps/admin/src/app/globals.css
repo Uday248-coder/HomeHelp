@@ -3,29 +3,39 @@
 @tailwind utilities;
 
 :root {
-  --sidebar: 220 20% 10%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-primary: 160 84% 39%;
-  --sidebar-accent: 220 15% 20%;
-  --background: 0 0% 98%;
-  --foreground: 0 0% 10%;
+  --sidebar: 224 20% 8%;
+  --sidebar-foreground: 0 0% 93%;
+  --sidebar-primary: 160 84% 45%;
+  --sidebar-accent: 224 14% 16%;
+  --background: 0 0% 97%;
+  --foreground: 224 12% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 10%;
-  --border: 0 0% 90%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --ring: 160 84% 39%;
-  --radius: 0.75rem;
+  --card-foreground: 224 12% 10%;
+  --border: 224 8% 88%;
+  --muted: 224 8% 94%;
+  --muted-foreground: 224 6% 46%;
+  --ring: 160 84% 45%;
+  --radius: 0.625rem;
+  --chart-1: 160 84% 45%;
+  --chart-2: 220 70% 55%;
+  --chart-3: 35 85% 55%;
+  --chart-4: 0 70% 55%;
+  --chart-5: 280 60% 55%;
 }
 
 .dark {
-  --background: 224 71% 4%;
-  --foreground: 0 0% 95%;
-  --card: 224 71% 7%;
-  --card-foreground: 0 0% 95%;
-  --border: 217 33% 12%;
-  --muted: 217 33% 10%;
-  --muted-foreground: 0 0% 60%;
+  --background: 224 12% 6%;
+  --foreground: 0 0% 93%;
+  --card: 224 12% 9%;
+  --card-foreground: 0 0% 93%;
+  --border: 224 10% 16%;
+  --muted: 224 10% 13%;
+  --muted-foreground: 224 6% 56%;
+  --chart-1: 160 84% 50%;
+  --chart-2: 220 80% 60%;
+  --chart-3: 35 90% 60%;
+  --chart-4: 0 75% 60%;
+  --chart-5: 280 65% 60%;
 }
 
 body {
@@ -34,23 +44,43 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+::selection {
+  background: hsl(160 84% 45% / 0.2);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
-}
-
-@layer base {
-  * {
-    @apply border-border;
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
   }
-  html {
-    scroll-behavior: smooth;
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-}
-
-@layer components {
-  .glass {
-    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl;
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
   }
 }

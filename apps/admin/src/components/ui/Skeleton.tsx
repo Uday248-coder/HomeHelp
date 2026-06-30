@@ -8,9 +8,10 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-md bg-muted',
+        'rounded-md bg-gradient-to-r from-muted via-muted/80 to-muted bg-[length:200%_100%] animate-shimmer',
         className
       )}
+      aria-hidden="true"
     />
   );
 }

@@ -33,7 +33,7 @@ export function RecentBookings() {
     }
   };
 
-  const getStatusBadge = (status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
+  const getStatusVariant = (status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
     const variants: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
       pending: 'warning',
       confirmed: 'info',
@@ -47,10 +47,10 @@ export function RecentBookings() {
   if (loading) {
     return (
       <div className="bg-card border border-border rounded-xl p-6">
-        <Skeleton className="h-6 w-40 mb-4" />
+        <Skeleton className="h-5 w-36 mb-5" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12" />
+            <Skeleton key={i} className="h-14" />
           ))}
         </div>
       </div>
@@ -59,37 +59,41 @@ export function RecentBookings() {
 
   return (
     <div className="bg-card border border-border rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Recent Bookings</h3>
+      <h3 className="text-base font-semibold text-foreground mb-4">Recent Bookings</h3>
 
       {bookings.length === 0 ? (
-        <p className="text-muted-foreground text-center py-8">No bookings found</p>
+        <p className="text-sm text-muted-foreground text-center py-8">No bookings found</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {bookings.map((booking) => (
             <div
               key={booking.id}
-              className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
+              className="flex items-center justify-between p-3.5 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors"
             >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <span className="text-lg">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-sm">
                     {booking.mode === 'driver' ? '🚗' : '🧹'}
                   </span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground capitalize">
-                    {booking.mode} - {booking.status.replace('_', ' ')}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground capitalize truncate">
+                    {booking.mode.replace('_', ' ')} — {booking.status.replace('_', ' ')}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(booking.createdAt).toLocaleDateString()}
+                    {new Date(booking.createdAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-foreground">
+              <div className="text-right shrink-0 ml-4">
+                <p className="text-sm font-semibold text-foreground tabular-nums">
                   ₹{booking.totalAmount?.toLocaleString() || '0'}
                 </p>
-                <Badge variant={getStatusBadge(booking.status)}>
+                <Badge variant={getStatusVariant(booking.status)} size="sm">
                   {booking.status.replace('_', ' ')}
                 </Badge>
               </div>

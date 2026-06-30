@@ -1,22 +1,61 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'success' | 'warning' | 'error' | 'info' | 'neutral';
+  variant?: 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'purple';
+  size?: 'sm' | 'md';
   className?: string;
+  dot?: boolean;
 }
 
-export function Badge({ children, variant = 'neutral', className = '' }: BadgeProps) {
+export function Badge({
+  children,
+  variant = 'neutral',
+  size = 'sm',
+  className,
+  dot,
+}: BadgeProps) {
   const variants = {
-    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    error: 'bg-red-500/10 text-red-400 border-red-500/20',
-    info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    neutral: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    error: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+    info: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+    neutral: 'bg-muted text-muted-foreground border-border',
+    purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
   };
-  
+
+  const sizes = {
+    sm: 'px-2 py-0.5 text-[11px]',
+    md: 'px-2.5 py-1 text-xs',
+  };
+
+  const dotColors = {
+    success: 'bg-emerald-500',
+    warning: 'bg-amber-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500',
+    neutral: 'bg-muted-foreground',
+    purple: 'bg-purple-500',
+  };
+
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${variants[variant]} ${className}`}>
+    <span
+      className={cn(
+        'inline-flex items-center font-medium rounded-full border',
+        sizes[size],
+        variants[variant],
+        className
+      )}
+    >
+      {dot && (
+        <span
+          className={cn(
+            'w-1.5 h-1.5 rounded-full mr-1.5',
+            dotColors[variant]
+          )}
+        />
+      )}
       {children}
     </span>
   );

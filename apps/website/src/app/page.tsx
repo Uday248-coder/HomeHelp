@@ -160,10 +160,14 @@ function FAQItem({ question, answer, index, openIndex, setOpenIndex }: {
         </svg>
       </button>
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 pb-5' : 'max-h-0'}`}
+        className={`grid transition-all duration-300 ease-out ${
+          isOpen ? 'grid-rows-[1fr] pb-5' : 'grid-rows-[0fr]'
+        }`}
         aria-hidden={!isOpen}
       >
-        <p className="text-[#8C847C] text-sm leading-relaxed">{answer}</p>
+        <div className="overflow-hidden">
+          <p className="text-[#8C847C] text-sm leading-relaxed">{answer}</p>
+        </div>
       </div>
     </div>
   );
