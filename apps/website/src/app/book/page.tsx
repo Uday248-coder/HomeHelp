@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import type { SendOtpResponse, VerifyOtpResponse, BookingResponse, ApiError } from '@/lib/types';
+import { auth, sendPhoneOTP, verifyPhoneOTP, getIdToken } from '@/lib/firebase-auth';
+import { RecaptchaVerifier } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -96,12 +97,23 @@ export default function BookPage() {
   const [duration, setDuration] = useState(2);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
-  const [token, setToken] = useState<string | null>(null);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpHint, setOtpHint] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    if (!recaptchaVerifierRef.current && recaptchaRef.current) {
+      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current, {
+        size: 'invisible',
+      });
+      recaptchaVerifierRef.current = verifier;
+    }
+  }, []);
 
   const selectedMode = MODES.find(m => m.id === mode);
 
@@ -110,15 +122,11 @@ export default function BookPage() {
     setError(''); setLoading(true);
     try {
       const fullPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-      const res = await fetch(`${API_URL}/api/auth/send-otp`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: fullPhone }),
-      });
-      const data: SendOtpResponse & ApiError = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
+      const result = await sendPhoneOTP(fullPhone);
+      if (!result.success) throw new Error(result.error || 'Failed to send OTP');
+      setVerificationId(result.verificationId || null);
       setOtpSent(true);
-      if (data.otp) setOtpHint(`Dev OTP: ${data.otp}`);
-      else setOtpHint('OTP sent to your phone. Enter it below to verify.');
+      setOtpHint('OTP sent to your phone. Enter it below to verify.');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to send OTP');
     } finally { setLoading(false); }
@@ -126,16 +134,22 @@ export default function BookPage() {
 
   const handleVerifyOtp = async () => {
     if (!otp || otp.length < 4) { setError('Enter the OTP'); return; }
+    if (!verificationId) { setError('Verification session expired. Please resend OTP.'); return; }
     setError(''); setLoading(true);
     try {
-      const fullPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-      const res = await fetch(`${API_URL}/api/auth/verify-otp`, {
+      const result = await verifyPhoneOTP(verificationId, otp);
+      if (!result.success) throw new Error(result.error || 'Verification failed');
+      const idToken = await getIdToken();
+      if (!idToken) throw new Error('Failed to get auth token');
+      // Exchange Firebase ID token for backend JWT
+      const res = await fetch(`${API_URL}/api/auth/firebase`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: fullPhone, otp }),
+        body: JSON.stringify({ idToken }),
       });
-      const data: VerifyOtpResponse & ApiError = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Verification failed');
-      setToken(data.token);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+      // Store token for booking creation
+      localStorage.setItem('booking_token', data.token);
       setStep(3);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Verification failed');
@@ -157,6 +171,9 @@ export default function BookPage() {
         body.scheduledAt = `${scheduledDate}T${scheduledTime}:00.000Z`;
       }
 
+      const token = localStorage.getItem('booking_token');
+      if (!token) throw new Error('Authentication token not found. Please verify OTP again.');
+
       const res = await fetch(`${API_URL}/api/bookings`, {
         method: 'POST', headers: {
           'Content-Type': 'application/json',
@@ -164,9 +181,10 @@ export default function BookPage() {
         },
         body: JSON.stringify(body),
       });
-      const data: BookingResponse & ApiError = await res.json();
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create booking');
       setBookingId(data.booking.id);
+      localStorage.removeItem('booking_token');
       setStep(4);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to create booking');
@@ -411,7 +429,7 @@ export default function BookPage() {
                     />
                   </div>
                   <div className="flex gap-3">
-                    <Button variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setOtp(''); }}>
+                    <Button variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setOtp(''); setVerificationId(null); }}>
                       Change Number
                     </Button>
                     <Button className="flex-[2]" size="lg" onClick={handleVerifyOtp} loading={loading} disabled={otp.length < 4}>
@@ -420,6 +438,7 @@ export default function BookPage() {
                   </div>
                 </div>
               )}
+              <div ref={recaptchaRef} />
             </div>
           )}
 

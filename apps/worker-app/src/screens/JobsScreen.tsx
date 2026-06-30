@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { colors, spacing, borderRadius, fontSize, shadow } from '../constants/th
 import { api } from '../api/client';
 import { Booking } from '../types';
 
-export default function JobsScreen({ navigation }: any) {
+export default function JobsScreen() {
   const [jobs, setJobs] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

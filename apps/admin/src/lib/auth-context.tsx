@@ -28,21 +28,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(getInitialDark);
 
   useEffect(() => {
-    const saved = localStorage.getItem('admin_token');
-    if (saved) setToken(saved);
+    // Check for cookie-based auth on mount
+    checkAuthCookie();
   }, []);
 
-  const login = useCallback((newToken: string) => {
-    // TODO(security): Token stored in plain localStorage — XSS-readable.
-    // Migrate to httpOnly cookie session when possible after setting up a
-    // session endpoint. localStorage was chosen for simplicity in MVP but
-    // the admin dashboard holds the most sensitive data access.
-    localStorage.setItem('admin_token', newToken);
-    setToken(newToken);
+  async function checkAuthCookie() {
+    try {
+      const res = await fetch('/api/auth/verify', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          setToken(data.token);
+        }
+      }
+    } catch {
+      // No valid session
+    }
+  }
+
+  const login = useCallback(async (newToken: string) => {
+    // Store token in httpOnly cookie via API
+    try {
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token: newToken }),
+      });
+      setToken(newToken);
+    } catch (e) {
+      console.error('Failed to create session cookie:', e);
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('admin_token');
+  const logout = useCallback(async () => {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
     setToken(null);
   }, []);
 

@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { JWT_SECRET } from '../lib/constants';
 import { validatePhoneNumber } from '../middleware/validation';
 import { firebaseAuth } from '../lib/firebase';
+import { sendSMS } from '../lib/sms';
 
 const OTP_TTL_SECONDS = 300;
 
@@ -40,9 +41,17 @@ authRouter.post('/send-otp', async (req, res) => {
       await redis.expire(attemptKey, 900);
     }
 
+    // Send SMS via MSG91
+    const smsResult = await sendSMS(phoneNumber, otp);
+    if (!smsResult.success) {
+      console.error('[OTP] Failed to send SMS:', smsResult.error);
+      // Don't fail the request - OTP is stored in Redis for verification
+      // In production, you might want to return an error here
+    }
+
     console.log(`[OTP] ${phoneNumber} -> ${otp}`);
 
-    return res.json({ message: 'OTP sent', otp });
+    return res.json({ message: 'OTP sent' });
   } catch {
     return res.status(500).json({ error: 'Failed to send OTP' });
   }

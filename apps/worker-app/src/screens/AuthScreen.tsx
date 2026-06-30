@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -18,19 +18,20 @@ export default function AuthScreen() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
+  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [devOtp, setDevOtp] = useState('');
 
   async function handleSendOtp() {
-    if (phone.length !== 10) {
-      Alert.alert('Invalid Phone', 'Please enter a 10-digit phone number.');
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length !== 10) {
+      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
       return;
     }
     setLoading(true);
     try {
-      const fullPhone = `+91${phone}`;
-      const data = await sendOtp(fullPhone);
-      if (data && data.otp) setDevOtp(String(data.otp));
+      const result = await sendOtp(cleaned);
+      if (!result.success) throw new Error(result.error || 'Failed to send OTP');
+      setVerificationId(result.verificationId || null);
       setStep('otp');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to send OTP');
@@ -44,10 +45,13 @@ export default function AuthScreen() {
       Alert.alert('Invalid OTP', 'Please enter the OTP.');
       return;
     }
+    if (!verificationId) {
+      Alert.alert('Error', 'Verification session expired. Please resend OTP.');
+      return;
+    }
     setLoading(true);
     try {
-      const fullPhone = `+91${phone}`;
-      await verifyOtp(fullPhone, otp);
+      await verifyOtp(verificationId, otp);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to verify OTP');
     } finally {
@@ -100,9 +104,6 @@ export default function AuthScreen() {
               <Text style={styles.otpHint}>
                 OTP sent to +91 {phone}
               </Text>
-              {__DEV__ && devOtp ? (
-                <Text style={styles.devOtp}>Dev OTP: {devOtp}</Text>
-              ) : null}
               <TextInput
                 style={styles.otpInput}
                 placeholder="000000"
@@ -123,7 +124,7 @@ export default function AuthScreen() {
                   <Text style={styles.buttonText}>Verify OTP</Text>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setStep('phone')}>
+              <TouchableOpacity onPress={() => { setStep('phone'); setOtp(''); }}>
                 <Text style={styles.backLink}>Change phone number</Text>
               </TouchableOpacity>
             </>
@@ -210,19 +211,12 @@ const styles = StyleSheet.create({
     letterSpacing: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   otpHint: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
     marginBottom: spacing.md,
-  },
-  devOtp: {
-    fontSize: fontSize.sm,
-    color: colors.warning,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-    textAlign: 'center',
   },
   button: {
     backgroundColor: colors.primary,

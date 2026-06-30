@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../api/client';
+import { sendPhoneOTP, verifyPhoneOTP, getIdToken, onAuthStateChanged, signOut } from '../lib/firebase-auth';
 import { Worker } from '../types';
 
 interface AuthContextType {
@@ -9,8 +10,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (token: string) => Promise<void>;
   logout: () => Promise<void>;
-  sendOtp: (phone: string) => Promise<any>;
-  verifyOtp: (phone: string, otp: string) => Promise<boolean>;
+  sendOtp: (phone: string) => Promise<{ success: boolean; verificationId?: string; error?: string }>;
+  verifyOtp: (verificationId: string, otp: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,56 +22,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadToken();
+    // Listen to Firebase auth state changes
+    const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        const idToken = await getIdToken();
+        if (idToken) {
+          await login(idToken);
+        }
+      } else {
+        setToken(null);
+        setWorker(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Also try to load stored token as fallback
+    loadStoredAuth();
+
+    return unsubscribe;
   }, []);
 
-  async function loadToken() {
+  async function loadStoredAuth() {
     try {
       const storedToken = await SecureStore.getItemAsync('worker_token');
       if (storedToken) {
         setToken(storedToken);
-        await fetchProfile(storedToken);
+        const workerData = await api.getWorkerProfile();
+        setWorker(workerData);
       }
     } catch {
-      // ignore
+      await SecureStore.deleteItemAsync('worker_token');
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  async function fetchProfile(t: string) {
-    try {
-      const me = await api.getWorkerProfile();
-      setWorker(me);
-    } catch {
-      await SecureStore.deleteItemAsync('worker_token');
-      setToken(null);
     }
   }
 
   const login = useCallback(async (newToken: string) => {
     await SecureStore.setItemAsync('worker_token', newToken);
     setToken(newToken);
-    await fetchProfile(newToken);
+    const workerData = await api.getWorkerProfile();
+    setWorker(workerData);
   }, []);
 
   const logout = useCallback(async () => {
     await SecureStore.deleteItemAsync('worker_token');
     setToken(null);
     setWorker(null);
+    await signOut();
   }, []);
 
   const sendOtp = useCallback(async (phone: string) => {
-    return api.sendOtp(phone);
+    return sendPhoneOTP(phone);
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, otp: string): Promise<boolean> => {
-    const data = await api.verifyOtp(phone, otp);
-    if (data.token) {
-      await login(data.token);
-      return true;
+  const verifyOtp = useCallback(async (verificationId: string, otp: string) => {
+    const result = await verifyPhoneOTP(verificationId, otp);
+    if (!result.success) {
+      throw new Error(result.error || 'Invalid OTP');
     }
-    return false;
+    const idToken = await getIdToken();
+    if (idToken) {
+      await login(idToken);
+    }
   }, [login]);
 
   return (

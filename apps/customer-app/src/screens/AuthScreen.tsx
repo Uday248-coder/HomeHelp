@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ export default function AuthScreen() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState('');
+  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(OTP_EXPIRY_SECONDS);
   const [isTimerActive, setIsTimerActive] = useState(false);
@@ -65,7 +65,8 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       const res = await sendOtp(cleaned);
-      setDevOtp(res.otp || '');
+      if (!res.success) throw new Error(res.error || 'Failed to send OTP');
+      setVerificationId(res.verificationId || null);
       setStep('otp');
       startTimer();
       setTimeout(() => otpInputRef.current?.focus(), 300);
@@ -77,13 +78,17 @@ export default function AuthScreen() {
   }
 
   async function handleVerifyOtp() {
+    if (!verificationId) {
+      Alert.alert('Error', 'Verification session expired. Please resend OTP.');
+      return;
+    }
     if (otp.length < 4) {
       Alert.alert('Invalid OTP', 'Please enter the full OTP.');
       return;
     }
     setLoading(true);
     try {
-      await verifyOtp(phone.replace(/\D/g, ''), otp);
+      await verifyOtp(verificationId, otp);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to verify OTP');
     } finally {
@@ -93,7 +98,7 @@ export default function AuthScreen() {
 
   function handleResend() {
     setOtp('');
-    setDevOtp('');
+    setVerificationId(null);
     setStep('phone');
   }
 
@@ -165,9 +170,9 @@ export default function AuthScreen() {
                 onChangeText={setOtp}
               />
 
-              {__DEV__ && devOtp ? (
+              {__DEV__ && verificationId ? (
                 <View style={styles.devHint}>
-                  <Text style={styles.devHintText}>Dev hint: {devOtp}</Text>
+                  <Text style={styles.devHintText}>Dev: verificationId={verificationId}</Text>
                 </View>
               ) : null}
 

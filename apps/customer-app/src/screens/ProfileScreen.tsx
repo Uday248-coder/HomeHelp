@@ -1,12 +1,4 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
 import { colors, spacing, fonts, borderRadius, shadows } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
