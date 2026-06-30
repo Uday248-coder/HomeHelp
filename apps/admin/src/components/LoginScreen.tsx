@@ -196,6 +196,12 @@ export default function LoginScreen() {
         <p className="text-xs text-muted-foreground text-center mt-6">
           Signed in as administrator
         </p>
+
+        <div className="mt-4 p-3 rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5">
+          <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center leading-relaxed">
+            <span className="font-semibold">Test Mode:</span> Use <code className="font-mono bg-amber-500/10 px-1 rounded">+91 99999 88888</code> with OTP <code className="font-mono bg-amber-500/10 px-1 rounded">123456</code>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -201,6 +201,9 @@ export default function JoinPage() {
                     onChange={e => updateField('phoneNumber', e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
                   />
+                  <p className="text-[11px] text-amber-600 mt-1.5">
+                    Testing? Use <code className="font-mono bg-amber-100 px-1 rounded">+91 9999988888</code> → OTP <code className="font-mono bg-amber-100 px-1 rounded">123456</code>
+                  </p>
                 </div>
 
                 <div>

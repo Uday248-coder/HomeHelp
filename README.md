@@ -27,7 +27,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 | **Prisma** | ORM for database access | ✅ **Connected** — 6 models, full migrations | N/A |
 | **Razorpay** | Payment processing | ⚠️ **Mock mode** — works with auto-generated mock order IDs, needs live keys for real payments | ❌ `RAZORPAY_KEY_ID` + `SECRET` not set |
 | **Sentry** | Error tracking | 🔌 **Wired in code** — initialized but DSN is empty, no errors being captured | ❌ `SENTRY_DSN` not set |
-| **Twilio / MSG91** | SMS delivery for OTP | ❌ **Not connected** — OTPs only logged to console, no SMS sent | ❌ No env vars set |
+| **Firebase Auth** | Phone OTP + Google Sign-In | ✅ **Using Firebase test numbers** — zero-cost, no SMS gateway needed | ✅ Pre-configured |
 | **Google Maps** | Address autocomplete, geocoding, ETA | ❌ **Not connected** — no API key set | ❌ No env vars set |
 | **Firebase (FCM)** | Push notifications for mobile apps | ❌ **Not connected** — no server key set | ❌ No env vars set |
 | **Socket.io** | Real-time location tracking | ❌ **Not implemented** — planned for mobile app phase | N/A |
@@ -131,7 +131,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 | Database | Neon Postgres (serverless) | ✅ Live |
 | ORM | Prisma 6 | ✅ Live |
 | OTP/Cache | Upstash Redis | ✅ Live |
-| Auth | OTP + JWT (custom), 7-day expiry | ✅ Live |
+| Auth | Firebase Phone Auth + JWT (custom httpOnly cookies), 7-day expiry | ✅ Live |
 | Payments | Razorpay with auto-mock fallback | ✅ Live (stubbed) |
 | Web framework | Next.js 14 App Router (website + admin) | ✅ Live on Vercel |
 | Styling | Tailwind CSS 3.4 with HSL variables | ✅ Live |
@@ -150,7 +150,6 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 ### Phase 0 — Production Readiness (1-2 days)
 - [ ] **Set Sentry DSN** in Render/Vercel env vars for error monitoring
 - [ ] **Razorpay live keys** — currently using mock order IDs, need real key_id + key_secret in env vars
-- [ ] **SMS provider** — Twilio/MSG91 for real OTP delivery (currently logged to console)
 - [ ] **Google Maps API key** — for address autocomplete + tracking in booking flow
 - [ ] **Mobile app env vars** — set `EXPO_PUBLIC_API_URL` for both mobile apps
 
@@ -183,7 +182,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 
 | Integration | What for | Status |
 |-------------|----------|--------|
-| **Twilio / MSG91** | SMS delivery of OTPs | ❌ Not connected |
+| **Firebase Auth** | Phone OTP + Google Sign-In | ✅ Using test numbers, zero-cost |
 | **Razorpay live** | Real payment processing (currently mock) | ❌ Not connected |
 | **Google Maps API** | Address autocomplete, geocoding, ETA, tracking | ❌ Not connected |
 | **Sentry DSN** | Error tracking and monitoring | 🔌 Wired, no key |
@@ -236,7 +235,7 @@ Set these on Render (API) and Vercel (website + admin):
 | `RAZORPAY_KEY_SECRET` | ❌ | Live payments |
 | `SENTRY_DSN` | ❌ | Error tracking |
 | `GOOGLE_MAPS_API_KEY` | ❌ | Maps + geocoding |
-| `TWILIO_SID` / `MSG91_KEY` | ❌ | SMS delivery |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | ❌ | Firebase Admin SDK (phone auth verification) |
 | `FCM_SERVER_KEY` | ❌ | Push notifications |
 
 ---

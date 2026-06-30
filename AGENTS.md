@@ -190,7 +190,7 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma |
 | OTP/Cache | Upstash Redis |
-| Auth | **Firebase Auth (phone) + JWT (custom/httpOnly cookies)** |
+| Auth | **Firebase Auth (phone) + JWT (custom/httpOnly cookies)** — Zero-cost via test numbers |
 | Error tracking | Sentry (wired, no DSN) |
 | Deploy (API) | Render |
 | Deploy (web) | Vercel |
@@ -290,7 +290,7 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 ## What to Build Next (Priority Order)
 
 ### Phase 0 — Polish & Production (In Progress)
-1. Add SMS provider for real OTP delivery — ✅ Code ready (MSG91), set `MSG91_API_KEY` + `MSG91_TEMPLATE_ID` on Render
+1. Firebase Phone Auth via test numbers for unlimited free OTP — MSG91 removed, all SMS code deleted
 2. Set Sentry DSN — ✅ Code wired, set `SENTRY_DSN` on Render
 3. Loading skeleton polish for admin dashboard — ✅ Done in Session 6
 4. **Set `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website** ✅
