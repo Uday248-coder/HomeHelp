@@ -1,6 +1,9 @@
 {
   "name": "homehelp",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "workspaces": [
     "apps/*",
     "services/*"
