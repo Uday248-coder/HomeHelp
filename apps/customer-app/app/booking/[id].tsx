@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import RazorpayCheckout from 'react-native-razorpay';
 import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { api } from '../../src/api/client';
 import { Booking } from '../../src/types';
@@ -112,6 +113,48 @@ export default function BookingDetailScreen() {
     ]);
   }
 
+  async function handlePayment() {
+    setActionLoading(true);
+    try {
+      const { payment, razorpayOrderId } = await api.createPaymentOrder(id);
+      
+      const options = {
+        description: `Payment for Booking ${id.slice(0, 8)}`,
+        image: 'https://homehelp.ai/logo.png', // Placeholder
+        currency: 'INR',
+        name: 'HomeHelp',
+        order_id: razorpayOrderId,
+        prefill: {
+          contact: '9999999999', // Should come from user profile
+          email: 'customer@example.com',
+        },
+        theme: { color: '#000000' },
+      };
+
+      RazorpayCheckout.open(options).then(async (data: any) => {
+        try {
+          await api.verifyPayment({
+            paymentId: payment.id,
+            razorpayPaymentId: data.razorpay_payment_id,
+            razorpaySignature: data.razorpay_signature,
+          });
+          Alert.alert('Payment Successful', 'Your booking is now confirmed!');
+          await fetchBooking();
+        } catch (err: any) {
+          Alert.alert('Verification Failed', err.message || 'Failed to verify payment');
+        } finally {
+          setActionLoading(false);
+        }
+      }).catch((error: any) => {
+        Alert.alert('Payment Cancelled', error.description || 'Payment was not completed');
+        setActionLoading(false);
+      });
+    } catch (err: any) {
+      Alert.alert('Payment Error', err.message || 'Failed to initiate payment');
+      setActionLoading(false);
+    }
+  }
+
   async function handleRate(n: number) {
     setLocalRating(n);
     // Future: implement rating on API
@@ -175,26 +218,35 @@ export default function BookingDetailScreen() {
         </View>
       )}
 
-      <View style={styles.actionSection}>
-        {booking.status === 'pending' && (
-          <TouchableOpacity
-            style={[styles.cancelButton, actionLoading && styles.buttonDisabled]}
-            onPress={handleCancel}
-            disabled={actionLoading}
-          >
-            {actionLoading ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Text style={styles.cancelButtonText}>Cancel Booking</Text>
-            )}
-          </TouchableOpacity>
-        )}
-        {booking.status === 'completed' && (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleBookAgain}>
-            <Text style={styles.primaryButtonText}>Book Again</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+       <View style={styles.actionSection}>
+         {booking.status === 'pending' && (
+           <>
+             <TouchableOpacity
+               style={[styles.primaryButton, actionLoading && styles.buttonDisabled]}
+               onPress={handlePayment}
+               disabled={actionLoading}
+             >
+               {actionLoading ? (
+                 <ActivityIndicator color={colors.white} size="small" />
+               ) : (
+                 <Text style={styles.primaryButtonText}>Pay Now to Confirm</Text>
+               )}
+             </TouchableOpacity>
+             <TouchableOpacity
+               style={[styles.cancelButton, actionLoading && styles.buttonDisabled]}
+               onPress={handleCancel}
+               disabled={actionLoading}
+             >
+               <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+             </TouchableOpacity>
+           </>
+         )}
+         {booking.status === 'completed' && (
+           <TouchableOpacity style={styles.primaryButton} onPress={handleBookAgain}>
+             <Text style={styles.primaryButtonText}>Book Again</Text>
+           </TouchableOpacity>
+         )}
+       </View>
     </ScrollView>
   );
 }
@@ -279,13 +331,14 @@ const styles = StyleSheet.create({
   actionSection: {
     marginTop: spacing.md,
   },
-  cancelButton: {
-    height: 52,
-    backgroundColor: colors.error,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+   cancelButton: {
+     height: 52,
+     backgroundColor: colors.error,
+     borderRadius: borderRadius.md,
+     alignItems: 'center',
+     justifyContent: 'center',
+     marginTop: spacing.md,
+   },
   cancelButtonText: {
     fontSize: fonts.sizeLg,
     fontWeight: fonts.weightSemiBold,

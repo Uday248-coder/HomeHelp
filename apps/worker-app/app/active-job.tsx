@@ -14,10 +14,15 @@ import {
 import { colors, spacing, borderRadius, fontSize, shadow } from '../src/constants/theme';
 import { api } from '../src/api/client';
 import { Booking } from '../src/types';
+import { useAuth } from '../src/context/AuthContext';
+import { locationService } from '../src/lib/location';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 type ActionType = 'start' | 'complete' | null;
 
 export default function ActiveJobScreen() {
+  const router = useRouter();
+  const { worker, token } = useAuth();
   const [jobs, setJobs] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,7 +34,16 @@ export default function ActiveJobScreen() {
 
   useEffect(() => {
     loadActiveJobs();
-  }, []);
+
+    if (worker && token) {
+      locationService.init(worker.id, token);
+    }
+
+    return () => {
+      locationService.stopTracking();
+      locationService.disconnect();
+    };
+  }, [worker, token]);
 
   async function loadActiveJobs() {
     try {
@@ -65,9 +79,17 @@ export default function ActiveJobScreen() {
       if (actionModal === 'start') {
         await api.startJob(selectedJob.id, otpInput);
         Alert.alert('Started', 'Job has been started!');
+        
+        // Start location tracking for this job
+        if (worker && token) {
+          await locationService.startTracking(selectedJob.id, worker.id);
+        }
       } else {
         await api.completeJob(selectedJob.id, otpInput, rating);
         Alert.alert('Completed', 'Job has been marked complete!');
+        
+        // Stop location tracking
+        locationService.stopTracking();
       }
       setActionModal(null);
       setSelectedJob(null);

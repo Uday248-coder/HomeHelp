@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -14,6 +15,7 @@ import { waitlistRouter } from './routes/waitlist';
 import { payoutsRouter } from './routes/payouts';
 import { usersRouter } from './routes/users';
 import { requestLogger } from './middleware/validation';
+import { setupSocket } from './socket';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -72,7 +74,10 @@ Sentry.setupExpressErrorHandler(app);
 
 app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 
-app.listen(PORT, () => {
+const httpServer = createServer(app);
+setupSocket(httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);
 });
 

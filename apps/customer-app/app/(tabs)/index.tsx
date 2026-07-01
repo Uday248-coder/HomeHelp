@@ -10,6 +10,7 @@ import {
   Alert,
   SafeAreaView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/api/client';
@@ -31,6 +32,7 @@ const DURATION_OPTIONS = [1, 2, 3, 4, 6, 8];
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [mode, setMode] = useState<'home_help' | 'driver'>('home_help');
   const [serviceType, setServiceType] = useState(SERVICE_OPTIONS.home_help.options[0]);
   const [address, setAddress] = useState('');
@@ -45,14 +47,16 @@ export default function HomeScreen() {
     }
     setLoading(true);
     try {
-      await api.createBooking({
+      const booking = await api.createBooking({
         mode,
         serviceType,
         customerAddress: address,
         durationHours: duration,
         scheduledAt: scheduleNow ? undefined : new Date(Date.now() + 86400000).toISOString(),
       });
-      Alert.alert('Success', 'Your booking has been created!');
+      Alert.alert('Success', 'Your booking has been created!', [
+        { text: 'View Details', onPress: () => router.push(`/booking/${booking.booking.id}`) }
+      ]);
       setAddress('');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to create booking');

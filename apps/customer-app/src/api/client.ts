@@ -58,6 +58,8 @@ export const api = {
   getBooking: (id: string) => request<any>(`/api/bookings/${id}`),
   cancelBooking: (id: string) =>
     request<any>(`/api/bookings/${id}/cancel`, { method: 'PATCH' }),
-  createPaymentOrder: (bookingId: string, amount: number) =>
-    request<any>('/api/payments/create-order', { method: 'POST', data: { bookingId, amount } }),
+  createPaymentOrder: (bookingId: string) =>
+    request<any>('/api/payments/create-order', { method: 'POST', data: { bookingId } }),
+  verifyPayment: (data: { paymentId: string; razorpayPaymentId: string; razorpaySignature: string }) =>
+    request<any>('/api/payments/verify', { method: 'POST', data }),
 };
