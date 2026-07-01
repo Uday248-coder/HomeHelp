@@ -23,7 +23,10 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 #### Backend API (`services/api/`)
 - OTP send/verify with rate limiting (max 5/15min, Redis-backed)
 - **Security Hardening** — JWT authentication using `httpOnly`, `secure`, `sameSite: 'lax'` cookies (prevents XSS theft)
-- **Authentication** — Logout implementation and Firebase Auth integration (`POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT in cookie)
+- **Authentication** — Logout implementation and Firebase Auth integration (`POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT in cookie and response body)
+- **Lazy Firebase Initialization** — Firebase admin initialized on first use to prevent API boot crashes if credentials are missing
+- **Comprehensive Error Logging** — All route catch blocks now log errors with prefix for searchable logs
+- **Real-time Communication** — Socket.io integration for worker location tracking
 - Admin role system (`isAdmin` field on User model)
 - Booking CRUD + lifecycle (create, assign, start with OTP, complete with OTP+rating, cancel)
 - Booking OTP generation endpoint (`PATCH /:id/generate-otp`)
@@ -70,6 +73,8 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **AuthContext** — token storage via `expo-secure-store` (not AsyncStorage)
 - **API clients** — use secure store for token retrieval
 - **Mobile apps have tsconfig.json with strict mode** — `tsc --noEmit` catches type errors
+- **Customer App**: Razorpay integration for payment confirmation
+- **Worker App**: Real-time location tracking via Socket.io and `expo-location`
 - Ready for Firebase Auth migration (currently use legacy OTP flow)
 
 ## Design System (Session 6 — HSL Tokens + Premium UI)
@@ -181,6 +186,10 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 - **`POST `/api/workers` admin-gated** — worker creation now requires admin role
 - **`GET `/api/workers/available/:mode` auth-gated** with field select (phone/coordinates excluded)
 - **Global + auth rate limiting** in `index.ts`
+- **Lazy Firebase Initialization** — prevents API crashes when service account is missing
+- **Token response in Auth** — /api/auth/firebase and /api/auth/verify-otp now return tokens for token-based clients
+- **Comprehensive Error Logging** — all route catch blocks now log with searchable prefixes
+- **Real-time location tracking** — Socket.io implementation for worker tracking
 
 ## Tech Stack
 
