@@ -19,8 +19,43 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
       },
     });
     return res.json({ workers });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] fetch workers error:', err);
     return res.status(500).json({ error: 'Failed to fetch workers' });
+  }
+});
+
+workersRouter.post('/register', authMiddleware, async (req, res) => {
+  try {
+    const { workerType, name, photoUrl } = req.body;
+    if (!workerType || !name) {
+      return res.status(400).json({ error: 'workerType and name are required' });
+    }
+    const phoneNumber = req.user!.phoneNumber;
+
+    const existing = await prisma.worker.findUnique({ where: { phoneNumber } });
+    if (existing) {
+      return res.status(409).json({ error: 'Worker profile already exists for this phone number' });
+    }
+
+    const worker = await prisma.worker.create({
+      data: { 
+        workerType, 
+        name, 
+        phoneNumber, 
+        photoUrl,
+        isActive: false, // Needs admin approval
+      },
+      select: {
+        id: true, name: true, workerType: true,
+        phoneNumber: true, photoUrl: true, isAvailable: true,
+        averageRating: true, createdAt: true,
+      },
+    });
+    return res.status(201).json({ worker });
+  } catch (err) {
+    console.error('[workers] register worker error:', err);
+    return res.status(500).json({ error: 'Failed to register worker' });
   }
 });
 
@@ -45,7 +80,8 @@ workersRouter.post('/', authMiddleware, adminMiddleware, async (req, res) => {
       },
     });
     return res.status(201).json({ worker });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] create worker error:', err);
     return res.status(500).json({ error: 'Failed to create worker' });
   }
 });
@@ -76,7 +112,8 @@ workersRouter.get('/:id', authMiddleware, async (req, res) => {
     }
 
     return res.json({ worker });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] get worker error:', err);
     return res.status(500).json({ error: 'Failed to fetch worker' });
   }
 });
@@ -104,7 +141,8 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
       },
     });
     return res.json({ worker });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] update worker error:', err);
     return res.status(500).json({ error: 'Failed to update worker' });
   }
 });
@@ -117,7 +155,8 @@ workersRouter.get('/me', authMiddleware, async (req, res) => {
     });
     if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
     return res.json({ worker });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] fetch worker profile error:', err);
     return res.status(500).json({ error: 'Failed to fetch worker profile' });
   }
 });
@@ -137,7 +176,8 @@ workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
       data: { isAvailable },
     });
     return res.json({ worker: updated });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] update availability error:', err);
     return res.status(500).json({ error: 'Failed to update availability' });
   }
 });
@@ -161,7 +201,8 @@ workersRouter.get('/available/:mode', authMiddleware, async (req, res) => {
       },
     });
     return res.json({ workers });
-  } catch (error) {
+  } catch (err) {
+    console.error('[workers] available workers error:', err);
     return res.status(500).json({ error: 'Failed to fetch available workers' });
   }
 });

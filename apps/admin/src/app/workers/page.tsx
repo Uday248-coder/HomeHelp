@@ -84,21 +84,21 @@ export default function WorkersPage() {
       <main className="flex-1 overflow-auto">
         <ErrorBoundary>
           <div className="p-6 lg:p-8 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
+            <header className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Workers</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Manage your workforce</p>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Workforce Management</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Monitor and verify your service professionals</p>
               </div>
-            </div>
+            </header>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg mb-5 text-sm flex items-center justify-between animate-slide-in">
+              <div className="bg-danger/10 border border-danger/20 text-danger px-4 py-2.5 rounded-lg mb-5 text-sm flex items-center justify-between animate-slide-in">
                 <span>{error}</span>
                 <button onClick={() => setError('')} className="font-medium underline hover:no-underline">Dismiss</button>
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="relative flex-1">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -116,7 +116,7 @@ export default function WorkersPage() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="h-9 px-3 bg-background border border-border rounded-lg text-sm text-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent hover:border-foreground/20"
               >
-                <option value="">All Types</option>
+                <option value="">All Service Types</option>
                 <option value="home_help">Home Help</option>
                 <option value="driver">Driver</option>
                 <option value="both">Both</option>
@@ -151,20 +151,20 @@ export default function WorkersPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground border-b border-border bg-muted/50">
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Name</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Worker Name</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Phone</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Service Type</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Availability</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Aadhaar</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">License</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Rating</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Jobs</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Avg Rating</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Total Jobs</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider text-right">Quick Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredWorkers.map((w) => (
-                        <tr key={w.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <tr key={w.id} className="ops-table-row border-b border-border">
                           <td className="px-4 py-3 font-medium text-foreground">{w.name}</td>
                           <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{w.phoneNumber}</td>
                           <td className="px-4 py-3">
@@ -173,21 +173,13 @@ export default function WorkersPage() {
                             </Badge>
                           </td>
                           <td className="px-4 py-3">
-                            <button
-                              onClick={() => handleToggleAvailability(w)}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
-                                w.isAvailable
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                              }`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${w.isAvailable ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
+                            <span className={`status-badge ${w.isAvailable ? 'status-active' : 'status-pending'}`}>
                               {w.isAvailable ? 'Available' : 'Busy'}
-                            </button>
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             {w.aadhaarVerified ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -196,7 +188,7 @@ export default function WorkersPage() {
                             ) : (
                               <button
                                 onClick={() => handleVerifyAadhaar(w)}
-                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
                               >
                                 Verify
                               </button>
@@ -204,7 +196,7 @@ export default function WorkersPage() {
                           </td>
                           <td className="px-4 py-3">
                             {w.licenseVerified ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -213,7 +205,7 @@ export default function WorkersPage() {
                             ) : (
                               <button
                                 onClick={() => handleVerifyLicense(w)}
-                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-medium"
+                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
                               >
                                 Verify
                               </button>
@@ -228,7 +220,7 @@ export default function WorkersPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-foreground text-sm tabular-nums">{w.totalJobs}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 text-right">
                             <button
                               onClick={() => handleToggleAvailability(w)}
                               className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
@@ -250,7 +242,7 @@ export default function WorkersPage() {
                   </p>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </ErrorBoundary>
       </main>

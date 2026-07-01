@@ -110,13 +110,15 @@ export default function JoinPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
+        credentials: 'include',
       });
       const authData = await authRes.json();
       if (!authRes.ok) throw new Error(authData.error || 'Authentication failed');
-      const workerRes = await fetch(`${API_URL}/api/workers`, {
+      const workerRes = await fetch(`${API_URL}/api/workers/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authData.token}` },
-        body: JSON.stringify({ name: form.name, email: form.email, phoneNumber: form.phoneNumber, workerType: form.workerType, experience: form.experience }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name, email: form.email, workerType: form.workerType, experience: form.experience }),
+        credentials: 'include',
       });
       const workerData = await workerRes.json();
       if (!workerRes.ok) throw new Error(workerData.error || 'Failed to create worker');

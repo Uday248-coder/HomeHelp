@@ -124,11 +124,25 @@ html {
     border-radius: var(--radius-xl);
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
-
+  
   .card-dashboard:hover {
     border-color: hsl(var(--border-hover));
     box-shadow: var(--shadow-md);
   }
+
+  .ops-table-row {
+    @apply transition-colors duration-150 hover:bg-muted/50;
+  }
+
+  .status-badge {
+    @apply px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border;
+  }
+
+  .status-pending { @apply bg-warning/10 text-warning border-warning/20; }
+  .status-assigned { @apply bg-info/10 text-info border-info/20; }
+  .status-active { @apply bg-accent/10 text-accent border-accent/20; }
+  .status-completed { @apply bg-success/10 text-success border-success/20; }
+  .status-cancelled { @apply bg-danger/10 text-danger border-danger/20; }
 
   .sidebar-glass {
     backdrop-filter: blur(20px) saturate(1.2);

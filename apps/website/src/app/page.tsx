@@ -29,21 +29,22 @@ function SiteHeader() {
 
   return (
     <header
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-surface/75 nav-blur border-b border-border'
+          ? 'bg-surface/80 nav-blur border-b border-border'
           : 'bg-transparent'
       }`}
     >
-      <nav className="container-page flex items-center justify-between h-16" aria-label="Main">
-        <a href="/" className="font-display text-lg font-medium text-foreground tracking-tight" aria-label="HomeHelp Home">
+      <nav className="container-page flex items-center justify-between h-16">
+        <a href="/" className="font-display text-xl font-medium text-foreground tracking-tight">
           HomeHelp
         </a>
 
         <ul className="hidden md:flex items-center gap-8">
-          <li><a href="#services" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors duration-150">Services</a></li>
-          <li><a href="#pricing" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors duration-150">Pricing</a></li>
-          <li><a href="#faq" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors duration-150">FAQ</a></li>
+          <li><a href="#why-us" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">Why Us</a></li>
+          <li><a href="#services" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">Services</a></li>
+          <li><a href="#pricing" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">Pricing</a></li>
+          <li><a href="#faq" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">FAQ</a></li>
         </ul>
 
         <div className="flex items-center gap-3">
@@ -63,7 +64,7 @@ function SiteHeader() {
             )}
           </button>
 
-          <a href="/book" className="btn-base btn-primary text-sm px-4 py-2">Book Now</a>
+          <a href="#services" className="btn-base btn-primary text-sm px-4 py-2">Explore Services</a>
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -85,6 +86,7 @@ function SiteHeader() {
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-surface/95 nav-blur">
           <ul className="container-page py-4 space-y-3">
+            <li><a href="#why-us" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Why Us</a></li>
             <li><a href="#services" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Services</a></li>
             <li><a href="#pricing" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Pricing</a></li>
             <li><a href="#faq" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">FAQ</a></li>
@@ -98,93 +100,124 @@ function SiteHeader() {
 
 /* ─── Hero ─── */
 
-function LiveStat({ value, label }: { value: string; label: string }) {
-  const [display, setDisplay] = useState('0');
-  useEffect(() => {
-    const target = parseInt(value);
-    if (isNaN(target)) { setDisplay(value); return; }
-    let current = 0;
-    const step = Math.max(1, Math.floor(target / 20));
-    const interval = setInterval(() => {
-      current = Math.min(current + step, target);
-      setDisplay(String(current));
-      if (current >= target) clearInterval(interval);
-    }, 30);
-    return () => clearInterval(interval);
-  }, [value]);
-
+function HeroSection() {
   return (
-    <div className="text-center">
-      <div className="font-display text-3xl text-foreground font-medium leading-none mb-1 tabular-nums">{display}</div>
-      <div className="text-sm text-foreground-tertiary">{label}</div>
-    </div>
+    <section className="relative overflow-hidden pt-32 pb-20 md:pt-48 md:pb-32">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-full pointer-events-none overflow-hidden">
+        <div className="absolute -top-24 left-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-warm/10 rounded-full blur-3xl animate-pulse delay-1000" />
+      </div>
+
+      <div className="container-page relative z-10 text-center">
+        <div className="max-w-4xl mx-auto">
+          <p className="eyebrow inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/20 animate-fade-in">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+            Now serving across Kolkata
+          </p>
+          <h1 className="heading-xl text-balance mb-8 leading-tight animate-fade-in-up">
+            Reclaim your time. <br />
+            <span className="text-gradient">Leave the chores to us.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-foreground-secondary leading-relaxed max-w-2xl mx-auto mb-10 text-pretty animate-fade-in-up delay-1">
+            Premium, background-verified home help and on-demand drivers. 
+            Professional service, hourly billing, and absolute peace of mind.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-2">
+            <a href="#services" className="btn-base btn-primary text-base px-8 py-3 w-full sm:w-auto">
+              Explore Services
+            </a>
+            <a href="#why-us" className="btn-base btn-secondary text-base px-8 py-3 w-full sm:w-auto">
+              Why HomeHelp?
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
-function HeroSection() {
-  return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
-      <div className="pt-28 pb-16 md:pt-36 md:pb-20">
-        <div className="container-page">
-          <div className="grid md:grid-cols-5 gap-10 md:gap-16 items-center">
-            <div className="md:col-span-3 fade-in-up">
-              <p className="eyebrow mb-3">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true" />
-                  Kolkata — Live Now
-                </span>
-              </p>
-              <h1 className="heading-xl text-balance mb-5">
-                The hours you spend cleaning and driving?<br />
-                <span className="text-gradient">Take them back.</span>
-              </h1>
-              <p className="text-lg text-foreground-secondary leading-relaxed max-w-lg mb-8 text-pretty">
-                Verified home help and on-demand drivers in Kolkata. Book by the hour, pay only for what you use.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a href="/book?mode=home_help" className="btn-base btn-primary text-sm px-5 py-2.5">
-                  Book Home Help
-                </a>
-                <a href="/book?mode=driver" className="btn-base btn-secondary text-sm px-5 py-2.5">
-                  Book a Driver
-                </a>
-              </div>
-              <ul className="flex flex-wrap gap-x-5 gap-y-1.5 mt-6 text-sm text-foreground-tertiary">
-                <li className="flex items-center gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-accent" aria-hidden="true" />
-                  500+ verified workers
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-accent" aria-hidden="true" />
-                  4.9 avg rating
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-accent" aria-hidden="true" />
-                  10-min avg arrival
-                </li>
-              </ul>
-            </div>
+/* ─── Trust Bar ─── */
 
-            <div className="md:col-span-2 fade-in-up delay-2">
-              <aside className="card-base p-6 md:p-8 card-lift" aria-label="Live status">
-                <div className="flex items-center gap-2 mb-5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-                  </span>
-                  <span className="eyebrow">Live Status</span>
-                </div>
-                <div className="space-y-4">
-                  <LiveStat value="12" label="home helpers available now" />
-                  <hr className="border-border" />
-                  <LiveStat value="3" label="drivers available now" />
-                  <hr className="border-border" />
-                  <LiveStat value="4.9" label="average rating" />
-                </div>
-              </aside>
-            </div>
+function TrustBar() {
+  return (
+    <section className="py-8 border-y border-border bg-surface-secondary/50">
+      <div className="container-page">
+        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Verified Professionals
           </div>
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            Aadhaar Verified
+          </div>
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 6.59 11 16.59z"/></svg>
+            Insured Service
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Why Us (Bento Grid) ─── */
+
+function WhyUsSection() {
+  const features = [
+    {
+      title: 'Background Verified',
+      desc: 'Every worker undergoes a multi-step verification process, including Aadhaar and police checks.',
+      icon: '🛡️',
+      className: 'md:col-span-2 md:row-span-1',
+    },
+    {
+      title: '10-Min Arrival',
+      desc: 'Hyper-local matching ensures a pro is at your door in minutes.',
+      icon: '⚡',
+      className: 'md:col-span-1 md:row-span-1',
+    },
+    {
+      title: 'Hourly Billing',
+      desc: 'No monthly contracts. Pay exactly for the hours you use.',
+      icon: '⏱️',
+      className: 'md:col-span-1 md:row-span-2',
+    },
+    {
+      title: 'Professional Training',
+      desc: 'Trained in modern home management and professional etiquette.',
+      icon: '🎓',
+      className: 'md:col-span-1 md:row-span-1',
+    },
+    {
+      title: 'Insured & Safe',
+      desc: 'Comprehensive insurance coverage for every booking for your total peace of mind.',
+      icon: '💎',
+      className: 'md:col-span-2 md:row-span-1',
+    },
+  ];
+
+  return (
+    <section id="why-us" className="section-padding" aria-labelledby="why-us-title">
+      <div className="container-page">
+        <header className="max-w-xl mb-14">
+          <p className="eyebrow">The HomeHelp Standard</p>
+          <h2 id="why-us-title" className="heading-lg text-foreground mt-2">Why choose us?</h2>
+          <p className="text-base text-foreground-secondary mt-3 leading-relaxed">
+            We don&rsquo;t just match you with workers; we manage the entire quality lifecycle.
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[200px]">
+          {features.map((f, i) => (
+            <div key={i} className={`bento-item ${f.className} flex flex-col justify-between p-8`}>
+              <div className="text-3xl mb-4">{f.icon}</div>
+              <div>
+                <h3 className="heading-md mb-2">{f.title}</h3>
+                <p className="text-sm text-foreground-secondary leading-relaxed">{f.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -197,71 +230,112 @@ const services = [
   {
     mode: 'home' as const,
     title: 'Home Help',
-    description: 'Background-verified workers for cleaning, kitchen work, laundry, and more. Available in ~10 minutes or schedule ahead.',
+    subtitle: 'Professional Home Management',
+    description: 'Verified workers for cleaning, kitchen work, laundry, and daily chores. High-standard training for modern households.',
     features: [
-      '1–4 hour sessions with 15-min billing slots',
-      'Verified & trained workers',
-      'Free cancellation up to 2 hours before',
+      '1–4 hour sessions with 15-min billing',
+      'Background-verified & trained',
+      'Flexible scheduling',
       'Real-time tracking',
     ],
+    color: 'accent',
+    href: '/book?mode=home_help',
   },
   {
     mode: 'driver' as const,
     title: 'Driver Mode',
-    description: 'A verified driver for your own car. Daily commute, airport runs, late nights — your car, your rules.',
+    subtitle: 'Your Car, Our Professional',
+    description: 'A verified driver for your own car. Perfect for daily commutes, airport runs, or long city trips.',
     features: [
-      'Aadhaar + license verified drivers',
-      'Your car only — safe & insured',
-      'Late night & senior-friendly service',
-      '4-hour minimum for outstation trips',
+      'Aadhaar + license verified',
+      'Safe, insured, & professional',
+      'Late night & senior-friendly',
+      'Outstation capabilities',
     ],
+    color: 'warm',
+    href: '/book?mode=driver',
   },
 ];
 
-function ServiceCard({ service, index }: { service: typeof services[number]; index: number }) {
+function ServiceSpotlight() {
   return (
-    <article className={`card-base p-6 md:p-8 card-lift fade-in-up delay-${index + 1}`}>
-      <div className="flex items-center gap-3 mb-4">
-        <span className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent font-semibold text-sm shrink-0">
-          {service.mode === 'home' ? 'H' : 'D'}
-        </span>
-        <h3 className="heading-md">{service.title}</h3>
+    <section id="services" className="section-padding bg-surface-secondary" aria-labelledby="services-title">
+      <div className="container-page">
+        <header className="max-w-xl mb-14 text-center mx-auto">
+          <p className="eyebrow">Dual Mode</p>
+          <h2 id="services-title" className="heading-lg text-foreground mt-2">Expert help for every need</h2>
+          <p className="text-base text-foreground-secondary mt-3 leading-relaxed">
+            Choose the mode that fits your current requirement.
+          </p>
+        </header>
+
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {services.map((s) => (
+            <article key={s.mode} className="glass-card p-8 rounded-3xl flex flex-col h-full transition-all duration-300 hover:shadow-xl group">
+              <div className={`w-12 h-12 rounded-2xl bg-${s.color}/10 flex items-center justify-center text-${s.color} mb-6 group-hover:scale-110 transition-transform`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  {s.mode === 'home' ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m0-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-16a1 1 0 011 1v10a1 1 0 01-1 1m-4-10a1 1 0 01-1 1v10a1 1 0 011 1m-4-10a1 1 0 01-1 1v10a1 1 0 011 1" />
+                  )}
+                </svg>
+              </div>
+              <p className={`text-xs font-bold uppercase tracking-wider text-${s.color} mb-2`}>{s.subtitle}</p>
+              <h3 className="heading-lg mb-4">{s.title}</h3>
+              <p className="text-foreground-secondary mb-8 leading-relaxed">{s.description}</p>
+              
+              <ul className="space-y-3 mb-10 flex-grow">
+                {s.features.map((feat, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm text-foreground">
+                    <svg className="w-4 h-4 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{feat}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <a href={s.href} className={`btn-base btn-primary w-full text-center py-3`}>
+                Book {s.title}
+              </a>
+            </article>
+          ))}
+        </div>
       </div>
-      <p className="text-sm text-foreground-secondary leading-relaxed mb-5">{service.description}</p>
-      <ul className="space-y-2.5">
-        {service.features.map((feat, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
-            <svg className="w-4 h-4 text-accent mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            <span>{feat}</span>
-          </li>
-        ))}
-      </ul>
-      <a
-        href={service.mode === 'home' ? '/book?mode=home_help' : '/book?mode=driver'}
-        className="btn-base btn-primary mt-6 w-full text-center"
-      >
-        {service.mode === 'home' ? 'Book Home Help' : 'Book a Driver'}
-      </a>
-    </article>
+    </section>
   );
 }
 
-function ServicesSection() {
+/* ─── How It Works ─── */
+
+function HowItWorksSection() {
+  const steps = [
+    { n: '01', title: 'Select', desc: 'Pick Home Help or Driver mode and choose your time.' },
+    { n: '02', title: 'Match', desc: 'We instantly dispatch a verified pro nearby.' },
+    { n: '03', title: 'Relax', desc: 'Pay by the hour and get your time back.' },
+  ];
+
   return (
-    <section id="services" className="section-padding" aria-labelledby="services-title">
+    <section className="section-padding" aria-labelledby="how-title">
       <div className="container-page">
-        <header className="max-w-xl mb-14">
-          <p className="eyebrow">Two modes</p>
-          <h2 id="services-title" className="heading-lg text-foreground mt-2">Choose how we help</h2>
-          <p className="text-base text-foreground-secondary mt-3 leading-relaxed">
-            Whether you need help at home or a driver for your car, we&rsquo;ve got you covered with verified professionals.
-          </p>
+        <header className="max-w-xl mb-16 text-center mx-auto">
+          <p className="eyebrow">Seamless Experience</p>
+          <h2 id="how-title" className="heading-lg text-foreground mt-2">How it works</h2>
         </header>
-        <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-4xl">
-          {services.map((s, i) => (
-            <ServiceCard key={s.mode} service={s} index={i} />
+
+        <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto relative">
+          {/* Connection Line (Desktop) */}
+          <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-border -translate-y-1/2 z-0" />
+          
+          {steps.map((step, i) => (
+            <div key={step.n} className="relative z-10 flex flex-col items-center text-center group">
+              <div className="w-14 h-14 rounded-full bg-surface border-2 border-border flex items-center justify-center text-xl font-display font-bold text-foreground mb-6 group-hover:border-accent group-hover:text-accent transition-all duration-300 shadow-sm">
+                {step.n}
+              </div>
+              <h3 className="heading-md mb-2">{step.title}</h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">{step.desc}</p>
+            </div>
           ))}
         </div>
       </div>
@@ -320,14 +394,14 @@ const plans = [
 function PricingCard({ plan, index }: { plan: typeof plans[number]; index: number }) {
   return (
     <article
-      className={`relative card-base p-6 md:p-8 card-lift fade-in-up delay-${index + 1} ${
+      className={`relative glass-card p-8 rounded-3xl transition-all duration-300 hover:shadow-xl ${
         plan.popular ? 'ring-2 ring-accent shadow-md' : ''
       }`}
     >
       {plan.popular && (
-        <p className="absolute -top-3 left-1/2 -translate-x-1/2">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
           <Badge variant="success" size="sm">Most Popular</Badge>
-        </p>
+        </div>
       )}
 
       <header className="text-center mb-6">
@@ -335,22 +409,22 @@ function PricingCard({ plan, index }: { plan: typeof plans[number]; index: numbe
       </header>
 
       <div className="text-center mb-6">
-        <span className="font-display text-4xl md:text-5xl font-medium text-foreground">{plan.price}</span>
+        <span className="font-display text-5xl font-medium text-foreground">{plan.price}</span>
         <span className="text-sm text-foreground-tertiary ml-1">{plan.period}</span>
       </div>
 
       <ul className="space-y-3 mb-8">
         {plan.features.map((feat, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
-            <svg className="w-4 h-4 text-accent mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          <li key={i} className="flex items-start gap-3 text-sm text-foreground">
+            <svg className="w-4 h-4 text-accent mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             <span>{feat}</span>
           </li>
         ))}
       </ul>
 
-      <a href={plan.href} className="btn-base btn-primary w-full text-center">
+      <a href={plan.href} className={`btn-base btn-primary w-full text-center py-3`}>
         {plan.cta}
       </a>
     </article>
@@ -361,51 +435,17 @@ function PricingSection() {
   return (
     <section id="pricing" className="section-padding bg-surface-secondary" aria-labelledby="pricing-title">
       <div className="container-page">
-        <header className="max-w-xl mb-14">
-          <p className="eyebrow">Pricing</p>
-          <h2 id="pricing-title" className="heading-lg text-foreground mt-2">Simple, transparent</h2>
+        <header className="max-w-xl mb-14 text-center mx-auto">
+          <p className="eyebrow">Transparent Pricing</p>
+          <h2 id="pricing-title" className="heading-lg text-foreground mt-2">Simple, hourly rates</h2>
           <p className="text-base text-foreground-secondary mt-3 leading-relaxed">
-            Pay only for what you use. No hidden fees, no subscription required.
+            Pay only for what you use. No hidden fees, no subscriptions.
           </p>
         </header>
 
-        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
           {plans.map((plan, i) => (
             <PricingCard key={plan.title} plan={plan} index={i} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── How It Works ─── */
-
-const steps = [
-  { n: '01', title: 'Choose', desc: 'Select Home Help or Driver mode, pick your time slot, and confirm your booking.' },
-  { n: '02', title: 'Get matched', desc: 'We instantly match you with a verified worker nearby. Track their arrival live.' },
-  { n: '03', title: 'Done & rated', desc: 'Service complete. Pay securely via UPI or card. Rate your experience to help others.' },
-];
-
-function HowItWorksSection() {
-  return (
-    <section className="section-padding" aria-labelledby="how-title">
-      <div className="container-page">
-        <header className="max-w-xl mb-14">
-          <p className="eyebrow">Three steps</p>
-          <h2 id="how-title" className="heading-lg text-foreground mt-2">How it works</h2>
-          <p className="text-base text-foreground-secondary mt-3 leading-relaxed">
-            No apps to download. Just pick a service, confirm, and relax.
-          </p>
-        </header>
-
-        <div className="grid md:grid-cols-3 gap-8 md:gap-12 max-w-4xl">
-          {steps.map((step, i) => (
-            <article key={step.n} className={`fade-in-up delay-${i + 1}`}>
-              <p className="font-display text-4xl md:text-5xl font-medium text-accent mb-3">{step.n}</p>
-              <h3 className="heading-md mb-2">{step.title}</h3>
-              <p className="text-sm text-foreground-secondary leading-relaxed">{step.desc}</p>
-            </article>
           ))}
         </div>
       </div>
@@ -416,40 +456,31 @@ function HowItWorksSection() {
 /* ─── Testimonials ─── */
 
 const testimonials = [
-  { name: 'Priya Sharma', role: 'Working Professional', rating: 5, text: 'This is exactly what our city needs. I can finally get reliable help at home without going through an agency. The workers are professional and punctual.', initial: 'PS' },
-  { name: 'Rahul Mehta', role: 'Tech Lead', rating: 5, text: 'Driver mode is genius. I have a car but driving in Kolkata traffic exhausts me. Having a verified driver is the perfect solution for my daily commute.', initial: 'RM' },
-  { name: 'Ananya Krishnan', role: 'Working Parent', rating: 5, text: 'As a working parent, I need someone I can trust at home. The verification process here gives me real peace of mind. Highly recommended!', initial: 'AK' },
+  { name: 'Priya Sharma', role: 'Working Professional', rating: 5, text: 'This is exactly what our city needs. I can finally get reliable help at home without going through an agency.', initial: 'PS' },
+  { name: 'Rahul Mehta', role: 'Tech Lead', rating: 5, text: 'Driver mode is genius. I have a car but driving in Kolkata traffic exhausts me. Perfect for my daily commute.', initial: 'RM' },
+  { name: 'Ananya Krishnan', role: 'Working Parent', rating: 5, text: 'As a working parent, I need someone I can trust. The verification process here gives me real peace of mind.', initial: 'AK' },
 ];
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} className={`w-4 h-4 ${i < rating ? 'text-amber-500' : 'text-border'}`} fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </div>
-  );
-}
 
 function TestimonialsSection() {
   return (
-    <section id="testimonials" className="section-padding bg-surface-secondary" aria-labelledby="testimonials-title">
+    <section id="testimonials" className="section-padding" aria-labelledby="testimonials-title">
       <div className="container-page">
         <header className="max-w-xl mb-14">
-          <p className="eyebrow">Testimonials</p>
-          <h2 id="testimonials-title" className="heading-lg text-foreground mt-2">Trusted by Kolkata</h2>
-          <p className="text-base text-foreground-secondary mt-3 leading-relaxed">See what our customers have to say.</p>
+          <p className="eyebrow">Voices of Trust</p>
+          <h2 id="testimonials-title" className="heading-lg text-foreground mt-2">Loved by the city</h2>
         </header>
 
-        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
           {testimonials.map((t, i) => (
-            <article key={t.name} className={`card-base p-6 card-lift fade-in-up delay-${i + 1}`}>
-              <StarRating rating={t.rating} />
-              <p className="text-sm text-foreground leading-relaxed mt-4 mb-6">&ldquo;{t.text}&rdquo;</p>
+            <article key={t.name} className="glass-card p-8 rounded-3xl transition-all duration-300 hover:shadow-lg">
+              <div className="flex items-center gap-0.5 mb-4">
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <svg key={j} className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                ))}
+              </div>
+              <p className="text-sm text-foreground leading-relaxed mb-8 italic">&ldquo;{t.text}&rdquo;</p>
               <footer className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center text-accent text-xs font-semibold shrink-0">
+                <span className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-bold shrink-0">
                   {t.initial}
                 </span>
                 <div>
@@ -499,27 +530,27 @@ function WaitlistSection() {
   };
 
   return (
-    <section id="waitlist" className="section-padding" aria-labelledby="waitlist-title">
-      <div className="container-page text-center max-w-lg mx-auto">
-        <p className="eyebrow">Expanding soon</p>
-        <h2 id="waitlist-title" className="heading-lg text-foreground mt-2">Be first in your city</h2>
-        <p className="text-sm text-foreground-secondary mt-3 mb-8 leading-relaxed">
-          We&rsquo;re expanding to more cities. Join the waitlist and get early access when we launch in your area.
+    <section id="waitlist" className="section-padding bg-surface-secondary" aria-labelledby="waitlist-title">
+      <div className="container-page text-center max-w-2xl mx-auto">
+        <p className="eyebrow">Coming Soon</p>
+        <h2 id="waitlist-title" className="heading-lg text-foreground mt-2 mb-6">Be the first in your city</h2>
+        <p className="text-base text-foreground-secondary mb-10 leading-relaxed">
+          We&rsquo;re expanding rapidly. Join the waitlist to get early access and a special launch discount when we hit your area.
         </p>
 
         {error && (
-          <div className="mb-6 px-4 py-3 rounded-lg bg-warm-subtle border border-warm/20 text-sm text-warm" role="alert">
+          <div className="mb-6 px-4 py-3 rounded-xl bg-warm-subtle border border-warm/20 text-sm text-warm" role="alert">
             {error}
           </div>
         )}
 
         {submitted ? (
-          <div className="card-base p-8 animate-scale-in">
-            <h3 className="heading-md mb-2">You&rsquo;re on the list!</h3>
-            <p className="text-sm text-foreground-secondary">We&rsquo;ll notify you when we launch in your city.</p>
+          <div className="glass-card p-12 rounded-3xl animate-scale-in">
+            <h3 className="heading-md mb-3">You&rsquo;re on the list!</h3>
+            <p className="text-sm text-foreground-secondary">We&rsquo;ll notify you as soon as we launch in your city.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
             <Input
               type="email"
               placeholder="Enter your email"
@@ -528,13 +559,12 @@ function WaitlistSection() {
               required
               aria-label="Email address for waitlist"
             />
-            <Button type="submit" loading={loading} className="shrink-0">
+            <Button type="submit" loading={loading} className="shrink-0 px-6">
               {loading ? 'Joining...' : 'Join Waitlist'}
             </Button>
           </form>
         )}
-
-        <p className="mt-4 text-xs text-foreground-tertiary">No spam. Unsubscribe anytime.</p>
+        <p className="mt-6 text-xs text-foreground-tertiary">No spam. Unsubscribe anytime.</p>
       </div>
     </section>
   );
@@ -543,12 +573,12 @@ function WaitlistSection() {
 /* ─── FAQ ─── */
 
 const faqs = [
-  { q: 'What cities do you operate in?', a: "We're live in Kolkata! More cities coming soon. Join the waitlist to be notified when we launch in your city." },
-  { q: 'How are workers verified?', a: 'All workers undergo Aadhaar verification, background checks, and in-person interviews. Home help workers also receive skill training before they\'re onboarded.' },
-  { q: 'Can I cancel a booking?', a: 'Yes, free cancellation up to 2 hours before the scheduled time. Late cancellations may incur a nominal fee.' },
-  { q: 'How does Driver mode work?', a: 'A verified driver comes to your location and drives your own car. The driver handles everything from pickup to drop-off — you just relax.' },
-  { q: 'What payment methods do you accept?', a: 'All major UPI apps (Google Pay, PhonePe, Paytm), credit/debit cards, and net banking. Payments are processed securely through Razorpay.' },
-  { q: 'Is there a subscription required?', a: 'No subscription required — pay only for what you use. Our subscription plan (coming soon) offers priority booking and discounted rates.' },
+  { q: 'What cities do you operate in?', a: "We're currently live in Kolkata! More cities coming soon. Join the waitlist to be notified when we launch in your area." },
+  { q: 'How are workers verified?', a: 'Every worker undergoes a rigorous verification process: Aadhaar identity check, police verification, and a personal interview. Home help workers are also skill-tested.' },
+  { q: 'Can I cancel a booking?', a: 'Yes, you can cancel for free up to 2 hours before the scheduled time. For late cancellations, a small fee may apply.' },
+  { q: 'How does Driver mode work?', a: 'A verified professional driver comes to your home and drives your own car. You maintain control of the vehicle while enjoying a stress-free ride.' },
+  { q: 'What payment methods do you accept?', a: 'We support all major UPI apps, credit/debit cards, and net banking via our secure Razorpay integration.' },
+  { q: 'Is there a subscription required?', a: 'No. We believe in flexibility. Pay only for the hours you use. A premium subscription for priority booking is coming soon.' },
 ];
 
 function FAQSection() {
@@ -559,48 +589,43 @@ function FAQSection() {
       <div className="container-page">
         <header className="max-w-xl mb-14">
           <p className="eyebrow">FAQ</p>
-          <h2 id="faq-title" className="heading-lg text-foreground mt-2">Frequently asked questions</h2>
+          <h2 id="faq-title" className="heading-lg text-foreground mt-2">Common questions</h2>
         </header>
 
-        <div className="max-w-2xl mx-auto">
-          <Card variant="elevated" padding="none">
+        <div className="max-w-3xl mx-auto">
+          <div className="space-y-4">
             {faqs.map((faq, i) => {
               const isOpen = openIndex === i;
-              const id = `faq-${i}`;
               return (
-                <div key={i} className="border-b border-border last:border-0">
-                  <h3>
-                    <button
-                      onClick={() => setOpenIndex(isOpen ? null : i)}
-                      className="w-full flex items-center justify-between px-6 py-5 text-left text-sm font-medium text-foreground hover:text-accent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-                      aria-expanded={isOpen}
-                      aria-controls={id}
+                <div key={i} className="glass-card rounded-2xl overflow-hidden transition-all duration-300">
+                  <button
+                    onClick={() => setOpenIndex(isOpen ? null : i)}
+                    className="w-full flex items-center justify-between px-6 py-5 text-left text-sm font-medium text-foreground hover:text-accent transition-colors"
+                    aria-expanded={isOpen}
+                  >
+                    <span>{faq.q}</span>
+                    <svg
+                      className={`w-4 h-4 shrink-0 text-foreground-tertiary transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
                     >
-                      <span className="pr-4">{faq.q}</span>
-                      <svg
-                        className={`w-4 h-4 shrink-0 text-foreground-tertiary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </h3>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                   <div
-                    id={id}
-                    role="region"
                     className={`grid transition-all duration-300 ease-out ${
                       isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                     }`}
-                    aria-hidden={!isOpen}
                   >
                     <div className="overflow-hidden">
-                      <p className="px-6 pb-5 text-sm text-foreground-secondary leading-relaxed">{faq.a}</p>
+                      <div className="px-6 pb-5 text-sm text-foreground-secondary leading-relaxed">
+                        {faq.a}
+                      </div>
                     </div>
                   </div>
                 </div>
               );
             })}
-          </Card>
+          </div>
         </div>
       </div>
     </section>
@@ -612,52 +637,44 @@ function FAQSection() {
 function Footer() {
   return (
     <footer className="border-t border-border bg-surface-secondary">
-      <div className="container-page py-12">
-        <div className="grid md:grid-cols-4 gap-8 mb-10">
+      <div className="container-page py-16">
+        <div className="grid md:grid-cols-4 gap-12 mb-16">
           <div className="md:col-span-2">
-            <a href="/" className="font-display text-lg font-medium text-foreground">HomeHelp</a>
-            <p className="mt-3 text-sm text-foreground-secondary max-w-xs leading-relaxed">
-              Home services &amp; drivers — whenever you need them. Verified professionals, transparent pricing, no subscriptions.
+            <a href="/" className="font-display text-2xl font-medium text-foreground">HomeHelp</a>
+            <p className="mt-4 text-sm text-foreground-secondary max-w-sm leading-relaxed">
+              The modern standard for on-demand home assistance. Reclaiming your time, one hour at a time.
             </p>
           </div>
-          <nav aria-label="Services">
-            <h4 className="text-sm font-medium text-foreground mb-4">Services</h4>
-            <ul className="space-y-2">
+          <nav aria-label="Quick Links">
+            <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-6">Services</h4>
+            <ul className="space-y-3">
               <li><a href="#services" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">Home Help</a></li>
               <li><a href="#services" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">Driver Mode</a></li>
               <li><a href="#pricing" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">Pricing</a></li>
             </ul>
           </nav>
           <nav aria-label="Company">
-            <h4 className="text-sm font-medium text-foreground mb-4">Company</h4>
-            <ul className="space-y-2">
+            <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-6">Company</h4>
+            <ul className="space-y-3">
               <li><a href="/join" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">Work with Us</a></li>
               <li><a href="#faq" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">FAQ</a></li>
             </ul>
           </nav>
         </div>
 
-        <hr className="border-border mb-8" />
-
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-foreground-tertiary">&copy; {new Date().getFullYear()} HomeHelp. All rights reserved.</p>
-          <ul className="flex items-center gap-5">
-            <li>
-              <a href="#" className="text-foreground-tertiary hover:text-foreground transition-colors" aria-label="Twitter">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-foreground-tertiary hover:text-foreground transition-colors" aria-label="LinkedIn">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z"/></svg>
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-foreground-tertiary hover:text-foreground transition-colors" aria-label="Instagram">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-              </a>
-            </li>
-          </ul>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-8 border-t border-border">
+          <p className="text-xs text-foreground-tertiary">&copy; {new Date().getFullYear()} HomeHelp. All rights reserved.</p>
+          <div className="flex items-center gap-6">
+            <a href="#" className="text-foreground-tertiary hover:text-foreground transition-colors" aria-label="Twitter">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+            </a>
+            <a href="#" className="text-foreground-tertiary hover:text-foreground transition-colors" aria-label="LinkedIn">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z"/></svg>
+            </a>
+            <a href="#" className="text-foreground-tertiary hover:text-foreground transition-colors" aria-label="Instagram">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </a>
+          </div>
         </div>
       </div>
     </footer>
@@ -672,9 +689,11 @@ export default function HomePage() {
       <SiteHeader />
       <main>
         <HeroSection />
-        <ServicesSection />
-        <PricingSection />
+        <TrustBar />
+        <WhyUsSection />
+        <ServiceSpotlight />
         <HowItWorksSection />
+        <PricingSection />
         <TestimonialsSection />
         <WaitlistSection />
         <FAQSection />

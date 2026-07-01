@@ -22,7 +22,8 @@ function verifySignature(orderId: string, paymentId: string, signature: string):
       .update(`${orderId}|${paymentId}`)
       .digest('hex');
     return expected === signature;
-  } catch {
+  } catch (err) {
+    console.error('[payments] verifySignature error:', err);
     return false;
   }
 }
@@ -84,7 +85,8 @@ paymentsRouter.post('/create-order', async (req, res) => {
     });
 
     return res.json({ payment, razorpayOrderId });
-  } catch (error) {
+  } catch (err) {
+    console.error('[payments] create-order error:', err);
     return res.status(500).json({ error: 'Failed to create payment' });
   }
 });
@@ -148,8 +150,8 @@ paymentsRouter.post('/verify', async (req, res) => {
 
     console.log(`[Payments] Payment ${paymentId} successfully verified and captured`);
     return res.json({ payment: updatedPayment });
-  } catch (error) {
-    console.error('[Payments] Error during verification:', error);
+  } catch (err) {
+    console.error('[payments] verify error:', err);
     return res.status(500).json({ error: 'Failed to verify payment' });
   }
 });
@@ -172,7 +174,8 @@ paymentsRouter.get('/booking/:bookingId', async (req, res) => {
     });
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
     return res.json({ payment });
-  } catch (error) {
+  } catch (err) {
+    console.error('[payments] get booking payment error:', err);
     return res.status(500).json({ error: 'Failed to fetch payment' });
   }
 });

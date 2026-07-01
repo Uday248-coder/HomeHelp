@@ -31,7 +31,8 @@ bookingsRouter.get('/', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     return res.json({ bookings });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] fetch bookings error:', err);
     return res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 });
@@ -71,7 +72,8 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
       },
     });
     return res.status(201).json({ booking });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] create booking error:', err);
     return res.status(500).json({ error: 'Failed to create booking' });
   }
 });
@@ -118,7 +120,8 @@ bookingsRouter.get('/admin/all', async (req: Request, res: Response) => {
     ]);
 
     return res.json({ bookings, total, page, totalPages: Math.ceil(total / limit) });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] admin all bookings error:', err);
     return res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 });
@@ -150,7 +153,8 @@ bookingsRouter.get('/available', async (req: Request, res: Response) => {
       take: 50,
     });
     return res.json({ bookings });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] available bookings error:', err);
     return res.status(500).json({ error: 'Failed to fetch available bookings' });
   }
 });
@@ -172,7 +176,8 @@ bookingsRouter.get('/worker', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     return res.json({ bookings });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] worker bookings error:', err);
     return res.status(500).json({ error: 'Failed to fetch worker bookings' });
   }
 });
@@ -192,7 +197,8 @@ bookingsRouter.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Booking not found' });
     }
     return res.json({ booking });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] get booking error:', err);
     return res.status(500).json({ error: 'Failed to fetch booking' });
   }
 });
@@ -214,7 +220,8 @@ bookingsRouter.patch('/:id/cancel', async (req: Request, res: Response) => {
       select: BOOKING_SAFE_FIELDS,
     });
     return res.json({ booking: updated });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] cancel booking error:', err);
     return res.status(500).json({ error: 'Failed to cancel booking' });
   }
 });
@@ -246,7 +253,8 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
       },
     });
     return res.json({ booking: updated });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] assign worker error:', err);
     return res.status(500).json({ error: 'Failed to assign worker' });
   }
 });
@@ -273,7 +281,8 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
       select: BOOKING_SAFE_FIELDS,
     });
     return res.json({ booking: updated });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] start booking error:', err);
     return res.status(500).json({ error: 'Failed to start booking' });
   }
 });
@@ -316,7 +325,8 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
     }
 
     return res.json({ booking: updated });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] complete booking error:', err);
     return res.status(500).json({ error: 'Failed to complete booking' });
   }
 });
@@ -347,7 +357,8 @@ bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) =>
     console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP: ${otp}`);
 
     return res.json({ message: `${type} OTP generated` });
-  } catch (error) {
+  } catch (err) {
+    console.error('[bookings] generate otp error:', err);
     return res.status(500).json({ error: 'Failed to generate OTP' });
   }
 });

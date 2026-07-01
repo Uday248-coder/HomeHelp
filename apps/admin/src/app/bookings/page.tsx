@@ -7,18 +7,9 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import { Modal } from '@/components/ui/Modal';
-import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import LoginScreen from '@/components/LoginScreen';
-
-const STATUS_BADGES: Record<string, 'success' | 'warning' | 'error' | 'info' | 'purple'> = {
-  completed: 'success',
-  in_progress: 'info',
-  assigned: 'purple',
-  cancelled: 'error',
-  pending: 'warning',
-};
 
 export default function BookingsPage() {
   const { token, logout } = useAuth();
@@ -117,28 +108,28 @@ export default function BookingsPage() {
       <main className="flex-1 overflow-auto">
         <ErrorBoundary>
           <div className="p-6 lg:p-8 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
+            <header className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">Bookings</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Manage all customer bookings</p>
+                <h1 className="text-xl font-semibold text-foreground tracking-tight">Bookings Management</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Operational view of all customer requests</p>
               </div>
-            </div>
+            </header>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg mb-5 text-sm flex items-center justify-between animate-slide-in">
+              <div className="bg-danger/10 border border-danger/20 text-danger px-4 py-2.5 rounded-lg mb-5 text-sm flex items-center justify-between animate-slide-in">
                 <span>{error}</span>
                 <button onClick={() => setError('')} className="font-medium underline hover:no-underline">Dismiss</button>
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="relative flex-1">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
                   type="search"
-                  placeholder="Search by ID or user..."
+                  placeholder="Search by Booking ID or User..."
                   value={search}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="w-full h-9 pl-9 pr-3 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent hover:border-foreground/20"
@@ -149,7 +140,7 @@ export default function BookingsPage() {
                 onChange={(e) => handleStatusFilter(e.target.value)}
                 className="h-9 px-3 bg-background border border-border rounded-lg text-sm text-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent hover:border-foreground/20"
               >
-                <option value="">All Status</option>
+                <option value="">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="assigned">Assigned</option>
                 <option value="in_progress">In Progress</option>
@@ -186,31 +177,31 @@ export default function BookingsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground border-b border-border bg-muted/50">
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">ID</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">User</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Worker</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Booking ID</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Customer</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Assigned Worker</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Mode</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Amount</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Date</th>
-                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Created At</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {bookings.map((b) => (
-                        <tr key={b.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <tr key={b.id} className="ops-table-row border-b border-border">
                           <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{b.id.slice(0, 8)}</td>
-                          <td className="px-4 py-3 text-foreground">{b.user?.name || b.user?.phoneNumber || 'N/A'}</td>
+                          <td className="px-4 py-3 text-foreground font-medium">{b.user?.name || b.user?.phoneNumber || 'N/A'}</td>
                           <td className="px-4 py-3 text-foreground">
                             {b.worker?.name || <span className="text-muted-foreground italic text-xs">Unassigned</span>}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="capitalize text-xs font-medium text-foreground">{b.mode.replace('_', ' ')}</span>
+                            <span className="capitalize text-xs text-muted-foreground">{b.mode.replace('_', ' ')}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <Badge variant={STATUS_BADGES[b.status] || 'neutral'} size="sm">
+                            <span className={`status-badge status-${b.status}`}>
                               {b.status.replace('_', ' ')}
-                            </Badge>
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-foreground font-medium tabular-nums">
                             {b.payment ? `₹${Number(b.payment.amount).toLocaleString()}` : '—'}
@@ -218,12 +209,12 @@ export default function BookingsPage() {
                           <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                             {new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-1">
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
                               {b.status === 'pending' && (
                                 <button
                                   onClick={() => openAssignModal(b)}
-                                  className="px-2 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors"
+                                  className="px-2 py-1 text-[11px] font-bold text-accent hover:bg-accent/10 rounded transition-colors"
                                 >
                                   Assign
                                 </button>
@@ -231,7 +222,7 @@ export default function BookingsPage() {
                               {b.status === 'assigned' && (
                                 <button
                                   onClick={() => handleAction('start', b)}
-                                  className="px-2 py-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-md transition-colors"
+                                  className="px-2 py-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded transition-colors"
                                 >
                                   Start
                                 </button>
@@ -239,7 +230,7 @@ export default function BookingsPage() {
                               {b.status === 'in_progress' && (
                                 <button
                                   onClick={() => handleAction('complete', b)}
-                                  className="px-2 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-md transition-colors"
+                                  className="px-2 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded transition-colors"
                                 >
                                   Complete
                                 </button>
@@ -247,7 +238,7 @@ export default function BookingsPage() {
                               {(b.status === 'pending' || b.status === 'assigned') && (
                                 <button
                                   onClick={() => handleAction('cancel', b)}
-                                  className="px-2 py-1 text-[11px] font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                                  className="px-2 py-1 text-[11px] font-bold text-danger hover:bg-danger/10 rounded transition-colors"
                                 >
                                   Cancel
                                 </button>
@@ -280,7 +271,7 @@ export default function BookingsPage() {
                   </button>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </ErrorBoundary>
       </main>
@@ -289,7 +280,7 @@ export default function BookingsPage() {
         isOpen={!!assignModal}
         onClose={() => setAssignModal(null)}
         title="Assign Worker"
-        description="Select an available worker for this booking"
+        description="Select a background-verified professional for this booking"
         size="sm"
       >
         {assigningWorkers ? (
@@ -301,7 +292,7 @@ export default function BookingsPage() {
           </div>
         ) : availableWorkers.length === 0 ? (
           <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground">No available workers for this service type.</p>
+            <p className="text-sm text-muted-foreground">No available workers found for this service mode.</p>
           </div>
         ) : (
           <div className="space-y-1.5 max-h-60 overflow-y-auto scrollbar-thin">
@@ -309,7 +300,7 @@ export default function BookingsPage() {
               <button
                 key={w.id}
                 onClick={() => handleAssignWorker(w.id)}
-                className="w-full text-left p-3 rounded-lg border border-border hover:border-emerald-500/50 hover:bg-muted transition-all"
+                className="w-full text-left p-3 rounded-lg border border-border hover:border-accent/50 hover:bg-accent/5 transition-all"
               >
                 <p className="font-medium text-foreground text-sm">{w.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">

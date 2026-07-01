@@ -22,7 +22,8 @@ waitlistRouter.post('/', async (req, res) => {
 
     const entry = await prisma.waitlistEntry.create({ data: { email } });
     return res.status(201).json({ message: 'Signed up successfully', entry });
-  } catch (error) {
+  } catch (err) {
+    console.error('[waitlist] signup error:', err);
     return res.status(500).json({ error: 'Failed to process signup' });
   }
 });
@@ -31,7 +32,8 @@ waitlistRouter.get('/', authMiddleware, adminMiddleware, async (_req, res) => {
   try {
     const entries = await prisma.waitlistEntry.findMany({ orderBy: { createdAt: 'desc' } });
     return res.json({ total: entries.length, entries });
-  } catch (error) {
+  } catch (err) {
+    console.error('[waitlist] fetch waitlist error:', err);
     return res.status(500).json({ error: 'Failed to fetch waitlist' });
   }
 });

@@ -47,18 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = useCallback(async (newToken: string) => {
-    // Store token in httpOnly cookie via API
-    try {
-      await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ token: newToken }),
-      });
-      setToken(newToken);
-    } catch (e) {
-      console.error('Failed to create session cookie:', e);
-    }
+    setToken(newToken);
   }, []);
 
   const logout = useCallback(async () => {

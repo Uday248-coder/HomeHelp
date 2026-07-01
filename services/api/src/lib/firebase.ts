@@ -21,5 +21,11 @@ function initFirebase(): admin.app.App {
   return admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 }
 
-export const firebaseApp = initFirebase();
-export const firebaseAuth = admin.auth(firebaseApp);
+let authInstance: admin.auth.Auth | null = null;
+
+export function getFirebaseAuth(): admin.auth.Auth {
+  if (authInstance) return authInstance;
+  const app = initFirebase();
+  authInstance = admin.auth(app);
+  return authInstance;
+}
