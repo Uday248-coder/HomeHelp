@@ -242,7 +242,7 @@ export default function WorkersPage() {
                   </p>
                 </div>
               </div>
-            ) : null}
+            )}
           </div>
         </ErrorBoundary>
       </main>

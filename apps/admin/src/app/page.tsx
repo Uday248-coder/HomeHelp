@@ -8,6 +8,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChart } from '@/components/dashboard/BarChart';
 import { DonutChart } from '@/components/dashboard/DonutChart';
 import { RecentBookings } from '@/components/dashboard/RecentBookings';
+import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';

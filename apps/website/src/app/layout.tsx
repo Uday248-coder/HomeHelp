@@ -1,21 +1,6 @@
 import type { Metadata } from "next";
-import { Newsreader, Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
-
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "HomeHelp — Hourly Home Services & Driver Booking, Kolkata",
@@ -35,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <Script id="theme-init" strategy="beforeInteractive">
           {`

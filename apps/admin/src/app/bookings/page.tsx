@@ -271,7 +271,7 @@ export default function BookingsPage() {
                   </button>
                 </div>
               </div>
-            ) : null}
+            )}
           </div>
         </ErrorBoundary>
       </main>
