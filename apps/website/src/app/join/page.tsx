@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { auth } from '@/lib/firebase';
-import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
+import { auth, sendPhoneOTP, verifyPhoneOTP } from '@/lib/firebase';
+import { RecaptchaVerifier } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -61,14 +61,14 @@ export default function JoinPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const recaptchaRef = useRef<HTMLDivElement>(null);
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!(window as unknown as Record<string, boolean>).recaptchaVerifier) {
-      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current!, {
+    if (!recaptchaVerifierRef.current && recaptchaRef.current) {
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
         size: 'invisible',
       });
-      (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier = verifier;
     }
   }, []);
 
@@ -83,11 +83,12 @@ export default function JoinPage() {
     setError('');
     setLoading(true);
     try {
-      const verifier = (window as unknown as Record<string, RecaptchaVerifier>).recaptchaVerifier;
+      const verifier = recaptchaVerifierRef.current;
       if (!verifier) throw new Error('Recaptcha not initialized. Please try again.');
       const formattedPhone = form.phoneNumber.startsWith('+') ? form.phoneNumber : `+${form.phoneNumber}`;
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
-      confirmationRef.current = confirmation;
+      const result = await sendPhoneOTP(formattedPhone, verifier);
+      if (!result.success) throw new Error(result.error || 'Failed to send OTP');
+      setVerificationId(result.verificationId || null);
       setStep(2);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to send OTP';
@@ -101,11 +102,14 @@ export default function JoinPage() {
     if (!form.email) { setError('Email is required'); return; }
     if (!form.otp) { setError('OTP is required'); return; }
     if (!form.termsAccepted) { setError('You must accept the terms and conditions'); return; }
+    if (!verificationId) { setError('Verification session expired. Please resend OTP.'); return; }
     setError('');
     setLoading(true);
     try {
-      const result = await confirmationRef.current!.confirm(form.otp);
-      const idToken = await result.user.getIdToken();
+      const result = await verifyPhoneOTP(verificationId, form.otp);
+      if (!result.success) throw new Error(result.error || 'Verification failed');
+      const idToken = await result.userCredential?.user.getIdToken();
+      if (!idToken) throw new Error('Failed to get auth token');
       const authRes = await fetch(`${API_URL}/api/auth/firebase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

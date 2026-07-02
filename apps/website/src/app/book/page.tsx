@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
-import { auth, sendPhoneOTP, verifyPhoneOTP, getIdToken } from '@/lib/firebase-auth';
+import { auth, sendPhoneOTP, verifyPhoneOTP, getIdToken } from '@/lib/firebase';
 import { RecaptchaVerifier } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';

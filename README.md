@@ -30,7 +30,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 | **Firebase Auth** | Phone OTP + Google Sign-In | ✅ **Using Firebase test numbers** — zero-cost, no SMS gateway needed | ✅ Pre-configured |
 | **Google Maps** | Address autocomplete, geocoding, ETA | ❌ **Not connected** — no API key set | ❌ No env vars set |
 | **Firebase (FCM)** | Push notifications for mobile apps | ❌ **Not connected** — no server key set | ❌ No env vars set |
-| **Socket.io** | Real-time location tracking | ❌ **Not implemented** — planned for mobile app phase | N/A |
+| **Socket.io** | Real-time location tracking | ✅ **Implemented** — basic worker location tracking via Socket.io | N/A |
 
 ---
 
@@ -156,7 +156,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 ### Phase 1 — Mobile Launch (2+ weeks)
 - [ ] **Customer App** — test on device/emulator, build with EAS, deploy to TestFlight/Play Store internal track
 - [ ] **Worker App** — test on device/emulator, build with EAS, deploy to TestFlight/Play Store internal track
-- [ ] **Real-time location tracking** via Socket.io for worker arrival
+- [x] **Real-time location tracking** via Socket.io for worker arrival
 - [ ] **Push notifications** via FCM (Expo Notifications) for booking updates
 
 ### Phase 2 — Platform Features (1-2 weeks)
@@ -187,7 +187,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 | **Google Maps API** | Address autocomplete, geocoding, ETA, tracking | ❌ Not connected |
 | **Sentry DSN** | Error tracking and monitoring | 🔌 Wired, no key |
 | **Firebase Cloud Messaging** | Push notifications to mobile apps | ❌ Not connected |
-| **Socket.io** | Real-time location tracking + live booking updates | ❌ Not connected |
+| **Socket.io** | Real-time location tracking + live booking updates | ✅ Implemented (basic location tracking) |
 | **Digilocker / Aadhaar API** | Worker identity verification | ❌ Not connected |
 | **SARATHI / Parivahan API** | Driver license verification | ❌ Not connected |
 

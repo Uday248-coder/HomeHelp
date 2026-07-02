@@ -45,6 +45,16 @@ export const fonts = {
   weightBold: '700' as const,
 };
 
+export const fontSize = {
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 22,
+  xxl: 28,
+  xxxl: 34,
+};
+
 export const shadows = {
   card: {
     shadowColor: '#000',
@@ -61,3 +71,5 @@ export const shadows = {
     elevation: 5,
   },
 };
+
+export const shadow = shadows;

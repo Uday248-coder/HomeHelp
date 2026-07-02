@@ -1,24 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize } from '../../src/constants/theme';
-
-const TAB_ICONS: Record<string, string> = {
-  index: '🏠',
-  jobs: '📋',
-  'active-job': '⚡',
-  earnings: '💰',
-  profile: '👤',
-};
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarIcon: ({ color, route }) => (
-          <Text style={{ fontSize: 22, opacity: color === colors.primary ? 1 : 0.5 }}>
-            {TAB_ICONS[route.name] || '📄'}
-          </Text>
-        ),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
@@ -46,6 +33,7 @@ export default function TabsLayout() {
         options={{
           title: 'Dashboard',
           tabBarLabel: 'Dashboard',
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -53,6 +41,7 @@ export default function TabsLayout() {
         options={{
           title: 'Available Jobs',
           tabBarLabel: 'Jobs',
+          tabBarIcon: ({ color, size }) => <Ionicons name="briefcase-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -60,6 +49,7 @@ export default function TabsLayout() {
         options={{
           title: 'Earnings',
           tabBarLabel: 'Earnings',
+          tabBarIcon: ({ color, size }) => <Ionicons name="cash-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -67,6 +57,7 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarLabel: 'Profile',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
         }}
       />
     </Tabs>
