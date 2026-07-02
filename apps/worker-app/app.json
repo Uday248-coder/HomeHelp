@@ -3,6 +3,7 @@
     "name": "worker-app",
     "slug": "worker-app",
     "version": "1.0.0",
+    "scheme": "homehelp-worker",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

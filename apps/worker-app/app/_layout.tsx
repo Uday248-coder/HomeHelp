@@ -28,7 +28,8 @@ function RootLayoutNav() {
       ) : (
         <>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="active-job" options={{ title: 'Active Job' }} />
+           <Stack.Screen name="active-job" options={{ title: 'Active Job' }} />
+           <Stack.Screen name="job/[id]" options={{ title: 'Job Details' }} />
         </>
       )}
     </Stack>

@@ -59,6 +59,7 @@ export const api = {
     request<any>(`/api/bookings/${bookingId}/start`, { method: 'PATCH', data: { otp } }),
   completeJob: (bookingId: string, otp: string, rating?: number) =>
     request<any>(`/api/bookings/${bookingId}/complete`, { method: 'PATCH', data: { otp, rating } }),
+  getJob: (id: string) => request<any>(`/api/bookings/${id}`),
   getMyJobs: () => request<any[]>('/api/bookings/worker'),
   toggleAvailability: (isAvailable: boolean) =>
     request<any>('/api/workers/me/availability', { method: 'PATCH', data: { isAvailable } }),

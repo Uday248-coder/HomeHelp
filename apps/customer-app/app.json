@@ -3,6 +3,7 @@
     "name": "customer-app",
     "slug": "customer-app",
     "version": "1.0.0",
+    "scheme": "homehelp-customer",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
