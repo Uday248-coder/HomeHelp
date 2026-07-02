@@ -16,7 +16,7 @@ export function HeroSection() {
           </p>
           <h1 className="heading-xl text-balance mb-8 leading-tight animate-fade-in-up">
             Reclaim your time. <br />
-            <span className="text-gradient">Leave the chores to us.</span>
+            <span className="text-gradient">Leave the cleaning & driving to us.</span>
           </h1>
           <p className="text-lg md:text-xl text-foreground-secondary leading-relaxed max-w-2xl mx-auto mb-10 text-pretty animate-fade-in-up delay-1">
             Premium, background-verified home help and on-demand drivers. 
