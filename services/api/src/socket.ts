@@ -1,6 +1,5 @@
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import { api } from './routes/auth'; // This is just to keep it in the same context, actually I'll use a better way to auth
 
 interface UserSocket {
   userId: string;
