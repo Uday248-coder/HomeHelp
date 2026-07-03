@@ -100,6 +100,7 @@ export default function JoinPage() {
       setStep(2);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to send OTP';
+      console.error('[join] firebase error:', msg);
       const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
       setError(cleanMsg || 'Failed to send OTP');
       resetRecaptcha();
@@ -138,6 +139,7 @@ export default function JoinPage() {
       setForm(prev => ({ ...prev, submitted: true }));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Something went wrong';
+      console.error('[join] firebase error:', msg);
       const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
       setError(cleanMsg || 'Something went wrong');
     } finally { setLoading(false); }

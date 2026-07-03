@@ -46,6 +46,7 @@ export default function LoginScreen() {
       setOtpSent(true);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to send OTP';
+      console.error('[admin-login] firebase error:', msg);
       const clean = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
       setLoginError(clean || 'Failed to send OTP');
     } finally {
@@ -63,6 +64,7 @@ export default function LoginScreen() {
       login(data.token);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to verify OTP';
+      console.error('[admin-login] firebase error:', msg);
       const clean = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
       setLoginError(clean || 'Invalid OTP');
     } finally {
