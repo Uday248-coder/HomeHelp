@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { auth, sendPhoneOTP, verifyPhoneOTP } from '@/lib/firebase';
-import { RecaptchaVerifier } from 'firebase/auth';
+import { auth, formatIndianPhone } from '@/lib/firebase';
+import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -62,7 +62,7 @@ export default function JoinPage() {
   const [loading, setLoading] = useState(false);
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   useEffect(() => {
     if (!recaptchaVerifierRef.current && recaptchaRef.current) {
@@ -72,11 +72,21 @@ export default function JoinPage() {
     }
   }, []);
 
+  const resetRecaptcha = () => {
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
+    if (recaptchaRef.current) {
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
+        size: 'invisible',
+      });
+    }
+  };
+
   const updateField = (field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const isStep1Valid = form.name.trim().length > 0 && form.email.includes('@') && /^\+?[1-9]\d{9,14}$/.test(form.phoneNumber);
+  const isStep1Valid = form.name.trim().length > 0 && form.email.includes('@') && /^(\+91)?[6-9]\d{9}$/.test(form.phoneNumber.replace(/\s/g, ''));
 
   const handleSendOtp = async () => {
     if (!form.phoneNumber) { setError('Phone number is required'); return; }
@@ -85,15 +95,14 @@ export default function JoinPage() {
     try {
       const verifier = recaptchaVerifierRef.current;
       if (!verifier) throw new Error('Recaptcha not initialized. Please try again.');
-      const formattedPhone = form.phoneNumber.startsWith('+') ? form.phoneNumber : `+${form.phoneNumber}`;
-      const result = await sendPhoneOTP(formattedPhone, verifier);
-      if (!result.success) throw new Error(result.error || 'Failed to send OTP');
-      setVerificationId(result.verificationId || null);
+      const confirmation = await signInWithPhoneNumber(auth, formatIndianPhone(form.phoneNumber), verifier);
+      confirmationRef.current = confirmation;
       setStep(2);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to send OTP';
       const cleanMsg = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
       setError(cleanMsg || 'Failed to send OTP');
+      resetRecaptcha();
     } finally { setLoading(false); }
   };
 
@@ -102,27 +111,27 @@ export default function JoinPage() {
     if (!form.email) { setError('Email is required'); return; }
     if (!form.otp) { setError('OTP is required'); return; }
     if (!form.termsAccepted) { setError('You must accept the terms and conditions'); return; }
-    if (!verificationId) { setError('Verification session expired. Please resend OTP.'); return; }
+    if (!confirmationRef.current) { setError('Verification session expired. Please resend OTP.'); return; }
     setError('');
     setLoading(true);
     try {
-      const result = await verifyPhoneOTP(verificationId, form.otp);
-      if (!result.success) throw new Error(result.error || 'Verification failed');
-      const idToken = await result.userCredential?.user.getIdToken();
+      const result = await confirmationRef.current.confirm(form.otp);
+      const idToken = await result.user.getIdToken();
       if (!idToken) throw new Error('Failed to get auth token');
       const authRes = await fetch(`${API_URL}/api/auth/firebase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
-        credentials: 'include',
       });
       const authData = await authRes.json();
       if (!authRes.ok) throw new Error(authData.error || 'Authentication failed');
       const workerRes = await fetch(`${API_URL}/api/workers/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authData.token}`,
+        },
         body: JSON.stringify({ name: form.name, email: form.email, workerType: form.workerType, experience: form.experience }),
-        credentials: 'include',
       });
       const workerData = await workerRes.json();
       if (!workerRes.ok) throw new Error(workerData.error || 'Failed to create worker');
@@ -283,7 +292,7 @@ export default function JoinPage() {
 
                 <div className="flex gap-3 pt-2">
                   <button
-                    onClick={() => setStep(1)}
+                    onClick={() => { setStep(1); confirmationRef.current = null; resetRecaptcha(); }}
                     className="flex-1 h-10 border border-[#E4DFD6] text-[#1C1C1C] rounded-xl font-medium text-sm hover:bg-[#F6F4EF] transition-colors"
                   >
                     ← Back

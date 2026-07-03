@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
-import { auth, sendPhoneOTP, verifyPhoneOTP, getIdToken } from '@/lib/firebase';
-import { RecaptchaVerifier } from 'firebase/auth';
+import { auth, formatIndianPhone } from '@/lib/firebase';
+import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -75,22 +75,31 @@ export default function BookPage() {
   const [duration, setDuration] = useState(2);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
-  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bookingId, setBookingId] = useState<string | null>(null);
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   useEffect(() => {
     if (!recaptchaVerifierRef.current && recaptchaRef.current) {
-      const verifier = new RecaptchaVerifier(auth, recaptchaRef.current, {
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
         size: 'invisible',
       });
-      recaptchaVerifierRef.current = verifier;
     }
   }, []);
+
+  const resetRecaptcha = () => {
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
+    if (recaptchaRef.current) {
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
+        size: 'invisible',
+      });
+    }
+  };
 
   const selectedMode = MODES.find(m => m.id === mode);
 
@@ -98,26 +107,26 @@ export default function BookPage() {
     if (!phoneNumber || phoneNumber.length < 10) { setError('Enter a valid phone number'); return; }
     setError(''); setLoading(true);
     try {
-      const fullPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
       const verifier = recaptchaVerifierRef.current;
       if (!verifier) throw new Error('Recaptcha not initialized. Please try again.');
-      const result = await sendPhoneOTP(fullPhone, verifier);
-      if (!result.success) throw new Error(result.error || 'Failed to send OTP');
-      setVerificationId(result.verificationId || null);
+      const confirmation = await signInWithPhoneNumber(auth, formatIndianPhone(phoneNumber), verifier);
+      confirmationRef.current = confirmation;
       setOtpSent(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to send OTP');
+      const msg = e instanceof Error ? e.message : 'Failed to send OTP';
+      const clean = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
+      setError(clean || 'Failed to send OTP');
+      resetRecaptcha();
     } finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async () => {
     if (!otp || otp.length < 4) { setError('Enter the OTP'); return; }
-    if (!verificationId) { setError('Verification session expired. Please resend OTP.'); return; }
+    if (!confirmationRef.current) { setError('Verification session expired. Please resend OTP.'); return; }
     setError(''); setLoading(true);
     try {
-      const result = await verifyPhoneOTP(verificationId, otp);
-      if (!result.success) throw new Error(result.error || 'Verification failed');
-      const idToken = await getIdToken();
+      const result = await confirmationRef.current.confirm(otp);
+      const idToken = await result.user.getIdToken();
       if (!idToken) throw new Error('Failed to get auth token');
       const res = await fetch(`${API_URL}/api/auth/firebase`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -128,7 +137,9 @@ export default function BookPage() {
       localStorage.setItem('booking_token', data.token);
       setStep(3);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Verification failed');
+      const msg = e instanceof Error ? e.message : 'Verification failed';
+      const clean = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
+      setError(clean || 'Verification failed');
     } finally { setLoading(false); }
   };
 
@@ -384,7 +395,7 @@ export default function BookPage() {
                     />
                   </div>
                   <div className="flex gap-3">
-                    <Button variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setOtp(''); setVerificationId(null); }}>
+                    <Button variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setOtp(''); confirmationRef.current = null; resetRecaptcha(); }}>
                       Change Number
                     </Button>
                     <Button className="flex-[2]" size="lg" onClick={handleVerifyOtp} loading={loading} disabled={otp.length < 4}>
@@ -393,7 +404,6 @@ export default function BookPage() {
                   </div>
                 </div>
               )}
-              <div ref={recaptchaRef} />
             </div>
           )}
 
@@ -473,6 +483,7 @@ export default function BookPage() {
             </div>
           )}
         </div>
+        <div ref={recaptchaRef} />
       </main>
     </div>
   );
