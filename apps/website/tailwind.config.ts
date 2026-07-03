@@ -27,28 +27,22 @@ const config: Config = {
       },
       colors: {
         neutral: {
-          50: "hsl(210 20% 98%)",
-          100: "hsl(210 17% 95%)",
-          200: "hsl(210 14% 89%)",
-          300: "hsl(210 12% 80%)",
-          400: "hsl(210 10% 62%)",
-          500: "hsl(210 9% 48%)",
-          600: "hsl(210 10% 36%)",
-          700: "hsl(210 12% 24%)",
-          800: "hsl(210 14% 16%)",
-          900: "hsl(210 16% 10%)",
-          950: "hsl(210 20% 6%)",
+          50: "hsl(var(--neutral-50))",
+          100: "hsl(var(--neutral-100))",
+          200: "hsl(var(--neutral-200))",
+          300: "hsl(var(--neutral-300))",
+          400: "hsl(var(--neutral-400))",
+          500: "hsl(var(--neutral-500))",
+          600: "hsl(var(--neutral-600))",
+          700: "hsl(var(--neutral-700))",
+          800: "hsl(var(--neutral-800))",
+          900: "hsl(var(--neutral-900))",
+          950: "hsl(var(--neutral-950))",
         },
         accent: {
-          DEFAULT: "hsl(160 84% 39%)",
-          hover: "hsl(160 72% 34%)",
-          active: "hsl(160 68% 28%)",
-          subtle: "hsl(160 60% 95%)",
-        },
-        warm: {
-          DEFAULT: "hsl(18 48% 54%)",
-          hover: "hsl(18 44% 48%)",
-          subtle: "hsl(18 50% 92%)",
+          DEFAULT: "hsl(var(--accent))",
+          hover: "hsl(var(--accent-hover))",
+          active: "hsl(var(--accent-active))",
         },
         surface: {
           DEFAULT: "hsl(var(--surface))",
@@ -63,6 +57,28 @@ const config: Config = {
         border: {
           DEFAULT: "hsl(var(--border))",
           hover: "hsl(var(--border-hover))",
+        },
+        background: "hsl(var(--background))",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        ring: "hsl(var(--ring))",
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
       },
       borderRadius: {
@@ -91,16 +107,21 @@ const config: Config = {
           "0%": { opacity: "0", transform: "scale(0.95)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
-        "shimmer": {
-          "0%": { backgroundPosition: "200% 0" },
-          "100%": { backgroundPosition: "-200% 0" },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height, auto)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height, auto)" },
+          to: { height: "0" },
         },
       },
       animation: {
         "fade-in": "fade-in 0.4s cubic-bezier(0.16,1,0.3,1) forwards",
         "fade-in-up": "fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) forwards",
         "scale-in": "scale-in 0.3s cubic-bezier(0.16,1,0.3,1) forwards",
-        "shimmer": "shimmer 2s linear infinite",
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
       },
     },
   },

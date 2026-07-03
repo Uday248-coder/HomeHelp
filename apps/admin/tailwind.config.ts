@@ -68,17 +68,17 @@ const config: Config = {
           "0%": { transform: "scale(0.95)", opacity: "0" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
-        "shimmer": {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        "pulse-soft": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
-        },
         "bar-grow": {
           "0%": { transform: "scaleY(0)" },
           "100%": { transform: "scaleY(1)" },
+        },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height, auto)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height, auto)" },
+          to: { height: "0" },
         },
       },
       animation: {
@@ -86,9 +86,9 @@ const config: Config = {
         "slide-in": "slide-in 0.25s cubic-bezier(0.16,1,0.3,1)",
         "slide-in-right": "slide-in-right 0.2s ease-out",
         "scale-in": "scale-in 0.2s cubic-bezier(0.16,1,0.3,1)",
-        "shimmer": "shimmer 2s linear infinite",
-        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "bar-grow": "bar-grow 0.6s cubic-bezier(0.16,1,0.3,1) forwards",
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
       },
     },
   },
