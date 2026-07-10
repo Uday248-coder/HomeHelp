@@ -142,10 +142,15 @@ export default function JoinPage() {
             </svg>
           </div>
           <h1 className="font-display text-2xl font-medium text-[#1C1C1C] mb-2">Application Submitted!</h1>
-          <p className="text-[#8C847C] text-sm mb-6">We&apos;ll review your application and get back to you soon.</p>
-          <a href="/" className="inline-flex items-center justify-center h-10 px-6 bg-[#C4774B] text-white rounded-full text-sm font-medium hover:bg-[#B06840] transition-colors">
-            Back to Home
-          </a>
+          <p className="text-[#8C847C] text-sm mb-6">We&apos;ll review your application and get back to you soon. Once approved, you can sign in to the Worker Portal to accept jobs.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/worker" className="inline-flex items-center justify-center h-10 px-6 bg-[#C4774B] text-white rounded-full text-sm font-medium hover:bg-[#B06840] transition-colors">
+              Go to Worker Portal
+            </a>
+            <a href="/" className="inline-flex items-center justify-center h-10 px-6 border border-[#E4DFD6] text-[#1C1C1C] rounded-full text-sm font-medium hover:bg-[#F6F4EF] transition-colors">
+              Back to Home
+            </a>
+          </div>
         </div>
       </div>
     );

@@ -39,6 +39,8 @@ export function SiteHeader() {
           <li><a href="#services" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">Services</a></li>
           <li><a href="#pricing" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">Pricing</a></li>
           <li><a href="#faq" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">FAQ</a></li>
+          <li><a href="/my-bookings" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">My Bookings</a></li>
+          <li><a href="/worker" className="text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors">Worker</a></li>
         </ul>
 
         <div className="flex items-center gap-3">
@@ -84,6 +86,8 @@ export function SiteHeader() {
             <li><a href="#services" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Services</a></li>
             <li><a href="#pricing" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Pricing</a></li>
             <li><a href="#faq" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">FAQ</a></li>
+            <li><a href="/my-bookings" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">My Bookings</a></li>
+            <li><a href="/worker" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Worker Portal</a></li>
             <li><a href="/join" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-foreground-secondary hover:text-foreground">Work with Us</a></li>
           </ul>
         </div>

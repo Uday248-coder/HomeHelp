@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
+import { getToken, setToken } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -92,7 +93,7 @@ export default function BookPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
-      localStorage.setItem('booking_token', data.token);
+      setToken(data.token);
       setStep(3);
     } catch (e: unknown) {
       setAuthError(e instanceof Error ? e.message : 'Authentication failed');
@@ -107,7 +108,7 @@ export default function BookPage() {
       if (scheduleType === 'later' && scheduledDate && scheduledTime) {
         body.scheduledAt = `${scheduledDate}T${scheduledTime}:00.000Z`;
       }
-      const token = localStorage.getItem('booking_token');
+      const token = getToken();
       if (!token) throw new Error('Session expired. Please sign in again.');
       const res = await fetch(`${API_URL}/api/bookings`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -116,7 +117,6 @@ export default function BookPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create booking');
       setBookingId(data.booking.id);
-      localStorage.removeItem('booking_token');
       setStep(4);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to create booking');
@@ -433,7 +433,8 @@ export default function BookPage() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <a href="/book"><Button size="lg">Book Another</Button></a>
-                <a href="/"><Button variant="outline" size="lg">Back to Home</Button></a>
+                <a href="/my-bookings"><Button variant="outline" size="lg">Track My Bookings →</Button></a>
+                <a href="/"><Button variant="ghost" size="lg">Back to Home</Button></a>
               </div>
             </div>
           )}

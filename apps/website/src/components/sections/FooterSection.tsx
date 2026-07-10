@@ -23,6 +23,8 @@ export function FooterSection() {
             <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-6">Company</h4>
             <ul className="space-y-3">
               <li><a href="/join" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">Work with Us</a></li>
+              <li><a href="/my-bookings" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">My Bookings</a></li>
+              <li><a href="/worker" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">Worker Portal</a></li>
               <li><a href="#faq" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">FAQ</a></li>
             </ul>
           </nav>

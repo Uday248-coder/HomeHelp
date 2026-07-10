@@ -20,12 +20,17 @@ const BOOKING_SAFE_FIELDS = {
   ratingByUser: true, reviewText: true, createdAt: true, updatedAt: true,
 } as const;
 
+// Owner-scoped view: includes OTPs so the customer (who receives them by email)
+// can share them with the worker to start/complete the job. Not used for
+// worker or admin endpoints, where OTPs must stay hidden.
+const CUSTOMER_FIELDS = { ...BOOKING_SAFE_FIELDS, startOtp: true, endOtp: true } as const;
+
 bookingsRouter.get('/', async (req: Request, res: Response) => {
   try {
     const bookings = await prisma.booking.findMany({
       where: { userId: req.user!.userId },
       select: {
-        ...BOOKING_SAFE_FIELDS,
+        ...CUSTOMER_FIELDS,
         worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
         payment: { select: { id: true, amount: true, status: true, createdAt: true } },
       },
@@ -188,7 +193,7 @@ bookingsRouter.get('/:id', async (req: Request, res: Response) => {
     const booking = await prisma.booking.findUnique({
       where: { id: getId(req) },
       select: {
-        ...BOOKING_SAFE_FIELDS,
+        ...CUSTOMER_FIELDS,
         worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
         payment: { select: { id: true, amount: true, status: true, createdAt: true } },
         user: { select: { id: true, name: true } },

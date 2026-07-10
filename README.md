@@ -8,8 +8,8 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 
 | App | URL | Status |
 |-----|-----|--------|
-| Marketing Website | [homehelp-website.vercel.app](https://homehelp-website.vercel.app) | **Live** — booking flow + waitlist + worker registration |
-| Admin Dashboard | [homehelp-admin.vercel.app](https://homehelp-admin.vercel.app) | **Live** — OTP login, dashboard, bookings/workers/payouts management |
+| Marketing Website | [homehelp-website.vercel.app](https://homehelp-website.vercel.app) | **Live** — booking flow, customer tracking, worker portal, waitlist + worker registration |
+| Admin Dashboard | [homehelp-admin.vercel.app](https://homehelp-admin.vercel.app) | **Live** — email/password login, dashboard, bookings/workers/payouts management |
 | Backend API | [homehelp-clbc.onrender.com](https://homehelp-clbc.onrender.com) | **Live** — full CRUD, auth, payments, stats |
 | GitHub Repo | [github.com/Uday248-coder/HomeHelp](https://github.com/Uday248-coder/HomeHelp) | Private |
 
@@ -27,7 +27,8 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 | **Prisma** | ORM for database access | ✅ **Connected** — 6 models, full migrations | N/A |
 | **Razorpay** | Payment processing | ⚠️ **Mock mode** — works with auto-generated mock order IDs, needs live keys for real payments | ❌ `RAZORPAY_KEY_ID` + `SECRET` not set |
 | **Sentry** | Error tracking | 🔌 **Wired in code** — initialized but DSN is empty, no errors being captured | ❌ `SENTRY_DSN` not set |
-| **Firebase Auth** | Phone OTP + Google Sign-In | ✅ **Using Firebase test numbers** — zero-cost, no SMS gateway needed | ✅ Pre-configured |
+| **Firebase Auth** | Phone OTP + Google Sign-In | ❌ **Removed** — migrated to email/password auth (see below) | ❌ N/A |
+| **Resend** | Transactional email (password reset + booking OTP) | ⚠️ **Wired in code** — needs `RESEND_API_KEY` to actually send | ❌ `RESEND_API_KEY` not set |
 | **Google Maps** | Address autocomplete, geocoding, ETA | ❌ **Not connected** — no API key set | ❌ No env vars set |
 | **Firebase (FCM)** | Push notifications for mobile apps | ❌ **Not connected** — no server key set | ❌ No env vars set |
 | **Socket.io** | Real-time location tracking | ✅ **Implemented** — basic worker location tracking via Socket.io | N/A |
@@ -37,7 +38,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 ## What's Done
 
 ### Backend API (`services/api/`)
-- **Auth**: OTP send/verify with Redis-backed rate limiting (max 5/15min), JWT login with auto user creation via `upsert` (no race condition), `/logout` endpoint, shared `JWT_SECRET` constant
+- **Auth**: Email + password register/login with bcrypt hashing, JWT (Bearer or `httpOnly` cookie), `/logout`, `/forgot-password` + `/reset-password` (hashed token + 1h expiry), shared `JWT_SECRET`. Global + auth rate limiting.
 - **Admin roles**: `adminMiddleware` reusable guard, `isAdmin` field on User model, admin-gated endpoints
 - **Booking CRUD**: Create, list, detail, cancel, assign worker, start (OTP-gated), complete (OTP+rating), generate OTP — all working with proper null-safety checks
 - **Workers**: CRUD with auth-gated POST/PATCH, availability filter by mode, worker self-service endpoints (`/me`, `/me/availability`)
@@ -56,18 +57,20 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **Workers** — search, type filter, availability toggle, Aadhaar/License Verify, rating stars
 - **Payouts** — table with status badges, loading skeleton, proper API integration
 - **Settings** — dark mode, sign out, API URL display
-- **Login** — phone input → OTP → verify, spinners, validation
+- **Login** — email + password with spinners, validation, and "Forgot your password?" link
 - **Theme** — HSL CSS variables, light + dark mode, all components use `bg-card`/`text-foreground`/`text-muted-foreground` etc.
 - **API client** — centralized `api.ts` with auto auth injection, 401 auto-logout, retry logic, AbortController, generic `get/post/patch` methods
 - **Components** — Modal (Escape key, backdrop blur, scroll lock), ErrorBoundary, Skeleton variants, Badge, Button, Card, Input
 
 ### Marketing Website (`apps/website/`)
-- **Booking flow** (`/book`) — 4-step wizard: mode selection (Home Help / Driver), service details with type/address/schedule/duration/price, phone OTP auth, confirmation with booking creation
+- **Booking flow** (`/book`) — 4-step wizard: mode selection (Home Help / Driver), service details with type/address/schedule/duration/price, email/password auth, confirmation with booking creation; links to `/my-bookings`
+- **Customer tracking** (`/my-bookings`) — signed-in customer's bookings with a 4-step status timeline, worker card, cancel, and Start/End OTPs to share with the worker
+- **Worker portal** (`/worker`) — browse available jobs by mode, accept (self-assign), start (Start OTP), complete (End OTP + rating)
 - **Hero** — "Now Live in Kolkata", trust indicators, CTAs linked to `/book`
 - **Services** — Feature cards for both modes
 - **Pricing** — 3 cards (Home Help ₹199/hr, Driver ₹149/hr, Subscription ₹499/mo) with links to `/book`
 - **Testimonials** — 3 user cards with star ratings
-- **Worker registration** (`/join`) — 3-step form with name/email/phone/type/experience, OTP verification, success animation
+- **Worker registration** (`/join`) — 2-step email + password form with name/email/phone/type/experience; success links to `/worker`
 - **Waitlist** — Email signup proxied to backend API
 - **FAQ** — 6-item accordion with smooth animations
 - **UI** — Sticky header, backdrop blur, custom animations (fadeInUp, slideUp, scaleIn), responsive design
@@ -77,7 +80,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **UI Polish**: High-end look with generous border-radius (up to 32px), soft shadows, and refined typography, removing all cartoonish elements for a professional feel.
 
 #### Customer App (`apps/customer-app/`) — Expo/React Native
-- **Auth** — Phone → OTP login with AsyncStorage persistence
+- **Auth** — Email + password login with `expo-secure-store` token persistence
 - **Home** — Mode switcher toggle (Home Help / Driver), service type chips, duration picker, schedule (now/later), price estimate, instant booking
 - **Bookings** — FlatList of past bookings with color-coded status badges, pull-to-refresh, empty state
 - **Booking Detail** — Full info, cancel pending bookings, star rating for completed
@@ -85,7 +88,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **Navigation** — Conditional stack (Auth vs Main), bottom tabs (Home, Bookings, Profile)
 
 #### Worker App (`apps/worker-app/`) — Expo/React Native
-- **Auth** — Phone → OTP login with AsyncStorage persistence
+- **Auth** — Email + password login with `expo-secure-store` token persistence
 - **Dashboard** — Large availability toggle, stats cards (Total Jobs, Rating, Earnings), "Find Jobs" button
 - **Jobs** — FlatList of available bookings with Accept Job button, pull-to-refresh
 - **Active Job** — Start/Complete with OTP modal + rating, status-dependent actions
@@ -96,7 +99,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 ### Infrastructure
 - **CI/CD** — GitHub Actions matrix build (api, website, admin), Render auto-deploy (API), Vercel auto-deploy (website + admin)
 - **Database** — Neon Postgres via Prisma ORM, 6 tables with proper indexes and relations
-- **Cache** — Upstash Redis for OTP storage and rate limiting
+- **Cache** — Upstash Redis for rate limiting (booking OTPs are now emailed via Resend)
 - **Error tracking** — Sentry wired (DSN not set yet)
 
 ### Bugs Fixed (Critical)
@@ -131,7 +134,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 | Database | Neon Postgres (serverless) | ✅ Live |
 | ORM | Prisma 6 | ✅ Live |
 | OTP/Cache | Upstash Redis | ✅ Live |
-| Auth | Firebase Phone Auth + JWT (custom httpOnly cookies), 7-day expiry | ✅ Live |
+| Auth | Email + password (bcrypt) + JWT (Bearer or httpOnly cookie), 7-day expiry | ✅ Live |
 | Payments | Razorpay with auto-mock fallback | ✅ Live (stubbed) |
 | Web framework | Next.js 14 App Router (website + admin) | ✅ Live on Vercel |
 | Styling | Tailwind CSS 3.4 with HSL variables | ✅ Live |
@@ -182,7 +185,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 
 | Integration | What for | Status |
 |-------------|----------|--------|
-| **Firebase Auth** | Phone OTP + Google Sign-In | ✅ Using test numbers, zero-cost |
+| **Firebase Auth** | Phone OTP + Google Sign-In | ❌ **Removed** — migrated to email/password |
 | **Razorpay live** | Real payment processing (currently mock) | ❌ Not connected |
 | **Google Maps API** | Address autocomplete, geocoding, ETA, tracking | ❌ Not connected |
 | **Sentry DSN** | Error tracking and monitoring | 🔌 Wired, no key |
@@ -204,9 +207,9 @@ npm install
 cp services/api/.env.example services/api/.env
 # Fill in DATABASE_URL, UPSTASH_* , JWT_SECRET
 
-# Run migrations
+# Sync database schema
 cd services/api
-npx prisma migrate dev
+npx prisma db push
 
 # Start dev servers
 npm run dev:api       # Backend on :3001
@@ -220,39 +223,19 @@ cd apps/worker-app   && npx expo start
 
 ---
 
-## Firebase Test Phone Auth Setup (Zero-Cost)
+## Authentication — Email/Password (current)
 
-Auth uses **Firebase Phone Authentication with test numbers** — no SMS gateway needed, zero cost.
+Auth migrated away from Firebase Phone OTP to **email + password** (Firebase was cost-prohibitive for the MVP). Flow:
+- `POST /api/auth/register` (email, password → bcrypt) and `POST /api/auth/login` return a JWT (Bearer or `httpOnly` cookie).
+- `POST /api/auth/forgot-password` stores a SHA-256-hashed reset token + 1h expiry and emails a link from `FRONTEND_URL`; `POST /api/auth/reset-password` verifies it.
+- Booking start/end OTPs are generated by an admin (`PATCH /api/bookings/:id/generate-otp`) and emailed to the customer via **Resend**; in dev (`NODE_ENV !== production`) the reset/OTP links are also returned in the API response for testing.
 
-### Step 1: Set up Firebase project (one-time)
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Select project `homehelp-cdb69` (or create new)
-3. Enable **Authentication** → **Sign-in method** → **Phone** → **Enable**
-4. Go to **Service accounts** → **Generate new private key** → download JSON
-5. Set the JSON as `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render
+### Resend (transactional email) setup
+1. Create a Resend account → generate an API key.
+2. Set `RESEND_API_KEY` and `EMAIL_FROM` on Render (see `services/api/.env.example`).
+3. Set `FRONTEND_URL` to the website origin used in reset links (defaults to `https://homehelp-website.vercel.app`).
 
-### Step 2: Add test phone numbers (for unlimited free OTP)
-1. Firebase Console → **Authentication** → **Sign-in method** → **Phone** → **Test phone numbers**
-2. Click **Add phone number**
-3. Enter `+91 9999988888` with test code `123456`
-4. Add any other development numbers you need
-5. These numbers will **not** send real SMS — OTP `123456` always works
-
-### Step 3: Add authorized domains
-Firebase Console → **Authentication** → **Settings** → **Authorized domains**:
-```
-homehelp-admin.vercel.app
-homehelp-website.vercel.app
-localhost
-```
-
-### How it works
-| Step | Detail | Cost |
-|------|--------|------|
-| User enters phone | Frontend calls Firebase `signInWithPhoneNumber` | Free (reCAPTCHA) |
-| Firebase processes | If whitelisted as test → no SMS sent, OTP is known | **$0** |
-| User enters OTP | `confirmation.confirm(otp)` → Firebase ID token | Free |
-| Backend verifies | `POST /api/auth/firebase` → Firebase Admin SDK verifies → JWT cookie | Free |
+Until `RESEND_API_KEY` is set, email sending is a safe no-op (logged to server console) and password-reset/dev links are returned inline in non-prod.
 
 ---
 
@@ -263,7 +246,7 @@ Set these on Render (API) and Vercel (website + admin):
 | Variable | Required | For |
 |----------|----------|-----|
 | `DATABASE_URL` | ✅ | Neon Postgres connection |
-| `UPSTASH_REDIS_REST_URL` | ✅ | Redis for OTP |
+| `UPSTASH_REDIS_REST_URL` | ✅ | Redis for rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | ✅ | Redis auth |
 | `JWT_SECRET` | ✅ | Token signing |
 | `NEXT_PUBLIC_API_URL` | ✅ | Frontend → API URL |
@@ -271,7 +254,7 @@ Set these on Render (API) and Vercel (website + admin):
 | `RAZORPAY_KEY_SECRET` | ❌ | Live payments |
 | `SENTRY_DSN` | ❌ | Error tracking |
 | `GOOGLE_MAPS_API_KEY` | ❌ | Maps + geocoding |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | ❌ | Firebase Admin SDK (phone auth verification) |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | ❌ | Removed — Firebase auth no longer used |
 | `FCM_SERVER_KEY` | ❌ | Push notifications |
 
 ---

@@ -9,8 +9,8 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 ### Live URLs
 | App | URL | Status |
 |-----|-----|--------|
-| Marketing website | https://homehelp-website.vercel.app | Live — waitlist + worker registration (Firebase Auth) |
-| Admin dashboard | https://homehelp-admin.vercel.app | Live — Firebase phone auth + live data |
+| Marketing website | https://homehelp-website.vercel.app | Live — booking flow, customer tracking, worker portal, waitlist + worker registration (email/password) |
+| Admin dashboard | https://homehelp-admin.vercel.app | Live — email/password login + live data |
 | Backend API | https://homehelp-clbc.onrender.com | Live — full CRUD + stats |
 | GitHub repo | https://github.com/Uday248-coder/HomeHelp | Private |
 
@@ -21,7 +21,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 ### What's Complete
 
 #### Backend API (`services/api/`)
-- OTP send/verify with rate limiting (max 5/15min, Redis-backed)
+- Email/password auth: `POST /api/auth/register` + `POST /api/auth/login` (bcrypt), `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/forgot-password` + `POST /api/auth/reset-password` (hashed token + 1h expiry)
 - **Security Hardening** — JWT authentication using `httpOnly`, `secure`, `sameSite: 'lax'` cookies (prevents XSS theft)
 - **Authentication** — Logout implementation and Firebase Auth integration (`POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT in cookie and response body)
 - **Lazy Firebase Initialization** — Firebase admin initialized on first use to prevent API boot crashes if credentials are missing
@@ -49,7 +49,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Dashboard** — 6 stat cards with SVG icons, gradient-filled weekly revenue bar chart (pure SVG with hover tooltips), booking status donut chart, recent bookings table, error boundary
 - **Bookings page** — search bar, status filter dropdown, paginated table, action dropdown per row (Assign Worker with modal, Generate Start/End OTP, Cancel), proper loading/empty/error states
 - **Workers page** — search, type filter, availability toggle (inline button), Aadhaar Verify / License Verify actions, rating stars
-- **Login flow** — **Firebase phone auth with invisible reCAPTCHA**, ambient gradient background, `card-dashboard` glass card, spinners, proper validation
+- **Login flow** — email + password, ambient gradient background, `card-dashboard` glass card, spinners, proper validation, and a "Forgot your password?" link to the website reset page
 - **Security** — Authentication handled via `httpOnly` cookies (managed automatically by API client)
 - **Components** — Sidebar (gradient logo, hover-state refinements), StatCard (group-hover icon scale), BarChart (gradient bar fills, hover highlight), DonutChart (brightness hover), Modal (Escape key, backdrop blur, body scroll lock), ErrorBoundary, Skeleton (StatCard, Table, Chart, Dashboard)
 - **Pages** — Dashboard, Customers (searchable table + booking history modal), Bookings, Analytics (date range picker, revenue chart, booking funnel, top workers), Workers, Payouts (status filter + process/mark-paid actions), Settings
@@ -62,11 +62,25 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Testimonials section** — 3 user cards with star ratings
 - **FAQ section** — 6-item accordion with smooth expand/collapse
 - **Sticky header** with backdrop blur
-- **Worker Registration** — 3-step progress indicator, email + experience fields, terms acceptance, phone format validation, **Firebase phone auth with invisible reCAPTCHA**, success animation, back button on step 2
+- **Worker Registration** (`/join`) — 2-step progress indicator, email + password + experience fields, terms acceptance, **email/password auth** (Firebase fully removed); success links to the Worker Portal
+- **Booking flow** (`/book`) — multi-step (choose service → details → account → confirm); email/password login or register inline; creates a booking via `POST /api/bookings`; success links to tracking
+- **Customer tracking** (`/my-bookings`) — authed page listing the customer's bookings with a 4-step status timeline (Pending → Assigned → In Progress → Completed; Cancelled separate), worker card, price, schedule/address, cancel, and the **Start/End OTPs surfaced to the customer** to share with the worker
+- **Worker Portal** (`/worker`) — authed page: browse **Available Jobs** by mode, **Accept** (self-assign), **Start** (enter Start OTP), **Complete** (enter End OTP + rating + review)
+- **Password reset** — `/forgot-password` (request link) and `/reset-password` (set new password); both link from the booking login and the admin login
 - **Design system** — Newsreader (display serif) + Inter (body sans) via next/font/google; palette: neutral slate + emerald accent + warm clay accent
 - **Hero** — dark pine split layout (headline + live-status card showing workers/drivers/rating)
 - **Reduced-motion support**; dark mode added back (system preference + manual toggle)
 - **Kolkata-specific** copy throughout
+- **Shared web auth** — `src/lib/auth.ts` (`getToken/setToken/clearToken`, `login`, `authedFetch`) using a single `homehelp_token` localStorage key
+
+##### Website Booking Flow & Architecture
+The website is a **Next.js App Router** app. It is the single place where the *entire* booking loop can be demoed without the mobile apps:
+- **Pages** (`src/app/`): `page.tsx` (landing/marketing), `book/` (customer booking), `join/` (worker signup), `my-bookings/` (customer tracking), `worker/` (worker operations), `forgot-password/`, `reset-password/`.
+- **Sections** (`src/components/sections/`): marketing blocks (Hero, Pricing, FAQ, Testimonials, etc.) + `SiteHeader`/`FooterSection` (nav, now linking Booking/Worker/My Bookings).
+- **UI kit** (`src/components/ui/`): `Button`, `Card`, `Input`, `Textarea`, `Badge` — same variants used across pages.
+- **Data access**: pages call the backend directly via `fetch` + the `authedFetch` helper (Bearer token from `homehelp_token`). `src/lib/types.ts` holds shared DTOs (`Booking`, `BookingStatus`, `WorkerInfo`). `API_URL` = `NEXT_PUBLIC_API_URL` (defaults to the prod Render API).
+- **Customer↔Worker handoff**: the customer books → sees status on `/my-bookings` → the assigned worker accepts on `/worker` → the worker enters the **OTP the customer shares from `/my-bookings`** to Start/Complete. OTPs are returned only on the customer-owned `GET /api/bookings` (owner-scoped), never to the worker endpoint.
+- **Session model**: a single JWT in `localStorage` (`homehelp_token`) is shared by `/book`, `/my-bookings`, and `/worker`; each page renders its own inline login view when no token is present.
 
 #### Mobile Apps (`apps/customer-app/`, `apps/worker-app/`) — Expo 56 (Fully Built)
 - **6 screens each** — Customer: Auth, Home, Bookings, BookingDetail, Profile; Worker: Auth, Dashboard, Jobs, ActiveJob, Earnings, Profile
@@ -75,7 +89,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **Mobile apps have tsconfig.json with strict mode** — `tsc --noEmit` catches type errors
 - **Customer App**: Razorpay integration for payment confirmation
 - **Worker App**: Real-time location tracking via Socket.io and `expo-location`
-- Ready for Firebase Auth migration (currently use legacy OTP flow)
+- Use email/password auth via `expo-secure-store` token persistence (Firebase fully removed)
 
 ## Design System (Session 6 — HSL Tokens + Premium UI)
 
@@ -212,10 +226,12 @@ HomeHelp/
 ├── apps/
 │   ├── customer-app/     # React Native / Expo ✅
 │   ├── worker-app/       # React Native / Expo ✅
-│   ├── website/          # Next.js 14 marketing site ✅
+│   ├── website/          # Next.js 14 — marketing + full web booking loop ✅
+│   │   └── src/app/      #   /book /my-bookings /worker /join /forgot-password /reset-password
 │   └── admin/            # Next.js 14 admin dashboard ✅
 ├── services/
 │   └── api/              # Express + TypeScript backend ✅
+│       └── scripts/      #   make-admin, seed-demo (operational scripts)
 ├── .github/workflows/    # CI/CD ✅
 ├── package.json          # npm workspaces root
 ├── AGENTS.md             # This file
