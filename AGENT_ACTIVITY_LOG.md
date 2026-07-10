@@ -83,3 +83,23 @@
 - Added `src/routes/auth.test.ts` (8 tests) covering register (success, duplicate email, invalid email), login (correct/wrong password, unknown user), and `/me` (Bearer token, missing token). Prisma, `bcryptjs`, and `jsonwebtoken` are mocked via `vi.mock`/`vi.hoisted`, so no database is required.
 **Verification:** `tsc --noEmit` passes on `services/api`; `npx vitest run` → 8/8 tests pass.
 **Status:** All planned email-auth migration items are complete. Changes remain UNCOMMITTED on `main`.
+
+## [2026-07-10 14:00:00]
+**Reason:** Execute the agreed plan — reusable admin script, shareable Android APK build config, and fix all agentic-review gaps (C1-C8) with minimal high-quality code.
+**Backend (`services/api`):**
+- `scripts/make-admin.ts` + npm script `make-admin` — grants `isAdmin` by email (reusable). Usage: `npm run make-admin -- you@example.com`.
+- `prisma/schema.prisma`: added `failed` to `PayoutStatus` enum (aligns with existing `failed` filter + earnings UI); added optional `Worker.experience`.
+- `routes/bookings.ts` `PATCH /:id/assign`: now allows **worker self-assign** (resolves caller's `Worker`, requires `pending` + unassigned); admin path unchanged (assign by `workerId`). Unblocks the mobile "Accept Job" flow.
+- `routes/workers.ts` `POST /register`: persists `experience`.
+- `src/socket.ts`: JWT-verified `io.use` (decodes `userId`, rejects invalid tokens), uses `socket.data.userId` instead of trusting client payload, and restricts CORS to `ALLOWED_ORIGINS` (was `'*'`).
+- `.env.example`: documented `ALLOWED_ORIGINS`.
+- Regenerated Prisma client (`prisma generate`) for new fields.
+**Admin (`apps/admin`):**
+- `lib/auth-context.tsx`: now loads/stores the `user` (with `isAdmin`) from `/api/auth/me`.
+- New `components/AdminGate.tsx`: shows `LoginScreen` when no token, an "Access denied" screen for non-admins, else children. Wired into `app/layout.tsx`. Enforces admin role client-side (server `/stats` already 403s non-admins).
+- Deleted dead `lib/firebase.ts`.
+**Customer app:** `app/booking/[id].tsx` — passes `EXPO_PUBLIC_RAZORPAY_KEY_ID` to Razorpay and shows a clear "Payments Unavailable" alert instead of crashing when keys/order are missing.
+**Website:** `app/join/page.tsx` — sends `experience` to `/api/workers/register` (was collected but dropped).
+**Mobile build (Part B):** Added `expo.android.package` + `expo.ios.bundleIdentifier` to both `app.json`; added `eas.json` (development/preview/production) with `preview.android.buildType: "apk"` so `eas build -p android --profile preview` yields a shareable/installable APK + QR.
+**Verification:** `tsc --noEmit` passes on services/api, apps/admin, apps/website, apps/customer-app, apps/worker-app; `vitest run` → 8/8 pass; `prisma validate` OK.
+**Status:** Changes committed and pushed to `main` (triggers Render + Vercel). Prod DB gets new columns/enum via `prisma db push` on deploy.

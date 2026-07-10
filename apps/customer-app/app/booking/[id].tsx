@@ -117,8 +117,18 @@ export default function BookingDetailScreen() {
     setActionLoading(true);
     try {
       const { payment, razorpayOrderId } = await api.createPaymentOrder(id);
-      
+
+      if (!razorpayOrderId || !process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID) {
+        Alert.alert(
+          'Payments Unavailable',
+          'Online payments are not configured yet. Please contact support to complete this booking.',
+        );
+        setActionLoading(false);
+        return;
+      }
+
       const options = {
+        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
         description: `Payment for Booking ${id.slice(0, 8)}`,
         image: 'https://homehelp.ai/logo.png', // Placeholder
         currency: 'INR',

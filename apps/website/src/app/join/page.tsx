@@ -116,6 +116,7 @@ export default function JoinPage() {
           name: form.name,
           workerType: form.workerType,
           phoneNumber: form.phoneNumber || undefined,
+          experience: form.experience,
         }),
       });
       const workerData = await workerRes.json();

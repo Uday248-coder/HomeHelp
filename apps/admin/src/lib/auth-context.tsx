@@ -2,10 +2,18 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 
+interface AdminUser {
+  id: string;
+  email: string;
+  name?: string;
+  isAdmin: boolean;
+}
+
 interface AuthContextType {
   token: string | null;
+  user: AdminUser | null;
   isDark: boolean;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
   toggleDark: () => void;
 }
@@ -25,32 +33,38 @@ function getInitialDark(): boolean {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [isDark, setIsDark] = useState(getInitialDark);
 
   useEffect(() => {
-    // Check for cookie-based auth on mount
     checkAuthCookie();
   }, []);
 
-  async function checkAuthCookie() {
+  async function loadUser(tokenValue: string) {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` },
+        headers: { Authorization: `Bearer ${tokenValue}` },
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.user) {
-          setToken(localStorage.getItem('admin_token') || 'authenticated');
-        }
+        if (data.user) setUser(data.user);
       }
     } catch {
       // No valid session
     }
   }
 
+  async function checkAuthCookie() {
+    const stored = localStorage.getItem('admin_token');
+    if (!stored) return;
+    setToken(stored);
+    await loadUser(stored);
+  }
+
   const login = useCallback(async (newToken: string) => {
     localStorage.setItem('admin_token', newToken);
     setToken(newToken);
+    await loadUser(newToken);
   }, []);
 
   const logout = useCallback(async () => {
@@ -60,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     localStorage.removeItem('admin_token');
     setToken(null);
+    setUser(null);
   }, []);
 
   const toggleDark = useCallback(() => {
@@ -72,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, isDark, login, logout, toggleDark }}>
+    <AuthContext.Provider value={{ token, user, isDark, login, logout, toggleDark }}>
       {children}
     </AuthContext.Provider>
   );

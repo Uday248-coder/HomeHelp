@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { AuthProvider } from "@/lib/auth-context";
+import AdminGate from "@/components/AdminGate";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,9 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AdminGate>{children}</AdminGate>
+        </AuthProvider>
       </body>
     </html>
   );

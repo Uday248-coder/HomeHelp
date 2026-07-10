@@ -230,16 +230,23 @@ bookingsRouter.patch('/:id/cancel', async (req: Request, res: Response) => {
 bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-    if (!user?.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    const { workerId } = req.body;
-    if (!workerId) return res.status(400).json({ error: 'workerId is required' });
+    const isAdmin = user?.isAdmin ?? false;
 
     const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    if (booking.status !== 'pending') return res.status(400).json({ error: 'Booking must be pending to assign' });
+    if (booking.status !== 'pending' || booking.workerId) {
+      return res.status(400).json({ error: 'Booking must be pending and unassigned to assign' });
+    }
+
+    let workerId: string;
+    if (isAdmin) {
+      workerId = req.body.workerId;
+      if (!workerId) return res.status(400).json({ error: 'workerId is required' });
+    } else {
+      const worker = await prisma.worker.findUnique({ where: { userId: req.user!.userId } });
+      if (!worker) return res.status(403).json({ error: 'Worker profile required to accept jobs' });
+      workerId = worker.id;
+    }
 
     const worker = await prisma.worker.findUnique({ where: { id: workerId } });
     if (!worker) return res.status(404).json({ error: 'Worker not found' });
@@ -255,8 +262,8 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
     });
     return res.json({ booking: updated });
   } catch (err) {
-    console.error('[bookings] assign worker error:', err);
-    return res.status(500).json({ error: 'Failed to assign worker' });
+    console.error('[bookings] assign error:', err);
+    return res.status(500).json({ error: 'Failed to assign booking' });
   }
 });
 

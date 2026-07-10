@@ -1,15 +1,20 @@
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from './lib/constants';
 
-interface UserSocket {
-  userId: string;
-  role: 'customer' | 'worker';
-}
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://homehelp-admin.vercel.app',
+  'https://homehelp-website.vercel.app',
+];
 
 export function setupSocket(httpServer: HttpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: '*',
+      origin: ALLOWED_ORIGINS,
+      credentials: true,
     },
   });
 
@@ -18,34 +23,27 @@ export function setupSocket(httpServer: HttpServer) {
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error('Authentication error'));
-    
-    // In a real app, verify JWT here. For now, we trust the token if present.
-    // We'll extract userId from token if needed.
-    next();
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as { userId?: string };
+      if (!payload.userId) return next(new Error('Invalid token'));
+      socket.data.userId = payload.userId;
+      next();
+    } catch {
+      next(new Error('Invalid token'));
+    }
   });
 
   io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}`);
+    const userId = socket.data.userId as string;
+    userSockets.set(userId, socket.id);
+    socket.join(`user:${userId}`);
 
-    socket.on('join', ({ userId, role }) => {
-      userSockets.set(userId, socket.id);
-      socket.join(`user:${userId}`);
-      console.log(`User ${userId} (${role}) joined socket ${socket.id}`);
-    });
-
-    socket.on('update_location', ({ userId, location }) => {
-      // location: { lat: number, lng: number }
-      // Broadcast to all bookings where this worker is assigned and the booking is 'in_progress'
-      // For now, just broadcast to a room based on userId
+    socket.on('update_location', ({ location }) => {
       io.to(`user:${userId}`).emit('location_updated', { userId, location });
-      
-      // In a full implementation, we'd find the active booking and emit to the customer
-      // For MVP, we can use a simpler room strategy: `booking:bookingId`
     });
 
     socket.on('join_booking', (bookingId: string) => {
       socket.join(`booking:${bookingId}`);
-      console.log(`Socket ${socket.id} joined booking room ${bookingId}`);
     });
 
     socket.on('update_booking_location', ({ bookingId, location }) => {
@@ -53,13 +51,8 @@ export function setupSocket(httpServer: HttpServer) {
     });
 
     socket.on('disconnect', () => {
-      console.log(`Socket disconnected: ${socket.id}`);
-      // Remove from userSockets map
-      for (const [userId, socketId] of userSockets.entries()) {
-        if (socketId === socket.id) {
-          userSockets.delete(userId);
-          break;
-        }
+      if (userSockets.get(userId) === socket.id) {
+        userSockets.delete(userId);
       }
     });
   });

@@ -35,6 +35,7 @@ enum PaymentStatus {
 enum PayoutStatus {
   pending
   processed
+  failed
 }
 
 model User {
@@ -66,6 +67,7 @@ model Worker {
   id               String       @id @default(uuid()) @db.Uuid
   workerType       WorkerType   @map("worker_type")
   name             String
+  experience       String?      @map("experience")
   phoneNumber      String?      @unique @map("phone_number")
   userId           String?      @unique @db.Uuid @map("user_id")
   user             User?        @relation(fields: [userId], references: [id])

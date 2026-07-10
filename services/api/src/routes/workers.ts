@@ -32,7 +32,7 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
 
 workersRouter.post('/register', authMiddleware, async (req, res) => {
   try {
-    const { workerType, name, photoUrl, phoneNumber: bodyPhone } = req.body;
+    const { workerType, name, photoUrl, phoneNumber: bodyPhone, experience } = req.body;
     if (!workerType || !name) {
       return res.status(400).json({ error: 'workerType and name are required' });
     }
@@ -55,7 +55,8 @@ workersRouter.post('/register', authMiddleware, async (req, res) => {
       data: { 
         workerType, 
         name, 
-        phoneNumber, 
+        phoneNumber,
+        experience: experience || undefined,
         userId,
         photoUrl,
         isActive: false, // Needs admin approval
