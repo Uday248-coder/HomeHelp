@@ -2,7 +2,7 @@ export interface Worker {
   id: string;
   workerType: 'home_help' | 'driver' | 'both';
   name: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   photoUrl?: string;
   aadhaarVerified: boolean;
   licenseVerified: boolean;
@@ -24,7 +24,7 @@ export interface Booking {
   durationHours?: number;
   hourlyRate?: number;
   totalAmount?: number;
-  user?: { id: string; name?: string; phoneNumber: string };
+  user?: { id: string; name?: string; phoneNumber?: string };
   startOtp?: string;
   endOtp?: string;
   createdAt: string;

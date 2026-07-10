@@ -1,7 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getIdToken } from '../lib/firebase-auth';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 const CACHE_PREFIX = '@api_cache:';
@@ -12,25 +11,7 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
-  // First try to get the stored backend token
-  let token = await SecureStore.getItemAsync('auth_token');
-  
-  if (!token) {
-    // If no stored token, try to get Firebase ID token and exchange it
-    const idToken = await getIdToken();
-    if (idToken) {
-      try {
-        const res = await axios.post(`${BASE_URL}/api/auth/firebase`, { idToken });
-        if (res.data && res.data.token) {
-          token = res.data.token;
-          await SecureStore.setItemAsync('auth_token', token);
-        }
-      } catch {
-        // Fall through
-      }
-    }
-  }
-  
+  const token = await SecureStore.getItemAsync('auth_token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
@@ -79,18 +60,24 @@ async function request<T>(endpoint: string, options: any = {}): Promise<CachedRe
 }
 
 export const api = {
-  // These are now handled by Firebase Auth directly
-  sendOtp: async (_phoneNumber: string) => {
-    throw new Error('Use AuthContext.sendOtp instead');
+  login: (email: string, password: string) =>
+    request<any>('/api/auth/login', { method: 'POST', data: { email, password } }),
+  register: (data: { email: string; password: string; name?: string; phoneNumber?: string }) =>
+    request<any>('/api/auth/register', { method: 'POST', data }),
+  getMe: async () => {
+    const res = await request<any>('/api/auth/me');
+    return res.user;
   },
-  verifyOtp: async (_phoneNumber: string, _otp: string) => {
-    throw new Error('Use AuthContext.verifyOtp instead');
-  },
-  getMe: () => request<any>('/api/auth/me'),
   createBooking: (data: any) =>
     request<any>('/api/bookings', { method: 'POST', data }),
-  getBookings: () => request<any[]>('/api/bookings'),
-  getBooking: (id: string) => request<any>(`/api/bookings/${id}`),
+  getBookings: async () => {
+    const res = await request<any>('/api/bookings');
+    return res.bookings;
+  },
+  getBooking: async (id: string) => {
+    const res = await request<any>(`/api/bookings/${id}`);
+    return res.booking;
+  },
   cancelBooking: (id: string) =>
     request<any>(`/api/bookings/${id}/cancel`, { method: 'PATCH' }),
   createPaymentOrder: (bookingId: string) =>

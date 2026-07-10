@@ -145,5 +145,3 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
 });
-
-(End of file - total 141 lines)

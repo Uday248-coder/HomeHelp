@@ -9,51 +9,99 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { colors, spacing, borderRadius, fontSize, shadow } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
 
+type Mode = 'login' | 'register' | 'profile';
+
+const WORKER_TYPES: { value: 'home_help' | 'driver' | 'both'; label: string }[] = [
+  { value: 'home_help', label: 'Home Help' },
+  { value: 'driver', label: 'Driver' },
+  { value: 'both', label: 'Both' },
+];
+
 export default function AuthScreen() {
-  const { sendOtp, verifyOtp } = useAuth();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const { login, register, completeProfile, needsWorkerProfile } = useAuth();
+  const [mode, setMode] = useState<Mode>(needsWorkerProfile ? 'profile' : 'login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [workerType, setWorkerType] = useState<'home_help' | 'driver' | 'both'>('home_help');
   const [loading, setLoading] = useState(false);
 
-  async function handleSendOtp() {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length !== 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
+  function validateEmail(value: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  async function handleLogin() {
+    if (!validateEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
       return;
     }
     setLoading(true);
     try {
-      const result = await sendOtp(cleaned);
-      if (!result.success) throw new Error(result.error || 'Failed to send OTP');
-      setVerificationId(result.verificationId || null);
-      setStep('otp');
+      await login(email, password);
+      if (needsWorkerProfile) setMode('profile');
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to send OTP');
+      const msg = err?.response?.data?.error || err.message || 'Login failed';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleVerifyOtp() {
-    if (otp.length < 4) {
-      Alert.alert('Invalid OTP', 'Please enter the OTP.');
+  async function handleRegister() {
+    if (!name.trim()) {
+      Alert.alert('Name Required', 'Please enter your full name.');
       return;
     }
-    if (!verificationId) {
-      Alert.alert('Error', 'Verification session expired. Please resend OTP.');
+    if (!validateEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
       return;
     }
     setLoading(true);
     try {
-      await verifyOtp(verificationId, otp);
+      await register({
+        email,
+        password,
+        name: name.trim(),
+        workerType,
+        phoneNumber: phone.trim() || undefined,
+      });
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to verify OTP');
+      const msg = err?.response?.data?.error || err.message || 'Registration failed';
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCompleteProfile() {
+    if (!name.trim()) {
+      Alert.alert('Name Required', 'Please enter your full name.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await completeProfile({
+        name: name.trim(),
+        workerType,
+        phoneNumber: phone.trim() || undefined,
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err.message || 'Failed to create profile';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -64,73 +112,120 @@ export default function AuthScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.inner}>
+      <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.logo}>HomeHelp</Text>
-        <Text style={styles.subtitle}>Worker Partner App</Text>
+        <Text style={styles.subtitle}>
+          {mode === 'profile' ? 'Complete your worker profile' : 'Worker Partner App'}
+        </Text>
 
         <View style={styles.card}>
-          {step === 'phone' ? (
-            <>
-              <Text style={styles.label}>Phone Number</Text>
-              <View style={styles.phoneRow}>
-                <View style={styles.countryCode}>
-                  <Text style={styles.countryCodeText}>+91</Text>
-                </View>
-                <TextInput
-                  style={styles.phoneInput}
-                  placeholder="9876543210"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={setPhone}
-                />
-              </View>
+          {mode !== 'profile' && (
+            <View style={styles.segment}>
               <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleSendOtp}
-                disabled={loading}
+                style={[styles.segmentBtn, mode === 'login' && styles.segmentBtnActive]}
+                onPress={() => setMode('login')}
               >
-                {loading ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Send OTP</Text>
-                )}
+                <Text style={[styles.segmentText, mode === 'login' && styles.segmentTextActive]}>Login</Text>
               </TouchableOpacity>
-            </>
-          ) : (
+              <TouchableOpacity
+                style={[styles.segmentBtn, mode === 'register' && styles.segmentBtnActive]}
+                onPress={() => setMode('register')}
+              >
+                <Text style={[styles.segmentText, mode === 'register' && styles.segmentTextActive]}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text style={styles.label}>Full Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Your name"
+            placeholderTextColor={colors.textMuted}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Worker Type</Text>
+          <View style={styles.typeRow}>
+            {WORKER_TYPES.map((t) => (
+              <TouchableOpacity
+                key={t.value}
+                style={[styles.typeBtn, workerType === t.value && styles.typeBtnActive]}
+                onPress={() => setWorkerType(t.value)}
+              >
+                <Text style={[styles.typeText, workerType === t.value && styles.typeTextActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {mode !== 'profile' && (
             <>
-              <Text style={styles.label}>Enter OTP</Text>
-              <Text style={styles.otpHint}>
-                OTP sent to +91 {phone}
-              </Text>
+              <Text style={styles.label}>Email</Text>
               <TextInput
-                style={styles.otpInput}
-                placeholder="000000"
+                style={styles.input}
+                placeholder="you@example.com"
                 placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                maxLength={6}
-                value={otp}
-                onChangeText={setOtp}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
               />
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleVerifyOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Verify OTP</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setStep('phone'); setOtp(''); }}>
-                <Text style={styles.backLink}>Change phone number</Text>
-              </TouchableOpacity>
+
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="At least 6 characters"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
             </>
           )}
+
+          <Text style={styles.label}>Phone (optional)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="+91 9876543210"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={
+              mode === 'login'
+                ? handleLogin
+                : mode === 'register'
+                ? handleRegister
+                : handleCompleteProfile
+            }
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.buttonText}>
+                {mode === 'login' ? 'Login' : mode === 'register' ? 'Create Account' : 'Save Profile'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {mode !== 'profile' && (
+            <TouchableOpacity
+              style={styles.backLink}
+              onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+            >
+              <Text style={styles.backLinkText}>
+                {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -141,9 +236,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   inner: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
   },
   logo: {
     fontSize: fontSize.xxxl,
@@ -164,65 +260,79 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     ...shadow.card,
   },
-  label: {
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 4,
+    marginBottom: spacing.lg,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: borderRadius.sm,
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.card,
+    ...shadow.card,
+  },
+  segmentText: {
     fontSize: fontSize.md,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  segmentTextActive: {
+    color: colors.primary,
+  },
+  label: {
+    fontSize: fontSize.sm,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.sm,
+    marginTop: spacing.md,
   },
-  phoneRow: {
+  input: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    fontSize: fontSize.md,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  typeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  countryCode: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  countryCodeText: {
-    fontSize: fontSize.md,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  phoneInput: {
+  typeBtn: {
     flex: 1,
-    backgroundColor: colors.background,
+    paddingVertical: 12,
+    alignItems: 'center',
     borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    fontSize: fontSize.md,
-    color: colors.text,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  otpInput: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    fontSize: fontSize.xl,
-    color: colors.text,
-    textAlign: 'center',
-    letterSpacing: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
+  typeBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  otpHint: {
+  typeText: {
     fontSize: fontSize.sm,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  typeTextActive: {
+    color: colors.white,
   },
   button: {
     backgroundColor: colors.primary,
     borderRadius: borderRadius.sm,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: spacing.lg,
     ...shadow.button,
   },
   buttonDisabled: {
@@ -234,9 +344,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   backLink: {
+    marginTop: spacing.md,
+  },
+  backLinkText: {
     color: colors.primary,
     textAlign: 'center',
-    marginTop: spacing.md,
     fontSize: fontSize.sm,
   },
 });

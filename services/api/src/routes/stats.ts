@@ -12,26 +12,20 @@ statsRouter.get('/dashboard', async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
     const [
-      activeBookings,
-      availableWorkers,
-      todayRevenue,
-      totalUsers,
-      totalWorkers,
       totalBookings,
+      pendingBookings,
+      completedBookings,
+      cancelledBookings,
+      activeWorkers,
+      totalRevenue,
       recentBookings,
     ] = await Promise.all([
-      prisma.booking.count({ where: { status: { in: ['assigned', 'in_progress'] } } }),
-      prisma.worker.count({ where: { isAvailable: true, isActive: true } }),
-      prisma.payment.aggregate({
-        _sum: { amount: true },
-        where: {
-          status: 'captured',
-          createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-        },
-      }),
-      prisma.user.count(),
-      prisma.worker.count(),
       prisma.booking.count(),
+      prisma.booking.count({ where: { status: 'pending' } }),
+      prisma.booking.count({ where: { status: 'completed' } }),
+      prisma.booking.count({ where: { status: 'cancelled' } }),
+      prisma.worker.count({ where: { isActive: true } }),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'captured' } }),
       prisma.booking.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -46,12 +40,12 @@ statsRouter.get('/dashboard', async (req, res) => {
     ]);
 
     return res.json({
-      activeBookings,
-      availableWorkers,
-      todayRevenue: todayRevenue._sum.amount || 0,
-      totalUsers,
-      totalWorkers,
       totalBookings,
+      activeWorkers,
+      totalRevenue: totalRevenue._sum.amount || 0,
+      pendingBookings,
+      completedBookings,
+      cancelledBookings,
       recentBookings,
     });
   } catch (error) {
@@ -66,16 +60,33 @@ statsRouter.get('/revenue/weekly', async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
     const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const payments = await prisma.payment.findMany({
       where: {
         status: 'captured',
         createdAt: { gte: sevenDaysAgo },
       },
+      select: { amount: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
-    return res.json({ payments });
+
+    const dailyMap = new Map<string, number>();
+    const cursor = new Date(sevenDaysAgo);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    while (cursor <= end) {
+      dailyMap.set(cursor.toISOString().slice(0, 10), 0);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    for (const p of payments) {
+      const key = p.createdAt.toISOString().slice(0, 10);
+      dailyMap.set(key, (dailyMap.get(key) || 0) + Number(p.amount));
+    }
+    const revenue = Array.from(dailyMap.entries()).map(([date, rev]) => ({ date, revenue: rev }));
+
+    return res.json({ revenue });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch revenue data' });
   }

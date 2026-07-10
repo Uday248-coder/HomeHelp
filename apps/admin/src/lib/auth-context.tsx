@@ -34,11 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function checkAuthCookie() {
     try {
-      const res = await fetch('/api/auth/verify', { credentials: 'include' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` },
+      });
       if (res.ok) {
         const data = await res.json();
-        if (data.token) {
-          setToken(data.token);
+        if (data.user) {
+          setToken(localStorage.getItem('admin_token') || 'authenticated');
         }
       }
     } catch {
@@ -47,14 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = useCallback(async (newToken: string) => {
+    localStorage.setItem('admin_token', newToken);
     setToken(newToken);
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/logout`, {
       method: 'POST',
-      credentials: 'include',
+      headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` },
     });
+    localStorage.removeItem('admin_token');
     setToken(null);
   }, []);
 

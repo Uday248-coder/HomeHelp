@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -14,92 +14,46 @@ import {
 import { colors, spacing, fonts, borderRadius, shadows } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
 
-const OTP_EXPIRY_SECONDS = 300;
-
 export default function AuthScreen() {
-  const { sendOtp, verifyOtp } = useAuth();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const { login, register } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [timer, setTimer] = useState(OTP_EXPIRY_SECONDS);
-  const [isTimerActive, setIsTimerActive] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const otpInputRef = useRef<TextInput>(null);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+  function validateEmail(value: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
 
-  function startTimer() {
-    setTimer(OTP_EXPIRY_SECONDS);
-    setIsTimerActive(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          setIsTimerActive(false);
-          return 0;
+  async function handleSubmit() {
+    if (!validateEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
+      return;
+    }
+    setLoading(true);
+    try {
+      if (mode === 'login') {
+        await login(email, password);
+      } else {
+        if (!name.trim()) {
+          Alert.alert('Name Required', 'Please enter your name.');
+          setLoading(false);
+          return;
         }
-        return prev - 1;
-      });
-    }, 1000);
-  }
-
-  function formatTime(seconds: number) {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
-
-  async function handleSendOtp() {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length !== 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await sendOtp(cleaned);
-      if (!res.success) throw new Error(res.error || 'Failed to send OTP');
-      setVerificationId(res.verificationId || null);
-      setStep('otp');
-      startTimer();
-      setTimeout(() => otpInputRef.current?.focus(), 300);
+        await register({ email, password, name: name.trim(), phoneNumber: phone.trim() || undefined });
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to send OTP');
+      const msg = err?.response?.data?.error || err.message || 'Authentication failed';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleVerifyOtp() {
-    if (!verificationId) {
-      Alert.alert('Error', 'Verification session expired. Please resend OTP.');
-      return;
-    }
-    if (otp.length < 4) {
-      Alert.alert('Invalid OTP', 'Please enter the full OTP.');
-      return;
-    }
-    setLoading(true);
-    try {
-      await verifyOtp(verificationId, otp);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to verify OTP');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleResend() {
-    setOtp('');
-    setVerificationId(null);
-    setStep('phone');
   }
 
   return (
@@ -120,83 +74,85 @@ export default function AuthScreen() {
         </View>
 
         <View style={styles.card}>
-          {step === 'phone' ? (
+          <View style={styles.segment}>
+            <TouchableOpacity
+              style={[styles.segmentBtn, mode === 'login' && styles.segmentBtnActive]}
+              onPress={() => setMode('login')}
+            >
+              <Text style={[styles.segmentText, mode === 'login' && styles.segmentTextActive]}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentBtn, mode === 'register' && styles.segmentBtnActive]}
+              onPress={() => setMode('register')}
+            >
+              <Text style={[styles.segmentText, mode === 'register' && styles.segmentTextActive]}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+
+          {mode === 'register' && (
             <>
-              <Text style={styles.cardTitle}>Login</Text>
-              <Text style={styles.cardSubtitle}>Enter your phone number to get started</Text>
-
-              <View style={styles.phoneInputRow}>
-                <View style={styles.countryCode}>
-                  <Text style={styles.countryCodeText}>+91</Text>
-                </View>
-                <TextInput
-                  style={styles.phoneInput}
-                  placeholder="Phone number"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={setPhone}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleSendOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.white} size="small" />
-                ) : (
-                  <Text style={styles.buttonText}>Send OTP</Text>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={styles.cardTitle}>Verify OTP</Text>
-              <Text style={styles.cardSubtitle}>
-                Enter the 4-digit code sent to +91 {phone}
-              </Text>
-
+              <Text style={styles.label}>Full Name</Text>
               <TextInput
-                ref={otpInputRef}
-                style={styles.otpInput}
-                placeholder="Enter OTP"
+                style={styles.input}
+                placeholder="Your name"
                 placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                maxLength={6}
-                value={otp}
-                onChangeText={setOtp}
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
               />
-
-              {__DEV__ && verificationId ? (
-                <View style={styles.devHint}>
-                  <Text style={styles.devHintText}>Dev: verificationId={verificationId}</Text>
-                </View>
-              ) : null}
-
-              <Text style={styles.timerText}>
-                {isTimerActive ? `Expires in ${formatTime(timer)}` : 'OTP expired'}
-              </Text>
-
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleVerifyOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.white} size="small" />
-                ) : (
-                  <Text style={styles.buttonText}>Verify & Login</Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.resendButton} onPress={handleResend}>
-                <Text style={styles.resendText}>Change phone number</Text>
-              </TouchableOpacity>
+              <Text style={styles.label}>Phone (optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="+91 9876543210"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+              />
             </>
           )}
+
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="you@example.com"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="At least 6 characters"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Text style={styles.buttonText}>{mode === 'login' ? 'Login' : 'Create Account'}</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.switchButton}
+            onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+          >
+            <Text style={styles.switchText}>
+              {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -246,39 +202,41 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     ...shadows.card,
   },
-  cardTitle: {
-    fontSize: fonts.sizeXxl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  cardSubtitle: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-  },
-  phoneInputRow: {
+  segment: {
     flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: 4,
     marginBottom: spacing.lg,
   },
-  countryCode: {
-    width: 64,
-    height: 52,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  countryCodeText: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightMedium,
-    color: colors.text,
-  },
-  phoneInput: {
+  segmentBtn: {
     flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: borderRadius.sm,
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.card,
+    ...shadows.card,
+  },
+  segmentText: {
+    fontSize: fonts.sizeMd,
+    fontWeight: fonts.weightSemiBold,
+    color: colors.textMuted,
+  },
+  segmentTextActive: {
+    color: colors.primary,
+  },
+  label: {
+    fontSize: fonts.sizeSm,
+    fontWeight: fonts.weightSemiBold,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
+  input: {
     height: 52,
     borderRadius: borderRadius.md,
     backgroundColor: colors.background,
@@ -287,36 +245,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     fontSize: fonts.sizeLg,
     color: colors.text,
-  },
-  otpInput: {
-    height: 52,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    fontSize: fonts.sizeXl,
-    color: colors.text,
-    textAlign: 'center',
-    letterSpacing: 8,
-    marginBottom: spacing.md,
-  },
-  devHint: {
-    backgroundColor: '#fef3c7',
-    borderRadius: borderRadius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  devHintText: {
-    fontSize: fonts.sizeSm,
-    color: '#92400e',
-    textAlign: 'center',
-  },
-  timerText: {
-    textAlign: 'center',
-    fontSize: fonts.sizeSm,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
   },
   button: {
     height: 52,
@@ -324,6 +252,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: spacing.lg,
     ...shadows.button,
   },
   buttonDisabled: {
@@ -334,12 +263,12 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weightSemiBold,
     color: colors.white,
   },
-  resendButton: {
+  switchButton: {
     alignSelf: 'center',
     marginTop: spacing.lg,
     padding: spacing.sm,
   },
-  resendText: {
+  switchText: {
     fontSize: fonts.sizeMd,
     color: colors.primary,
     fontWeight: fonts.weightMedium,

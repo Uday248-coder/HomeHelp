@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { auth, formatIndianPhone } from '@/lib/firebase';
-import { signInWithPhoneNumber, RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -29,7 +27,7 @@ const MODES = [
 ];
 
 function ProgressSteps({ current, total }: { current: number; total: number }) {
-  const labels = ['Choose Service', 'Details', 'Verify', 'Confirm'];
+  const labels = ['Choose Service', 'Details', 'Account', 'Confirm'];
   return (
     <div className="flex justify-between mb-10 max-w-xl mx-auto">
       {labels.slice(0, total).map((label, i) => {
@@ -73,73 +71,31 @@ export default function BookPage() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [duration, setDuration] = useState(2);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
+  const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bookingId, setBookingId] = useState<string | null>(null);
-  const recaptchaRef = useRef<HTMLDivElement>(null);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
-
-  useEffect(() => {
-    if (!recaptchaVerifierRef.current && recaptchaRef.current) {
-      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
-        size: 'invisible',
-      });
-    }
-  }, []);
-
-  const resetRecaptcha = () => {
-    recaptchaVerifierRef.current?.clear();
-    recaptchaVerifierRef.current = null;
-    if (recaptchaRef.current) {
-      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
-        size: 'invisible',
-      });
-    }
-  };
 
   const selectedMode = MODES.find(m => m.id === mode);
 
-  const handleSendOtp = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) { setError('Enter a valid phone number'); return; }
-    setError(''); setLoading(true);
+  const handleAuth = async () => {
+    if (!email || !password) { setAuthError('Enter your email and password'); return; }
+    setAuthError(''); setLoading(true);
     try {
-      const verifier = recaptchaVerifierRef.current;
-      if (!verifier) throw new Error('Recaptcha not initialized. Please try again.');
-      const confirmation = await signInWithPhoneNumber(auth, formatIndianPhone(phoneNumber), verifier);
-      confirmationRef.current = confirmation;
-      setOtpSent(true);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to send OTP';
-      const clean = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
-      setError(clean || 'Failed to send OTP');
-      resetRecaptcha();
-    } finally { setLoading(false); }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 4) { setError('Enter the OTP'); return; }
-    if (!confirmationRef.current) { setError('Verification session expired. Please resend OTP.'); return; }
-    setError(''); setLoading(true);
-    try {
-      const result = await confirmationRef.current.confirm(otp);
-      const idToken = await result.user.getIdToken();
-      if (!idToken) throw new Error('Failed to get auth token');
-      const res = await fetch(`${API_URL}/api/auth/firebase`, {
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
       localStorage.setItem('booking_token', data.token);
       setStep(3);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Verification failed';
-      const clean = msg.replace('Firebase: ', '').replace(/\(.*\)\.?/, '').trim();
-      setError(clean || 'Verification failed');
+      setAuthError(e instanceof Error ? e.message : 'Authentication failed');
     } finally { setLoading(false); }
   };
 
@@ -152,7 +108,7 @@ export default function BookPage() {
         body.scheduledAt = `${scheduledDate}T${scheduledTime}:00.000Z`;
       }
       const token = localStorage.getItem('booking_token');
-      if (!token) throw new Error('Authentication token not found. Please verify OTP again.');
+      if (!token) throw new Error('Session expired. Please sign in again.');
       const res = await fetch(`${API_URL}/api/bookings`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body),
@@ -353,57 +309,48 @@ export default function BookPage() {
 
           {step === 2 && (
             <div className="animate-fade-in">
-              <h2 className="font-display text-2xl font-medium text-[#1C1C1C] mb-1">Verify your number</h2>
-              <p className="text-[#8C847C] text-sm mb-6">You need to verify your phone to confirm the booking.</p>
+              <h2 className="font-display text-2xl font-medium text-[#1C1C1C] mb-1">{isLogin ? 'Sign in' : 'Create account'}</h2>
+              <p className="text-[#8C847C] text-sm mb-6">{isLogin ? 'Sign in to confirm your booking.' : 'Create an account to confirm your booking.'}</p>
 
-              {!otpSent ? (
-                <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Phone Number</label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-[#E4DFD6] bg-[#F6F4EF] text-[#8C847C] text-sm font-medium">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        placeholder="9876543210"
-                        value={phoneNumber}
-                        onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        className="flex-1 h-10 px-3 rounded-r-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <Button className="w-full" size="lg" onClick={handleSendOtp} loading={loading}>
-                    Send OTP
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div className="bg-[#F6F4EF] rounded-xl p-4 text-sm text-[#8C847C]">
-                    <p className="font-medium text-[#1C1C1C] mb-0.5">Code sent to +91 {phoneNumber}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Enter Code</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="000000"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="w-full h-11 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/40 text-lg text-center font-mono tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
-                      maxLength={6}
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <Button variant="outline" className="flex-1" onClick={() => { setOtpSent(false); setOtp(''); confirmationRef.current = null; resetRecaptcha(); }}>
-                      Change Number
-                    </Button>
-                    <Button className="flex-[2]" size="lg" onClick={handleVerifyOtp} loading={loading} disabled={otp.length < 4}>
-                      Verify & Continue
-                    </Button>
-                  </div>
+              {authError && (
+                <div className="mb-5 px-4 py-3 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-sm flex items-center gap-2 animate-slide-in" role="alert">
+                  <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-xs font-bold shrink-0">!</span>
+                  {authError}
                 </div>
               )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Password</label>
+                  <input
+                    type="password"
+                    placeholder={isLogin ? 'Your password' : 'At least 6 characters'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAuth()}
+                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                  />
+                </div>
+                <Button className="w-full" size="lg" onClick={handleAuth} loading={loading}>
+                  {isLogin ? 'Sign In' : 'Create Account'}
+                </Button>
+                <button
+                  onClick={() => { setIsLogin(!isLogin); setAuthError(''); }}
+                  className="w-full text-sm text-[#8C847C] hover:text-[#1A3C34] transition-colors"
+                >
+                  {isLogin ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -483,7 +430,6 @@ export default function BookPage() {
             </div>
           )}
         </div>
-        <div ref={recaptchaRef} />
       </main>
     </div>
   );

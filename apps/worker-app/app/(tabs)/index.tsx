@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -253,4 +253,3 @@ const styles = StyleSheet.create({
   },
 });
 
-(End of file - total 217 lines)

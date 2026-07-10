@@ -268,5 +268,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
 });
-
-(End of file - total 232 lines)

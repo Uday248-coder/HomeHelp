@@ -5,7 +5,8 @@ import { prisma } from '../lib/prisma';
 
 export interface AuthPayload {
   userId: string;
-  phoneNumber: string;
+  phoneNumber?: string;
+  email?: string;
 }
 
 declare global {

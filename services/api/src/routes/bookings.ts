@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { RATE_TABLE } from '../lib/constants';
+import { sendOtpEmail } from '../lib/mailer';
 import { Prisma } from '@prisma/client';
 
 export const bookingsRouter = Router();
@@ -129,7 +130,7 @@ bookingsRouter.get('/admin/all', async (req: Request, res: Response) => {
 bookingsRouter.get('/available', async (req: Request, res: Response) => {
   try {
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
     });
     if (!worker || !worker.isActive) {
       return res.status(403).json({ error: 'Only active workers can view available bookings' });
@@ -162,7 +163,7 @@ bookingsRouter.get('/available', async (req: Request, res: Response) => {
 bookingsRouter.get('/worker', async (req: Request, res: Response) => {
   try {
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
     });
     if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
 
@@ -265,7 +266,7 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
     if (!otp) return res.status(400).json({ error: 'OTP is required' });
 
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
     });
     if (!worker) return res.status(403).json({ error: 'Worker profile not found' });
 
@@ -293,7 +294,7 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
     if (!otp) return res.status(400).json({ error: 'OTP is required' });
 
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
     });
     if (!worker) return res.status(403).json({ error: 'Worker profile not found' });
 
@@ -343,7 +344,10 @@ bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'type must be start or end' });
     }
 
-    const booking = await prisma.booking.findUnique({ where: { id: getId(req) } });
+    const booking = await prisma.booking.findUnique({
+      where: { id: getId(req) },
+      include: { user: { select: { email: true } } },
+    });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -354,7 +358,11 @@ bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) =>
       data: { [field]: otp },
     });
 
-    console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP: ${otp}`);
+    if (booking.user?.email) {
+      await sendOtpEmail(booking.user.email, getId(req), type, otp);
+    } else {
+      console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP: ${otp}`);
+    }
 
     return res.json({ message: `${type} OTP generated` });
   } catch (err) {

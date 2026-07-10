@@ -1,7 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getIdToken } from '../lib/firebase-auth';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 const CACHE_PREFIX = '@api_cache:';
@@ -12,25 +11,7 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
-  // First try to get the stored backend token
-  let token = await SecureStore.getItemAsync('worker_token');
-  
-  if (!token) {
-    // If no stored token, try to get Firebase ID token and exchange it
-    const idToken = await getIdToken();
-    if (idToken) {
-      try {
-        const res = await axios.post(`${BASE_URL}/api/auth/firebase`, { idToken });
-        if (res.data && res.data.token) {
-          token = res.data.token;
-          await SecureStore.setItemAsync('worker_token', token);
-        }
-      } catch {
-        // Fall through
-      }
-    }
-  }
-  
+  const token = await SecureStore.getItemAsync('worker_token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
@@ -79,24 +60,38 @@ async function request<T>(endpoint: string, options: any = {}): Promise<CachedRe
 }
 
 export const api = {
-  sendOtp: async (_phoneNumber: string) => {
-    throw new Error('Use AuthContext.sendOtp instead');
+  login: (email: string, password: string) =>
+    request<any>('/api/auth/login', { method: 'POST', data: { email, password } }),
+  register: (data: { email: string; password: string; name?: string; phoneNumber?: string }) =>
+    request<any>('/api/auth/register', { method: 'POST', data }),
+  getWorkerProfile: async () => {
+    const res = await request<any>('/api/workers/me');
+    return res.worker;
   },
-  verifyOtp: async (_phoneNumber: string, _otp: string) => {
-    throw new Error('Use AuthContext.verifyOtp instead');
+  registerWorkerProfile: (data: { name: string; workerType: string; phoneNumber?: string }) =>
+    request<any>('/api/workers/register', { method: 'POST', data }),
+  getAvailableJobs: async (mode?: string) => {
+    const res = await request<any>('/api/bookings/available' + (mode ? `?mode=${mode}` : ''));
+    return res.bookings;
   },
-  getWorkerProfile: () => request<any>('/api/workers/me'),
-  getAvailableJobs: (mode?: string) =>
-    request<any[]>('/api/bookings/available' + (mode ? `?mode=${mode}` : '')),
   acceptJob: (bookingId: string) =>
     request<any>(`/api/bookings/${bookingId}/assign`, { method: 'PATCH', data: {} }),
   startJob: (bookingId: string, otp: string) =>
     request<any>(`/api/bookings/${bookingId}/start`, { method: 'PATCH', data: { otp } }),
   completeJob: (bookingId: string, otp: string, rating?: number) =>
     request<any>(`/api/bookings/${bookingId}/complete`, { method: 'PATCH', data: { otp, rating } }),
-  getJob: (id: string) => request<any>(`/api/bookings/${id}`),
-  getMyJobs: () => request<any[]>('/api/bookings/worker'),
+  getJob: async (id: string) => {
+    const res = await request<any>(`/api/bookings/${id}`);
+    return res.booking;
+  },
+  getMyJobs: async () => {
+    const res = await request<any>('/api/bookings/worker');
+    return res.bookings;
+  },
   toggleAvailability: (isAvailable: boolean) =>
     request<any>('/api/workers/me/availability', { method: 'PATCH', data: { isAvailable } }),
-  getEarnings: () => request<any>('/api/payouts/me'),
+  getEarnings: async () => {
+    const res = await request<any>('/api/payouts/me');
+    return res.payouts;
+  },
 };

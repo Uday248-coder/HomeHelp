@@ -45,7 +45,7 @@ payoutsRouter.get('/', adminMiddleware, async (req, res) => {
 payoutsRouter.get('/me', async (req, res) => {
   try {
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
     });
     if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
 

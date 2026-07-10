@@ -207,7 +207,7 @@ export default function BookingDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Worker</Text>
           <DetailRow label="Name" value={booking.worker.name} />
-          <DetailRow label="Phone" value={booking.worker.phoneNumber} />
+          <DetailRow label="Phone" value={booking.worker.phoneNumber || '—'} />
         </View>
       )}
 

@@ -30,3 +30,56 @@
 - Confirmed `auth/argument-error` is resolved in the booking flow.
 - Verified `expo-router` migration for both Customer and Worker mobile apps.
 - All a-priori tasks completed.
+
+## [2026-07-09 11:00:00]
+**Reason:** Switch authentication from Firebase Phone/OTP to email+password (Firebase plan not affordable right now). 
+**Decision:** Email/password is the interim auth method; Firebase/Phone may return later per the plan.
+**Action — Backend (`services/api`):**
+- `prisma/schema.prisma`: `User` model reworked — `email String @unique` (required), added `password String` (hashed), `phoneNumber` made optional (`String? @unique`). Reset DB via `prisma db push --force-reset`.
+- `src/routes/auth.ts`: Removed `/send-otp`, `/verify-otp`, `/firebase`. Added `POST /register` (email, password, name, optional phone → bcrypt hash) and `POST /login` (email + bcrypt compare). Both set httpOnly `auth_token` cookie + return JWT. `GET /me` and `POST /logout` retained; `/me` strips password from response.
+- Installed `bcryptjs` (+ `@types/bcryptjs`) for password hashing.
+- `src/middleware/auth.ts`: `AuthPayload` updated to `phoneNumber?: string; email?: string` (optional) for email-only users.
+- `src/routes/workers.ts`: `POST /register`, `GET /me`, `PATCH /me/availability` updated to resolve worker by user's `phoneNumber` (fallback to body phone) instead of relying on JWT `phoneNumber`.
+**Action — Admin (`apps/admin`):**
+- `components/LoginScreen.tsx`: Replaced phone+OTP+Firebase Recaptcha UI with email + password form calling `api.login()`.
+- `lib/auth-context.tsx`: `checkAuthCookie` now hits `/api/auth/me` with Bearer token from `localStorage.admin_token`; `login()` persists token to `localStorage`; `logout()` hits `/api/auth/logout` with Bearer.
+- `lib/api.ts`: Added `login()`/`register()` helpers; removed `sendOtp`/`verifyOtp`/`firebaseAuth`; `fetchAPI` now attaches `Authorization: Bearer` from `localStorage.admin_token`.
+**Action — Website (`apps/website`):**
+- `app/join/page.tsx`: Replaced 3-step phone/OTP/Firebase flow with 2-step email+password account creation. Step 1 = name/email/password/optional phone; Step 2 = worker type/experience + terms. Submits to `/api/auth/register` then `/api/workers/register` with Bearer token. Progress + sessionStorage persistence retained.
+**Verification:** `tsc --noEmit` passes clean on `services/api`, `apps/admin`, `apps/website`. No remaining `firebase`/`sendOtp`/`Recaptcha` references in `apps/`.
+**Cleanup (root):** Removed redundant, now-broken artifacts tied to the old OTP/Firebase flow: `design-system.ts`, `e2e_test.py`, `recon_all.py`, `test_booking_auth.py`, `verify_auth_fix.py`, `scripts/with_server.py` (+ empty `scripts/`). Confirmed via grep they are referenced nowhere. Kept `TODOS.md`, `README.md`, `.prettierrc`, `HomeHelp_Driver_App_Plan.docx`, `AGENTS.md`.
+**Status:** Changes are NOT committed (working tree modified on `main`). Awaiting commit decision.
+
+## [2026-07-10 12:00:00]
+**Reason:** Continue mobile-app migration (customer-app + worker-app) from Firebase phone/OTP to email/password, matching the backend `/api/auth/login` + `/api/auth/register` (JWT Bearer) flow already in place.
+**Action - Both apps (`src/api/client.ts`):**
+- Removed `firebase-auth` import and the request interceptor that silently exchanged a Firebase ID token for a backend JWT at `POST /api/auth/firebase` (endpoint no longer exists). Interceptor now only attaches `Authorization: Bearer <token>` from `expo-secure-store`.
+- Reworked API wrapper to unwrap backend envelope shapes: `getMe()->{user}`, `getBookings()->{bookings}`, `getBooking(id)->{booking}`, `getWorkerProfile()->{worker}`, `getMyJobs()->{bookings}`, `getJob(id)->{booking}`, `getAvailableJobs()->{bookings}`, `getEarnings()->{payouts}`. Added `login(email,password)` and `register(...)` helpers.
+**Action - customer-app (`src/context/AuthContext.tsx`):** Replaced Firebase `onAuthStateChanged`/`sendOtp`/`verifyOtp` with `login(email,password)` + `register(...)` that store the backend JWT in `expo-secure-store` (`auth_token`) and set `user` from `/register` or `/me` response.
+**Action - worker-app (`src/context/AuthContext.tsx`):** Same, plus `needsWorkerProfile` flag — if `/api/workers/me` returns 404 the user is logged in but prompted to finish the worker profile via `completeProfile()` (`POST /api/workers/register`). `register()` creates the user AND the worker profile in one flow.
+**Action - auth screens (`app/auth.tsx`):** Replaced phone+OTP UI with email + password forms (login/register segmented toggle). Worker screen adds name + workerType picker + optional phone, and a "complete profile" mode for users lacking a worker row.
+**Action - types:** `User.phoneNumber` and `Worker.phoneNumber` made optional (backend may omit them); worker `Booking.user.phoneNumber` optional.
+**Deleted:** `src/lib/firebase-auth.ts` (both apps). Removed `firebase` dependency from customer-app `package.json`.
+**Fixes surfaced once `app/` was added to tsconfig `include` (was only `src` before, so screens were never typechecked):**
+- Removed dead root `index.ts` (imported a missing `./App`) in both apps; tsconfig `include` set to `["src","app"]`.
+- Removed literal junk line `(End of file - total N lines)` accidentally embedded in `app/(tabs)/bookings.tsx`, `app/(tabs)/profile.tsx`, `app/(tabs)/index.tsx` (worker).
+- Added `@expo/vector-icons@^14.0.0` to both apps (was used by tab bars but never a dependency) and installed it.
+- Added `src/declarations.d.ts` (`declare module 'react-native-razorpay';`) in both apps.
+- Fixed worker unused-import errors (`useCallback`, `useLocalSearchParams`, `router`, `colors`), `fontSize.md` -> `fonts.sizeMd`, and unused `userId` param in `location.ts`.
+**Verification:** `npx tsc --noEmit` passes clean on BOTH `apps/customer-app` and `apps/worker-app` (previously none of the `app/` screens were typechecked).
+**Status:** Mobile email migration complete and typechecks. Changes remain UNCOMMITTED on `main`.
+
+## [2026-07-10 13:00:00]
+**Reason:** Complete the remaining backend items from the email-auth migration plan: email OTP delivery, drop dead Firebase code, fix broken CI, add auth tests.
+**Action - Email OTP delivery (`services/api`):**
+- Added `src/lib/mailer.ts` using `resend` (`sendOtpEmail(to, bookingId, type, otp)`). No-ops with a warning if `RESEND_API_KEY` is unset, so dev/runtime without the key keeps working.
+- `src/routes/bookings.ts` `PATCH /:id/generate-otp` now `include`s the booking user's email and calls `sendOtpEmail`; falls back to the previous `console.log` only when the user has no email.
+- Added `resend@^4.0.0` to `services/api/package.json`; documented `RESEND_API_KEY` + `EMAIL_FROM` in `.env.example`.
+**Action - Remove dead Firebase:**
+- `npm uninstall firebase-admin --workspace=services/api` (removed from deps + root lockfile) and deleted `src/lib/firebase.ts` (was unused after the Firebase→email switch; grep confirmed no remaining references).
+**Action - CI (` .github/workflows/ci.yml`):** Removed the `e2e` job (it ran the deleted `e2e_test.py` → would fail every run). `lint-build` matrix (services/api, apps/website, apps/admin) unchanged.
+**Action - Auth tests (`services/api`):**
+- Added `vitest` + `supertest` + `@types/supertest` (devDeps), `vitest.config.ts` (node env, sets `JWT_SECRET`), and `npm test` script.
+- Added `src/routes/auth.test.ts` (8 tests) covering register (success, duplicate email, invalid email), login (correct/wrong password, unknown user), and `/me` (Bearer token, missing token). Prisma, `bcryptjs`, and `jsonwebtoken` are mocked via `vi.mock`/`vi.hoisted`, so no database is required.
+**Verification:** `tsc --noEmit` passes on `services/api`; `npx vitest run` → 8/8 tests pass.
+**Status:** All planned email-auth migration items are complete. Changes remain UNCOMMITTED on `main`.

@@ -1,6 +1,6 @@
 export interface User {
   id: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   name?: string;
   email?: string;
 }
@@ -19,7 +19,7 @@ export interface Booking {
   totalAmount?: number;
   ratingByUser?: number;
   createdAt: string;
-  worker?: { id: string; name: string; phoneNumber: string };
+  worker?: { id: string; name: string; phoneNumber?: string };
   payment?: { id: string; amount: number; status: string };
 }
 

@@ -34,7 +34,7 @@ export interface Worker {
   id: string;
   workerType: 'home_help' | 'driver' | 'both';
   name: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   photoUrl?: string;
   aadhaarVerified: boolean;
   licenseVerified: boolean;

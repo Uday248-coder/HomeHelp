@@ -8,6 +8,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChart } from '@/components/dashboard/BarChart';
 import { DonutChart } from '@/components/dashboard/DonutChart';
 import { RecentBookings } from '@/components/dashboard/RecentBookings';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
@@ -46,7 +47,7 @@ export default function Dashboard() {
         api.getWeeklyRevenue(),
       ]);
       setStats(statsData);
-      setRevenueData(revenues);
+      setRevenueData(Array.isArray(revenues) ? revenues : revenues.revenue || []);
     } catch {
       setError('Failed to load dashboard data');
     } finally {
@@ -103,6 +104,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      <ErrorBoundary>
       <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
         <header className="flex justify-between items-start">
           <div>
@@ -226,6 +228,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      </ErrorBoundary>
     </Layout>
   );
 }

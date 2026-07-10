@@ -1,17 +1,27 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../api/client';
-import { sendPhoneOTP, verifyPhoneOTP, getIdToken, onAuthStateChanged, signOut } from '../lib/firebase-auth';
 import { Worker } from '../types';
 
 interface AuthContextType {
   token: string | null;
   worker: Worker | null;
   isLoading: boolean;
-  login: (token: string) => Promise<void>;
+  needsWorkerProfile: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    name: string;
+    workerType: 'home_help' | 'driver' | 'both';
+    phoneNumber?: string;
+  }) => Promise<void>;
+  completeProfile: (data: {
+    name: string;
+    workerType: 'home_help' | 'driver' | 'both';
+    phoneNumber?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
-  sendOtp: (phone: string) => Promise<{ success: boolean; verificationId?: string; error?: string }>;
-  verifyOtp: (verificationId: string, otp: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,26 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [worker, setWorker] = useState<Worker | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsWorkerProfile, setNeedsWorkerProfile] = useState(false);
 
   useEffect(() => {
-    // Listen to Firebase auth state changes
-    const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        const idToken = await getIdToken();
-        if (idToken) {
-          await login(idToken);
-        }
-      } else {
-        setToken(null);
-        setWorker(null);
-      }
-      setIsLoading(false);
-    });
-
-    // Also try to load stored token as fallback
     loadStoredAuth();
-
-    return unsubscribe;
   }, []);
 
   async function loadStoredAuth() {
@@ -50,44 +44,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const workerData = await api.getWorkerProfile();
         setWorker(workerData);
       }
-    } catch {
-      await SecureStore.deleteItemAsync('worker_token');
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        setNeedsWorkerProfile(true);
+      } else {
+        await SecureStore.deleteItemAsync('worker_token');
+      }
     } finally {
       setIsLoading(false);
     }
   }
 
-  const login = useCallback(async (newToken: string) => {
-    await SecureStore.setItemAsync('worker_token', newToken);
-    setToken(newToken);
-    const workerData = await api.getWorkerProfile();
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await api.login(email, password);
+    await SecureStore.setItemAsync('worker_token', res.token);
+    setToken(res.token);
+    try {
+      const workerData = await api.getWorkerProfile();
+      setWorker(workerData);
+      setNeedsWorkerProfile(false);
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        setNeedsWorkerProfile(true);
+        setWorker(null);
+      } else {
+        throw err;
+      }
+    }
+  }, []);
+
+  const register = useCallback(async (data: {
+    email: string;
+    password: string;
+    name: string;
+    workerType: 'home_help' | 'driver' | 'both';
+    phoneNumber?: string;
+  }) => {
+    const res = await api.register({
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      phoneNumber: data.phoneNumber,
+    });
+    await SecureStore.setItemAsync('worker_token', res.token);
+    setToken(res.token);
+    const workerData = await api.registerWorkerProfile({
+      name: data.name,
+      workerType: data.workerType,
+      phoneNumber: data.phoneNumber,
+    });
     setWorker(workerData);
+    setNeedsWorkerProfile(false);
+  }, []);
+
+  const completeProfile = useCallback(async (data: {
+    name: string;
+    workerType: 'home_help' | 'driver' | 'both';
+    phoneNumber?: string;
+  }) => {
+    const workerData = await api.registerWorkerProfile(data);
+    setWorker(workerData);
+    setNeedsWorkerProfile(false);
   }, []);
 
   const logout = useCallback(async () => {
     await SecureStore.deleteItemAsync('worker_token');
     setToken(null);
     setWorker(null);
-    await signOut();
+    setNeedsWorkerProfile(false);
   }, []);
-
-  const sendOtp = useCallback(async (phone: string) => {
-    return sendPhoneOTP(phone);
-  }, []);
-
-  const verifyOtp = useCallback(async (verificationId: string, otp: string) => {
-    const result = await verifyPhoneOTP(verificationId, otp);
-    if (!result.success) {
-      throw new Error(result.error || 'Invalid OTP');
-    }
-    const idToken = await getIdToken();
-    if (idToken) {
-      await login(idToken);
-    }
-  }, [login]);
 
   return (
-    <AuthContext.Provider value={{ token, worker, isLoading, login, logout, sendOtp, verifyOtp }}>
+    <AuthContext.Provider
+      value={{ token, worker, isLoading, needsWorkerProfile, login, register, completeProfile, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

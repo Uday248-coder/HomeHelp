@@ -1,6 +1,5 @@
 import * as Location from 'expo-location';
 import { io, Socket } from 'socket.io-client';
-import { colors } from '../constants/theme';
 
 const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 
@@ -16,7 +15,7 @@ class LocationService {
     this.socket.emit('join', { userId, role: 'worker' });
   }
 
-  async startTracking(bookingId: string, userId: string) {
+  async startTracking(bookingId: string, _userId: string) {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       throw new Error('Location permission not granted');

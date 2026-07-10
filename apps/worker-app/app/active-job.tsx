@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,10 @@ import { api } from '../src/api/client';
 import { Booking } from '../src/types';
 import { useAuth } from '../src/context/AuthContext';
 import { locationService } from '../src/lib/location';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 
 type ActionType = 'start' | 'complete' | null;
 
 export default function ActiveJobScreen() {
-  const router = useRouter();
   const { worker, token } = useAuth();
   const [jobs, setJobs] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);

@@ -73,7 +73,7 @@ export default function WorkersPage() {
   const filteredWorkers = workers.filter((w) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return w.name.toLowerCase().includes(q) || w.phoneNumber.includes(q);
+    return w.name.toLowerCase().includes(q) || (w.phoneNumber || '').includes(q);
   });
 
   if (!token) return <LoginScreen />;
@@ -166,7 +166,7 @@ export default function WorkersPage() {
                       {filteredWorkers.map((w) => (
                         <tr key={w.id} className="ops-table-row border-b border-border">
                           <td className="px-4 py-3 font-medium text-foreground">{w.name}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{w.phoneNumber}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{w.phoneNumber || '—'}</td>
                           <td className="px-4 py-3">
                             <Badge variant="neutral" size="sm">
                               {w.workerType.replace('_', ' ')}

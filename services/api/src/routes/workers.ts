@@ -13,9 +13,14 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
         id: true,
         name: true,
         workerType: true,
+        phoneNumber: true,
         averageRating: true,
         photoUrl: true,
         isAvailable: true,
+        isActive: true,
+        aadhaarVerified: true,
+        licenseVerified: true,
+        totalJobs: true,
       },
     });
     return res.json({ workers });
@@ -27,15 +32,23 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
 
 workersRouter.post('/register', authMiddleware, async (req, res) => {
   try {
-    const { workerType, name, photoUrl } = req.body;
+    const { workerType, name, photoUrl, phoneNumber: bodyPhone } = req.body;
     if (!workerType || !name) {
       return res.status(400).json({ error: 'workerType and name are required' });
     }
-    const phoneNumber = req.user!.phoneNumber;
+    const userId = req.user!.userId;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const phoneNumber = bodyPhone || user?.phoneNumber || undefined;
 
-    const existing = await prisma.worker.findUnique({ where: { phoneNumber } });
-    if (existing) {
-      return res.status(409).json({ error: 'Worker profile already exists for this phone number' });
+    const existingByUser = await prisma.worker.findUnique({ where: { userId } });
+    if (existingByUser) {
+      return res.status(409).json({ error: 'A worker profile already exists for this account' });
+    }
+    if (phoneNumber) {
+      const existing = await prisma.worker.findUnique({ where: { phoneNumber } });
+      if (existing) {
+        return res.status(409).json({ error: 'Worker profile already exists for this phone number' });
+      }
     }
 
     const worker = await prisma.worker.create({
@@ -43,6 +56,7 @@ workersRouter.post('/register', authMiddleware, async (req, res) => {
         workerType, 
         name, 
         phoneNumber, 
+        userId,
         photoUrl,
         isActive: false, // Needs admin approval
       },
@@ -95,7 +109,7 @@ workersRouter.get('/:id', authMiddleware, async (req, res) => {
     if (!worker) return res.status(404).json({ error: 'Worker not found' });
 
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-    const isOwnProfile = req.user!.phoneNumber === worker.phoneNumber;
+    const isOwnProfile = req.user!.userId === worker.userId;
     const isAdmin = user?.isAdmin ?? false;
 
     if (!isOwnProfile && !isAdmin) {
@@ -150,7 +164,7 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
 workersRouter.get('/me', authMiddleware, async (req, res) => {
   try {
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
       include: { bookings: true, payouts: true },
     });
     if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
@@ -167,7 +181,7 @@ workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
     if (isAvailable === undefined) return res.status(400).json({ error: 'isAvailable is required' });
 
     const worker = await prisma.worker.findUnique({
-      where: { phoneNumber: req.user!.phoneNumber },
+      where: { userId: req.user!.userId },
     });
     if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
 

@@ -39,15 +39,17 @@ enum PayoutStatus {
 
 model User {
   id              String    @id @default(uuid()) @db.Uuid
-  phoneNumber     String    @unique @map("phone_number")
+  email           String    @unique
+  password        String
   name            String?
-  email           String?
+  phoneNumber     String?   @unique @map("phone_number")
   profilePhotoUrl String?   @map("profile_photo_url")
   walletBalance   Decimal   @default(0) @map("wallet_balance")
   isAdmin         Boolean   @default(false) @map("is_admin")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   bookings        Booking[]
+  workers         Worker[]
 
   @@map("users")
 }
@@ -64,7 +66,9 @@ model Worker {
   id               String       @id @default(uuid()) @db.Uuid
   workerType       WorkerType   @map("worker_type")
   name             String
-  phoneNumber      String       @unique @map("phone_number")
+  phoneNumber      String?      @unique @map("phone_number")
+  userId           String?      @unique @db.Uuid @map("user_id")
+  user             User?        @relation(fields: [userId], references: [id])
   photoUrl         String?      @map("photo_url")
   aadhaarVerified  Boolean      @default(false) @map("aadhaar_verified")
   licenseVerified  Boolean      @default(false) @map("license_verified")

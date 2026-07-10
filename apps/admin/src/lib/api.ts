@@ -13,6 +13,9 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2
     'Content-Type': 'application/json',
   };
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -126,14 +129,11 @@ export const api = {
   getAvailableWorkers: (mode?: string) =>
     fetchAPI('/api/workers/available' + (mode ? `/${mode}` : '')),
 
-  sendOtp: (phoneNumber: string) =>
-    fetchAPI('/api/auth/send-otp', { method: 'POST', body: JSON.stringify({ phoneNumber }) }) as Promise<{ otp?: string }>,
+  login: (email: string, password: string) =>
+    fetchAPI('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<{ token: string }>,
 
-  verifyOtp: (phoneNumber: string, otp: string) =>
-    fetchAPI('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phoneNumber, otp }) }) as Promise<{ token: string }>,
-
-  firebaseAuth: (idToken: string) =>
-    fetchAPI('/api/auth/firebase', { method: 'POST', body: JSON.stringify({ idToken }) }) as Promise<{ token: string }>,
+  register: (email: string, password: string, name?: string, phoneNumber?: string) =>
+    fetchAPI('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name, phoneNumber }) }) as Promise<{ token: string }>,
 
   getUser: () => fetchAPI('/api/auth/me'),
 

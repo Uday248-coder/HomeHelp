@@ -11,7 +11,8 @@ interface Booking {
   mode: string;
   workerName?: string;
   createdAt: string;
-  totalAmount: number;
+  totalAmount?: number;
+  payment?: { amount: number };
 }
 
 const statusVariant: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
@@ -90,7 +91,7 @@ export function RecentBookings() {
               </div>
               <div className="text-right shrink-0 ml-4">
                 <p className="text-sm font-semibold text-foreground tabular-nums">
-                  ₹{booking.totalAmount?.toLocaleString() || '0'}
+                  ₹{(booking.payment?.amount ?? booking.totalAmount ?? 0).toLocaleString()}
                 </p>
                 <Badge variant={statusVariant[booking.status] || 'neutral'} size="sm">
                   {booking.status.replace('_', ' ')}
