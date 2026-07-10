@@ -107,6 +107,12 @@ export default function LoginScreen() {
                 'Sign In'
               )}
             </button>
+            <a
+              href="https://homehelp-website.vercel.app/forgot-password"
+              className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors mt-3"
+            >
+              Forgot your password?
+            </a>
           </div>
         </div>
 

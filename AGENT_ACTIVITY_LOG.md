@@ -113,3 +113,18 @@
 **Verification:** `tsc --noEmit` passes on services/api and apps/admin; `vitest run` → 8/8 pass.
 **Status:** Changes committed and pushed to `main`.
 **Notes:** Render API was briefly unreachable from the dev sandbox (TCP timeout) though google.com resolved — likely Render cold-start/sleep on the free tier; founder should confirm `/health` in a browser. Neon auto-suspends compute after idle (~5 min), so `make-admin`/`seed-demo` may need a retry on first connect.
+
+## [2026-07-10 21:15:00]
+**Reason:** Wire up password reset (founder request) — backend endpoints + email delivery + website UI + admin link, with tests.
+**Backend (`services/api`):**
+- `prisma/schema.prisma`: added `passwordResetToken`, `passwordResetExpires` to `User`.
+- `src/lib/mailer.ts`: added `sendPasswordResetEmail(to, resetUrl)` (Reuses Resend; no-op + warn if `RESEND_API_KEY` unset).
+- `src/routes/auth.ts`: added `POST /api/auth/forgot-password` (validates email; if account exists, stores a SHA-256-hashed random token + 1h expiry, emails a reset link built from `FRONTEND_URL`; always returns a generic message to avoid account enumeration; in non-prod also returns `devResetUrl` for testing without email) and `POST /api/auth/reset-password` (verifies hashed token + expiry, enforces min 6 chars, updates password, clears token fields). Tokens are hashed at rest; raw token only travels in the emailed link.
+- `.env.example`: documented `FRONTEND_URL` (used for reset links).
+- `prisma db push` applied the new columns to prod Neon; client regenerated.
+**Frontend:**
+- `apps/website`: new `app/forgot-password/page.tsx` (email → request link, shows dev link when returned) and `app/reset-password/page.tsx` (token+email from query, set new password, success state). Linked "Forgot your password?" from the booking login step.
+- `apps/admin/src/components/LoginScreen.tsx`: added "Forgot your password?" link to the website reset page (one canonical reset flow serves customers + admins + workers).
+**Tests:** Extended `src/routes/auth.test.ts` with 6 password-reset cases (dev link, enumeration-safe generic response, invalid email, successful reset clears token, expired/invalid token rejection, short-password rejection). `vitest run` → 14/14 pass.
+**Verification:** `tsc --noEmit` clean on services/api, apps/website, apps/admin; `prisma db push` in sync; tests green.
+**Status:** Committed and pushed to `main` (Render + Vercel rebuild). End-to-end reset verified live after deploy.

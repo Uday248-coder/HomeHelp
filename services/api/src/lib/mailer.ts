@@ -37,3 +37,27 @@ export async function sendOtpEmail(
     console.error('[mailer] failed to send OTP email:', err);
   }
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  resetUrl: string,
+): Promise<void> {
+  const resend = getClient();
+  if (!resend) {
+    console.warn('[mailer] RESEND_API_KEY not set — skipping password reset email');
+    return;
+  }
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject: 'Reset your HomeHelp password',
+      text:
+        `We received a request to reset your HomeHelp password.\n\n` +
+        `Reset your password here: ${resetUrl}\n\n` +
+        `This link expires in 1 hour. If you did not request this, you can ignore this email.`,
+    });
+  } catch (err) {
+    console.error('[mailer] failed to send password reset email:', err);
+  }
+}

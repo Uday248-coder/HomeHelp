@@ -350,6 +350,14 @@ export default function BookPage() {
                 >
                   {isLogin ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
                 </button>
+                {isLogin && (
+                  <a
+                    href="/forgot-password"
+                    className="block w-full text-center text-sm text-[#C4774B] hover:text-[#A85F38] transition-colors"
+                  >
+                    Forgot your password?
+                  </a>
+                )}
               </div>
             </div>
           )}
