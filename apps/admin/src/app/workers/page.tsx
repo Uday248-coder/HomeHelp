@@ -70,6 +70,15 @@ export default function WorkersPage() {
     }
   };
 
+  const handleToggleActive = async (worker: Worker) => {
+    try {
+      await api.updateWorker(worker.id, { isActive: !worker.isActive });
+      fetchWorkers();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to update worker status');
+    }
+  };
+
   const filteredWorkers = workers.filter((w) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -157,6 +166,7 @@ export default function WorkersPage() {
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Availability</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Aadhaar</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">License</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Avg Rating</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Total Jobs</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider text-right">Quick Action</th>
@@ -212,6 +222,13 @@ export default function WorkersPage() {
                             )}
                           </td>
                           <td className="px-4 py-3">
+                            {w.isActive ? (
+                              <span className="status-badge status-active">Active</span>
+                            ) : (
+                              <span className="status-badge status-pending">Inactive</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
                             <span className="inline-flex items-center gap-1 text-foreground font-medium">
                               <svg className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -221,15 +238,28 @@ export default function WorkersPage() {
                           </td>
                           <td className="px-4 py-3 text-foreground text-sm tabular-nums">{w.totalJobs}</td>
                           <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => handleToggleAvailability(w)}
-                              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                              title={w.isAvailable ? 'Mark as Busy' : 'Mark as Available'}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-                              </svg>
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleToggleActive(w)}
+                                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                                  w.isActive
+                                    ? 'text-danger bg-danger/10 hover:bg-danger/20'
+                                    : 'text-success bg-success/10 hover:bg-success/20'
+                                }`}
+                                title={w.isActive ? 'Deactivate worker' : 'Activate worker'}
+                              >
+                                {w.isActive ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <button
+                                onClick={() => handleToggleAvailability(w)}
+                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                title={w.isAvailable ? 'Mark as Busy' : 'Mark as Available'}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

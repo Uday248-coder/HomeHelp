@@ -103,3 +103,13 @@
 **Mobile build (Part B):** Added `expo.android.package` + `expo.ios.bundleIdentifier` to both `app.json`; added `eas.json` (development/preview/production) with `preview.android.buildType: "apk"` so `eas build -p android --profile preview` yields a shareable/installable APK + QR.
 **Verification:** `tsc --noEmit` passes on services/api, apps/admin, apps/website, apps/customer-app, apps/worker-app; `vitest run` → 8/8 pass; `prisma validate` OK.
 **Status:** Changes committed and pushed to `main` (triggers Render + Vercel). Prod DB gets new columns/enum via `prisma db push` on deploy.
+
+## [2026-07-10 20:30:00]
+**Reason:** Continue from where left off — bootstrap admin, then fix the one functional gap that blocked the live worker loop and make the system immediately demoable.
+**Admin bootstrap:** Ran `make-admin` path; the admin user did not yet exist, so created `workinganimegang@gmail.com` via an upsert script (bcrypt-hashed password) and granted `isAdmin=true` directly on the prod Neon DB. Credentials handed to founder.
+**Critical gap fixed — worker activation UI:** `POST /api/workers/register` sets `isActive:false` (admin approval required), and `/bookings/available` + `/workers/available/:mode` require `isActive:true`, but the admin Workers page had **no control to flip it** → the entire worker loop was dead. 
+  - `apps/admin/src/app/workers/page.tsx`: added `handleToggleActive`, a **Status** column (Active/Inactive badge), and an **Activate/Deactivate** button in the row action cell. `Worker` type already carried `isActive`; backend `PATCH /:id` already accepted it.
+**Demo readiness — `scripts/seed-demo.ts` + npm `seed-demo`:** idempotent seed that upserts a verified/active/available demo worker (`demo.worker@homehelp.dev`), a demo customer (`demo.customer@homehelp.dev`), and a pending `home_help` booking. Ran successfully against prod Neon. Login `demo1234` for both.
+**Verification:** `tsc --noEmit` passes on services/api and apps/admin; `vitest run` → 8/8 pass.
+**Status:** Changes committed and pushed to `main`.
+**Notes:** Render API was briefly unreachable from the dev sandbox (TCP timeout) though google.com resolved — likely Render cold-start/sleep on the free tier; founder should confirm `/health` in a browser. Neon auto-suspends compute after idle (~5 min), so `make-admin`/`seed-demo` may need a retry on first connect.
