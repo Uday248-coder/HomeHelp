@@ -209,4 +209,19 @@
 - Worker APK: `apps/worker-app/android/app/build/outputs/apk/release/app-release.apk` — **41.3 MB**, signed with the **same** keystore/cert.
 **Docs updated:** AGENTS.md (new "Mobile App Local Build & Release" section: choices table, keystore guard, env fixes, build command, and a **Future payment gateway** note — re-add Razorpay only via `newArchEnabled:false`/`expo-build-properties`, or a pure-JS/WebView SDK, or after a New-Arch-compatible SDK post-launch; server Razorpay path with DB-backed signature verification stays for when `RAZORPAY_*` keys are set); README.md (mobile build commands + UPI payment note); this log.
 **Not yet done:** (a) commit + push the mobile changes (generated `android/` is gitignored, but `package.json`, `metro.config.js`, and `app/booking/[id].tsx`/`client.ts` edits should be committed — pending founder go-ahead); (b) on-device `adb install` + smoke test of the booking→payment loop (no device attached in sandbox).
-**Status:** APKs produced and verified signed; docs written. Awaiting founder go-ahead to commit/push.
+**Status:** APKs produced and verified signed; docs written. Committed + pushed as `0419f6d` ("Build signed release APKs locally; drop Razorpay for UPI deeplink") — 9 files, `android/` and `node_modules` correctly excluded.
+
+## [2026-07-11 20:30:00] — SESSION END / HANDOFF
+**Reason:** Founder wants the APKs easy to grab, GitHub up to date, and a clean resume point for the next session.
+**GitHub:** Already pushed — `main` is at `0419f6d` (ahead of `e006325`). Working tree clean. The mobile source changes + all docs are live on GitHub.
+**APKs (for sideload / easy access):** Copied to repo root for grab-and-go (NOT committed — `*.apk` added to `.gitignore` so the repo stays lean; regenerate any time via the AGENTS.md build steps):
+- `customer-app-release.apk` (42.6 MB, `com.homehelp.customer`) — root copy of `apps/customer-app/android/app/build/outputs/apk/release/app-release.apk`
+- `worker-app-release.apk` (41.3 MB, `com.homehelp.worker`) — root copy of `apps/worker-app/android/app/build/outputs/apk/release/app-release.apk`
+- Both signed with the shared keystore `C:\Users\User\homehelp-keys\homehelp.keystore` (CN=HomeHelp, SHA-256 `904c2af3bc10e1919969ce053456a3bb9228526505e46b6839f8389e4b34d123`). **GUARD THIS KEYSTORE.**
+**How to install + test (founder, on device):** enable "Install unknown apps" for the file opener → tap each APK → Install. Log in: customer `demo.customer@homehelp.dev`/`demo1234`, worker `demo.worker@homehelp.dev`/`demo1234` (or register). Customer books → pays via UPI QR ("Pay in UPI app"). Backend is prod `homehelp-clbc.onrender.com` (Render free tier cold-starts ~20–30s on first hit).
+**RESUME POINT for next session:**
+- **Full loop test**: a worker only sees jobs once **verified** (Aadhaar, +License for driver) via admin. If `demo.worker` isn't verified it shows the pending-verification banner — verify an account (admin dashboard or `services/api/scripts`) to exercise customer→worker Accept/Start(OTP)/Complete(OTP+rating).
+- **Rebuild after `expo prebuild`**: the NDK/CMake/gradle/signing edits live ONLY in the generated `android/` (gitignored). If you re-run `expo prebuild --clean`, re-apply them from AGENTS.md "Mobile App Local Build & Release" (NDK `27.0.12077973`, CMake `3.30.5`, `reactNativeArchitectures=arm64-v8a`, shared keystore, `metro.config.js` buffer polyfill, `react-native-svg` must stay `15.15.4`).
+- **Future gateway**: Razorpay/any PSP re-add guidance is in AGENTS.md (only via `newArchEnabled:false`/`expo-build-properties`, or pure-JS/WebView SDK, or post-launch New-Arch-compatible SDK). Server Razorpay path already hardened, activates when `RAZORPAY_*` keys set.
+- **Nothing pending in code.** All planned work (security + Phase 2 committed `e006325`; local APK build + UPI switch + docs committed `0419f6d`) is done.
+**Status:** Session complete. Repo pushed, APKs at root, logs current. Next session can start cold from here.

@@ -422,6 +422,12 @@ cd apps/<app>/android
 ```
 Verify signing: `<build-tools>/apksigner.bat verify --print-certs app-release.apk`.
 
+### Easy-access copies
+The built APKs are also copied to the **repo root** for grab-and-go sideloading (these are gitignored — `*.apk` — and not committed; regenerate via the steps above):
+- `customer-app-release.apk` (root copy of `apps/customer-app/android/app/build/outputs/apk/release/app-release.apk`)
+- `worker-app-release.apk` (root copy of `apps/worker-app/android/app/build/outputs/apk/release/app-release.apk`)
+Both are signed with the shared `homehelp.keystore` (see Keystore note above).
+
 ### Future payment gateway (Razorpay or any PSP)
 The native `react-native-razorpay` was dropped because its Kotlin/Java native module is incompatible with the **New Architecture** (Fabric/TurboModules) in RN 0.85 and breaks the Gradle build. To re-introduce a gateway later:
 - **Preferred**: keep the current **server-driven UPI QR / deeplink** flow (zero fees, no native code) — no client change needed beyond the existing `create-order` endpoint.

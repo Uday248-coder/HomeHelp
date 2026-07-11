@@ -12,3 +12,6 @@ dist/
 
 # Firebase service account (secret — do not commit)
 services/api/firebase-service-account.json
+
+# Built APKs (kept locally for easy sideload; regenerate via documented build steps)
+*.apk
