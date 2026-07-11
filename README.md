@@ -84,7 +84,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **Auth** — Email + password login with `expo-secure-store` token persistence
 - **Home** — Mode switcher toggle (Home Help / Driver), service type chips, duration picker, schedule (now/later), price estimate, instant booking
 - **Bookings** — FlatList of past bookings with color-coded status badges, pull-to-refresh, empty state
-- **Booking Detail** — Full info, cancel pending bookings, star rating for completed
+- **Booking Detail** — Full info, cancel pending bookings, star rating for completed, **pay via UPI deeplink + QR** (`react-native-razorpay` removed — reuses the website's fee-free UPI flow)
 - **Profile** — Account info, logout with confirmation
 - **Navigation** — Conditional stack (Auth vs Main), bottom tabs (Home, Bookings, Profile)
 
@@ -217,9 +217,15 @@ npm run dev:api       # Backend on :3001
 npm run dev:website   # Website on :3000
 npm run dev:admin     # Admin on :3002
 
-# Mobile apps
+# Mobile apps (dev)
 cd apps/customer-app && npx expo start
 cd apps/worker-app   && npx expo start
+
+# Mobile apps (local signed release APK — no Expo/EAS account needed)
+# See AGENTS.md "Mobile App Local Build & Release" for the full NDK/CMake/gradle fixes.
+cd apps/customer-app && npx expo prebuild --platform android --clean && cd android && ./gradlew.bat assembleRelease --no-daemon
+cd apps/worker-app   && npx expo prebuild --platform android --clean && cd android && ./gradlew.bat assembleRelease --no-daemon
+# APKs: android/app/build/outputs/apk/release/app-release.apk (both signed with C:\Users\User\homehelp-keys\homehelp.keystore)
 ```
 
 ---

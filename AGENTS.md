@@ -88,9 +88,10 @@ The website is a **Next.js App Router** app. It is the single place where the *e
 - **AuthContext** — token storage via `expo-secure-store` (not AsyncStorage)
 - **API clients** — use secure store for token retrieval
 - **Mobile apps have tsconfig.json with strict mode** — `tsc --noEmit` catches type errors
-- **Customer App**: Razorpay integration for payment confirmation
+- **Customer App**: In-app payment via **UPI deeplink + QR** (reuses the website's `POST /api/payments/create-order` → `upi.link` flow). `react-native-razorpay` was removed — its native module clashes with the RN 0.85 New Architecture, and we already run fee-free UPI QR payments.
 - **Worker App**: Real-time location tracking via Socket.io and `expo-location`
 - Use email/password auth via `expo-secure-store` token persistence (Firebase fully removed)
+- **Both apps ship as locally-built, signed release APKs** (no Expo/EAS account needed — see "Mobile App Local Build & Release" below)
 
 ## Design System (Session 6 — HSL Tokens + Premium UI)
 
@@ -382,6 +383,50 @@ Full context in `HomeHelp_Bud101_Prompt.md`. TL;DR:
 - Risk: worker no-shows (10% standby pool), trust/safety (OTP gating), competition (differentiate on Driver mode)
 
 ---
+
+## Mobile App Local Build & Release (Session 7 — no Expo/EAS account)
+
+Both mobile apps are built as **signed release APKs locally** with Android Studio / Gradle — no Expo or EAS account required. The generated `android/` projects are gitignored; the native-build fixes below are applied to the generated project after every `expo prebuild` (they are NOT committed).
+
+### Choices considered → decision
+| Decision | Options at hand | Chosen | Why |
+|----------|----------------|--------|-----|
+| Build host | (a) Expo EAS, (b) local Gradle/Android Studio | **(b) local** | No Expo account available; user has Android Studio + SDK/NDK on machine. Local build is free and fully offline-capable. |
+| APK type | (a) debug APK, (b) signed release APK | **(b) signed release** | Debug APKs can't be cleanly shared to other admins/demo phones and can't go to Play Store later. One shared keystore signs both apps. |
+| In-app payments | (a) Razorpay native SDK, (b) website UPI deeplink + QR | **(b) UPI deeplink + QR** | `react-native-razorpay` is a native module that clashes with the RN 0.85 New Architecture (build failures); we already run fee-free UPI QR payments on the website, so the customer app reuses `POST /api/payments/create-order` → `res.upi.link` (rendered with `react-native-qrcode-svg` + `Linking.openURL`). |
+
+### Keystore (GUARD THIS — losing it blocks all future store updates)
+- Path: `C:\Users\User\homehelp-keys\homehelp.keystore`
+- Alias `homehelp`, store + key password `HomeHelp@2026!`, RSA 2048 / 10000 days
+- Same keystore signs **both** `com.homehelp.customer` and `com.homehelp.worker` (different `applicationId`, same signing identity).
+- Wired via `android/gradle.properties` (`HOMEHELP_STORE_*`) → `app/build.gradle` `signingConfigs.release`.
+
+### Required environment fixes (Windows + Expo SDK 56 / RN 0.85)
+Applied to the generated `android/` project (re-do after any `expo prebuild`):
+1. **NDK**: pin `ndkVersion = "27.0.12077973"` in root `build.gradle` `ext`. NDK **r27b (27.1.12297006)** ships a CMake/ninja bug ("`build.ninja` still dirty after 100 tries") on Windows — do NOT use it. (NDK 26 was not installed.) Install via `sdkmanager "ndk;27.0.12077973"`.
+2. **CMake**: AGP's default **3.22.1** has the same regeneration-loop bug AND its bundled `ninja` is not long-path aware (fails with "Filename longer than 260 characters" on the RN codegen object paths). Install `cmake;3.30.5` via `sdkmanager` and force it:
+   - `ext { cmakeVersion = "3.30.5" }` + `gradle.allprojects { ... an.externalNativeBuild.cmake.version = "3.30.5" }` in root `build.gradle`.
+   - Add `externalNativeBuild { cmake { version "3.30.5" } }` to `app/build.gradle`'s `android {}` (RN injects the `path`; this merges the `version`).
+   - Native libs (`expo-modules-core`, `react-native-gesture-handler`, `react-native-screens`) don't set a CMake version, so also patch their `node_modules/**/android/build.gradle` `cmake {` blocks to add `version "3.30.5"`.
+3. **Architectures**: set `reactNativeArchitectures=arm64-v8a` in `gradle.properties` (phone-only; cuts build time dramatically — no x86 emulator needed).
+4. **`react-native-svg` version**: must be the Expo-pinned version for SDK 56 (**15.15.4** with RN 0.85). A manually-picked `~15.11.x` compiles C++ against removed RN APIs (`BaseShadowNode`, `SharedImageManager`) and fails. Always run `npx expo install react-native-svg react-native-qrcode-svg` rather than hand-editing the version.
+5. **Buffer polyfill**: RN 0.85's `react-native-svg` imports Node's `buffer` from a nested `node_modules`, which Metro can't resolve during `createBundleReleaseJsAndAssets`. Add `apps/<app>/metro.config.js` with `extraNodeModules: { buffer: require.resolve('buffer/') }`.
+
+### Build command
+```powershell
+$env:ANDROID_HOME="C:\Users\User\AppData\Local\Android\Sdk"
+$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-17.0.13.11-hotspot"
+cd apps/<app>/android
+.\gradlew.bat assembleRelease --no-daemon
+# APK: android/app/build/outputs/apk/release/app-release.apk
+```
+Verify signing: `<build-tools>/apksigner.bat verify --print-certs app-release.apk`.
+
+### Future payment gateway (Razorpay or any PSP)
+The native `react-native-razorpay` was dropped because its Kotlin/Java native module is incompatible with the **New Architecture** (Fabric/TurboModules) in RN 0.85 and breaks the Gradle build. To re-introduce a gateway later:
+- **Preferred**: keep the current **server-driven UPI QR / deeplink** flow (zero fees, no native code) — no client change needed beyond the existing `create-order` endpoint.
+- If a gateway is required: (a) set `expo-build-properties` `newArchEnabled:false` so the legacy native module loads, OR (b) use a **pure-JS / WebView** gateway SDK (no TurboModule) instead of the native wrapper, OR (c) after launching on the Play Store, migrate to the gateway's official RN **New-Arch-compatible** SDK. Never re-add the old `react-native-razorpay` native package under the New Architecture.
+- Server side already retains a hardened Razorpay path (`RAZORPAY_*` env vars) with DB-backed signature verification — it activates automatically only when those keys are set.
 
 ## Required Reading for Future Sessions
 

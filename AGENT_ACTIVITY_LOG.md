@@ -186,3 +186,27 @@
 **Verification:** `tsc --noEmit` clean on services/api + apps/website + apps/admin; `vitest run` → 29/29; website + admin `next build` succeed with middleware; `secret-guard` passes on source + built bundles.
 **Not run:** live in-browser e2e of the worker loop (Render free-tier sleep from sandbox) — recommend a quick pass: verified worker sees jobs on `/worker` → Accept → Start (OTP) → Complete; and confirm an unverified worker sees the banner + no jobs.
 **Status:** Committing + pushing to `main` (triggers Render + Vercel rebuilds).
+
+## [2026-07-11 19:45:00]
+**Reason:** Build signed-release APKs for both mobile apps **locally** (no Expo/EAS account — user has Android Studio + SDK/NDK on machine), drop the incompatible `react-native-razorpay` native module in favour of the website's fee-free UPI deeplink, and document the build choices + a future payment-gateway note. Founder approved the plan.
+**Build-host / APK-type decisions (documented in AGENTS.md "Mobile App Local Build & Release"):**
+- Build host: **local Gradle/Android Studio** chosen over Expo EAS (no account available; free + offline-capable).
+- APK type: **signed release** chosen over debug (shareable to other admins/demo phones + Play-Store-ready). One shared keystore signs both apps.
+- Payments: **UPI deeplink + QR** chosen over the Razorpay native SDK (Razorpay's Kotlin/Java native module is incompatible with the RN 0.85 New Architecture and breaks the Gradle build; we already run fee-free UPI QR on the website).
+**Customer app changes:**
+- `package.json`: removed `react-native-razorpay`; added `react-native-qrcode-svg` (^6.3.21) + `react-native-svg` (Expo-pinned **15.15.4** — a hand-picked ~15.11.x compiles C++ against removed RN 0.85 APIs `BaseShadowNode`/`SharedImageManager` and fails; used `npx expo install`).
+- `app/booking/[id].tsx`: replaced Razorpay `RazorpayCheckout` with `Linking` + `QRCodeSvg` UPI flow (calls `api.createPaymentOrder(id)` → shows `upi.link` QR + "Pay in UPI app" button → `Linking.openURL`). Fixed `fonts.sizeXs`→`fonts.sizeSm`.
+- `src/api/client.ts`: removed `verifyPayment` (Razorpay).
+- Added `apps/customer-app/metro.config.js` with `extraNodeModules: { buffer: require.resolve('buffer/') }` (RN 0.85's `react-native-svg` imports Node `buffer` from a nested `node_modules`, which Metro can't resolve during `createBundleReleaseJsAndAssets`).
+- `tsc --noEmit` clean; `npm install` pruned razorpay.
+**Both apps — native build (Windows + Expo SDK 56 / RN 0.85):**
+- `expo prebuild --platform android --clean` generated `android/` (gitignored) for each.
+- Keystore created: `C:\Users\User\homehelp-keys\homehelp.keystore` (alias `homehelp`, RSA 2048 / 10000d, pw `HomeHelp@2026!`) — **GUARD THIS**. Wired via `gradle.properties` `HOMEHELP_STORE_*` → `app/build.gradle` `signingConfigs.release`. Same cert signs `com.homehelp.customer` + `com.homehelp.worker`.
+- Environment fixes applied to the generated `android/` (re-do after any `expo prebuild`): (1) NDK pinned `27.0.12077973` (NDK r27b 27.1.12297006 has a CMake/ninja "`build.ninja` still dirty after 100 tries" loop on Windows); (2) CMake forced to **3.30.5** — AGP default 3.22.1 loops the regeneration AND its bundled ninja is not long-path aware ("Filename longer than 260 characters" on RN codegen paths). Forced via `ext.cmakeVersion` + `gradle.allprojects { an.externalNativeBuild.cmake.version = "3.30.5" }` + `app/build.gradle` `externalNativeBuild { cmake { version "3.30.5" } }` + patching `expo-modules-core`/`react-native-gesture-handler`/`react-native-screens` `node_modules/**/android/build.gradle` `cmake {` blocks; (3) `reactNativeArchitectures=arm64-v8a` (phone-only, much faster).
+- `sdkmanager` installs: `ndk;27.0.12077973`, `cmake;3.30.5` (3.22.1 was the bundled default; 26.3.11579264 was missing `source.properties`).
+**Result:** Both `assembleRelease` succeed.
+- Customer APK: `apps/customer-app/android/app/build/outputs/apk/release/app-release.apk` — **42.6 MB**, signed (CN=HomeHelp, SHA-256 `904c2af3…d123`).
+- Worker APK: `apps/worker-app/android/app/build/outputs/apk/release/app-release.apk` — **41.3 MB**, signed with the **same** keystore/cert.
+**Docs updated:** AGENTS.md (new "Mobile App Local Build & Release" section: choices table, keystore guard, env fixes, build command, and a **Future payment gateway** note — re-add Razorpay only via `newArchEnabled:false`/`expo-build-properties`, or a pure-JS/WebView SDK, or after a New-Arch-compatible SDK post-launch; server Razorpay path with DB-backed signature verification stays for when `RAZORPAY_*` keys are set); README.md (mobile build commands + UPI payment note); this log.
+**Not yet done:** (a) commit + push the mobile changes (generated `android/` is gitignored, but `package.json`, `metro.config.js`, and `app/booking/[id].tsx`/`client.ts` edits should be committed — pending founder go-ahead); (b) on-device `adb install` + smoke test of the booking→payment loop (no device attached in sandbox).
+**Status:** APKs produced and verified signed; docs written. Awaiting founder go-ahead to commit/push.

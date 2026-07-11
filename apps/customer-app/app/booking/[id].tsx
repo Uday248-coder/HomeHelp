@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
+import { Linking } from 'react-native';
+import QRCodeSvg from 'react-native-qrcode-svg';
 import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { api } from '../../src/api/client';
 import { Booking } from '../../src/types';
@@ -73,6 +74,14 @@ export default function BookingDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [localRating, setLocalRating] = useState(0);
+  const [upi, setUpi] = useState<{
+    link: string;
+    pa: string;
+    pn: string;
+    am: number;
+    cu: string;
+    tn: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchBooking();
@@ -116,52 +125,37 @@ export default function BookingDetailScreen() {
   async function handlePayment() {
     setActionLoading(true);
     try {
-      const { payment, razorpayOrderId } = await api.createPaymentOrder(id);
-
-      if (!razorpayOrderId || !process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID) {
+      const res: any = await api.createPaymentOrder(id);
+      const upiInfo = res?.upi;
+      if (!upiInfo?.link) {
         Alert.alert(
-          'Payments Unavailable',
-          'Online payments are not configured yet. Please contact support to complete this booking.',
+          'Payment Unavailable',
+          'UPI payment is not set up yet. Please contact support to complete this booking.',
         );
         setActionLoading(false);
         return;
       }
-
-      const options = {
-        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
-        description: `Payment for Booking ${id.slice(0, 8)}`,
-        image: 'https://homehelp.ai/logo.png', // Placeholder
-        currency: 'INR',
-        name: 'HomeHelp',
-        order_id: razorpayOrderId,
-        prefill: {
-          contact: '9999999999', // Should come from user profile
-          email: 'customer@example.com',
-        },
-        theme: { color: '#000000' },
-      };
-
-      RazorpayCheckout.open(options).then(async (data: any) => {
-        try {
-          await api.verifyPayment({
-            paymentId: payment.id,
-            razorpayPaymentId: data.razorpay_payment_id,
-            razorpaySignature: data.razorpay_signature,
-          });
-          Alert.alert('Payment Successful', 'Your booking is now confirmed!');
-          await fetchBooking();
-        } catch (err: any) {
-          Alert.alert('Verification Failed', err.message || 'Failed to verify payment');
-        } finally {
-          setActionLoading(false);
-        }
-      }).catch((error: any) => {
-        Alert.alert('Payment Cancelled', error.description || 'Payment was not completed');
-        setActionLoading(false);
+      setUpi({
+        link: upiInfo.link,
+        pa: upiInfo.pa,
+        pn: upiInfo.pn,
+        am: Number(upiInfo.am) || 0,
+        cu: upiInfo.cu,
+        tn: upiInfo.tn,
       });
-    } catch (err: any) {
-      Alert.alert('Payment Error', err.message || 'Failed to initiate payment');
       setActionLoading(false);
+    } catch (err: any) {
+      Alert.alert('Payment Error', err?.message || 'Failed to initiate payment');
+      setActionLoading(false);
+    }
+  }
+
+  async function openUpi() {
+    if (!upi?.link) return;
+    try {
+      await Linking.openURL(upi.link);
+    } catch (e: any) {
+      Alert.alert('Could not open UPI app', e?.message || 'Please scan the QR code instead.');
     }
   }
 
@@ -225,6 +219,28 @@ export default function BookingDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Rate Your Experience</Text>
           <RatingStars rating={localRating} editable onRate={handleRate} />
+        </View>
+      )}
+
+      {booking.status === 'pending' && upi && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Pay {formatCurrency(upi.am)} via UPI</Text>
+          <View style={styles.upiRow}>
+            <View style={styles.qrBox}>
+              <QRCodeSvg value={upi.link} size={140} />
+            </View>
+            <View style={styles.upiInfo}>
+              <Text style={styles.upiHint}>
+                Scan with any UPI app (GPay, PhonePe, Paytm). The amount is pre-filled.
+              </Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={openUpi}>
+                <Text style={styles.primaryButtonText}>Pay ₹{upi.am} in UPI app</Text>
+              </TouchableOpacity>
+              <Text style={styles.upiNote}>
+                After paying, an admin confirms the transfer and your booking is activated. No gateway fees — paid directly to HomeHelp.
+              </Text>
+            </View>
+          </View>
         </View>
       )}
 
@@ -367,7 +383,32 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weightSemiBold,
     color: colors.white,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
+   buttonDisabled: {
+     opacity: 0.7,
+   },
+   upiRow: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     gap: spacing.md,
+   },
+   qrBox: {
+     backgroundColor: colors.white,
+     borderRadius: borderRadius.md,
+     padding: spacing.sm,
+     borderWidth: 1,
+     borderColor: colors.border,
+   },
+   upiInfo: {
+     flex: 1,
+     gap: spacing.sm,
+   },
+   upiHint: {
+     fontSize: fonts.sizeSm,
+     color: colors.textMuted,
+   },
+   upiNote: {
+     fontSize: fonts.sizeSm,
+     color: colors.textMuted,
+     lineHeight: 18,
+   },
 });
