@@ -100,6 +100,15 @@ export default function BookingsPage() {
     }
   };
 
+  const handleMarkPaid = async (paymentId: string) => {
+    try {
+      await api.markPaymentPaid(paymentId);
+      fetchBookings();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to mark payment paid');
+    }
+  };
+
   if (!token) return <LoginScreen />;
 
   return (
@@ -204,7 +213,18 @@ export default function BookingsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-foreground font-medium tabular-nums">
-                            {b.payment ? `₹${Number(b.payment.amount).toLocaleString()}` : '—'}
+                            {b.payment ? (
+                              <div className="flex flex-col gap-1">
+                                <span>₹{Number(b.payment.amount).toLocaleString()}</span>
+                                <span className={`text-[10px] font-medium uppercase tracking-wider ${
+                                  b.payment.status === 'paid' || b.payment.status === 'captured'
+                                    ? 'text-emerald-600'
+                                    : 'text-amber-600'
+                                }`}>
+                                  {b.payment.status === 'paid' || b.payment.status === 'captured' ? 'Paid' : 'Pending'}
+                                </span>
+                              </div>
+                            ) : '—'}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                             {new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -241,6 +261,14 @@ export default function BookingsPage() {
                                   className="px-2 py-1 text-[11px] font-bold text-danger hover:bg-danger/10 rounded transition-colors"
                                 >
                                   Cancel
+                                </button>
+                              )}
+                              {b.payment && b.payment.status === 'pending' && (
+                                <button
+                                  onClick={() => handleMarkPaid(b.payment!.id)}
+                                  className="px-2 py-1 text-[11px] font-bold text-[#1A3C34] hover:bg-[#1A3C34]/10 rounded transition-colors"
+                                >
+                                  Mark Paid
                                 </button>
                               )}
                             </div>

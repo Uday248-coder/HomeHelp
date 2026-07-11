@@ -11,6 +11,9 @@ const razorpayKeyId = process.env.RAZORPAY_KEY_ID || '';
 const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || '';
 const hasRazorpayKeys = !!(razorpayKeyId && razorpayKeySecret);
 
+const upiVpa = process.env.UPI_VPA || '';
+const upiName = process.env.UPI_NAME || 'HomeHelp';
+
 let razorpay: Razorpay | null = null;
 if (hasRazorpayKeys) {
   razorpay = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpayKeySecret });
@@ -26,6 +29,19 @@ function verifySignature(orderId: string, paymentId: string, signature: string):
     console.error('[payments] verifySignature error:', err);
     return false;
   }
+}
+
+function buildUpiLink(bookingId: string, amount: number): string | null {
+  if (!upiVpa) return null;
+  const note = `HomeHelp Booking ${bookingId.slice(0, 8)}`;
+  const params = new URLSearchParams({
+    pa: upiVpa,
+    pn: upiName,
+    am: amount.toFixed(2),
+    cu: 'INR',
+    tn: note,
+  });
+  return `upi://pay?${params.toString()}`;
 }
 
 paymentsRouter.post('/create-order', async (req, res) => {
@@ -52,42 +68,100 @@ paymentsRouter.post('/create-order', async (req, res) => {
 
     const platformFee = parseFloat((amount * 0.15).toFixed(2));
     const workerPayout = parseFloat((amount - platformFee).toFixed(2));
-    const amountInPaise = Math.round(Number(amount) * 100);
+
+    // Idempotent: reuse an existing payment for this booking instead of duplicating.
+    let payment = await prisma.payment.findUnique({ where: { bookingId } });
 
     let razorpayOrderId: string | null = null;
+    let method = 'upi';
 
-    if (razorpay) {
-      try {
-        const order = await razorpay.orders.create({
-          amount: amountInPaise,
-          currency: 'INR',
-          receipt: `booking_${bookingId.slice(0, 8)}`,
-        });
-        razorpayOrderId = order.id;
-      } catch (err) {
-        console.error('[Payments] Razorpay order creation failed:', err);
-        throw new Error('Razorpay order creation failed');
+    if (!payment) {
+      if (razorpay) {
+        try {
+          const order = await razorpay.orders.create({
+            amount: Math.round(amount * 100),
+            currency: 'INR',
+            receipt: `booking_${bookingId.slice(0, 8)}`,
+          });
+          razorpayOrderId = order.id;
+          method = 'razorpay';
+        } catch (err) {
+          console.error('[Payments] Razorpay order creation failed:', err);
+          throw new Error('Razorpay order creation failed');
+        }
+      } else {
+        console.warn('[Payments] Razorpay not configured - using UPI manual collection');
+        razorpayOrderId = null;
+        method = 'upi';
       }
-    } else {
-      console.warn('[Payments] Razorpay not configured - using mock order ID');
-      razorpayOrderId = `order_mock_${Date.now()}`;
+
+      payment = await prisma.payment.create({
+        data: {
+          bookingId,
+          amount: Number(amount),
+          platformFee,
+          workerPayout,
+          status: 'pending',
+          paymentMethod: method,
+          razorpayOrderId,
+        },
+      });
+    } else if (payment.paymentMethod === 'razorpay' && razorpay && !payment.razorpayOrderId) {
+      // Backfill a missing Razorpay order id for an existing Razorpay payment.
+      const order = await razorpay.orders.create({
+        amount: Math.round(Number(payment.amount) * 100),
+        currency: 'INR',
+        receipt: `booking_${bookingId.slice(0, 8)}`,
+      });
+      payment = await prisma.payment.update({
+        where: { id: payment.id },
+        data: { razorpayOrderId: order.id },
+      });
     }
 
-    const payment = await prisma.payment.create({
-      data: {
-        bookingId,
-        amount: Number(amount),
-        platformFee,
-        workerPayout,
-        status: 'pending',
-        razorpayOrderId,
-      },
-    });
+    const upiLink = payment.paymentMethod === 'upi' ? buildUpiLink(bookingId, Number(payment.amount)) : null;
 
-    return res.json({ payment, razorpayOrderId });
+    return res.json({
+      payment,
+      razorpayOrderId: payment.razorpayOrderId,
+      upi: upiLink
+        ? {
+            pa: upiVpa,
+            pn: upiName,
+            am: Number(payment.amount),
+            cu: 'INR',
+            tn: `HomeHelp Booking ${bookingId.slice(0, 8)}`,
+            link: upiLink,
+          }
+        : null,
+    });
   } catch (err) {
     console.error('[payments] create-order error:', err);
     return res.status(500).json({ error: 'Failed to create payment' });
+  }
+});
+
+// Admin confirms a manually-collected payment (e.g. UPI transfer verified in bank).
+paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    if (payment.status === 'paid' || payment.status === 'captured') {
+      return res.json({ payment });
+    }
+
+    const updated = await prisma.payment.update({
+      where: { id },
+      data: { status: 'paid' },
+    });
+
+    console.log(`[Payments] Payment ${id} marked paid by admin ${req.user!.userId}`);
+    return res.json({ payment: updated });
+  } catch (err) {
+    console.error('[payments] mark-paid error:', err);
+    return res.status(500).json({ error: 'Failed to mark payment paid' });
   }
 });
 

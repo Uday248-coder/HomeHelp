@@ -15,6 +15,7 @@
     "firebase": "^12.15.0",
     "lucide-react": "^1.23.0",
     "next": "14.2.35",
+    "qrcode.react": "^3.2.0",
     "react": "^18",
     "react-dom": "^18",
     "shadcn": "^4.12.0",

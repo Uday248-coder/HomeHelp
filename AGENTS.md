@@ -31,8 +31,9 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - Booking CRUD + lifecycle (create, assign, start with OTP, complete with OTP+rating, cancel)
 - Booking OTP generation endpoint (`PATCH /:id/generate-otp`)
 - Worker CRUD with auth-gated POST/PATCH, open GET (with field restrictions)
-- **Hardened Payments** — Razorpay signature verification using database-stored `razorpayOrderId` to prevent tampering
-- Payment create-order (15% platform fee, Razorpay with auto-mock fallback) + verify (fixed signature check) + get by booking
+- **Fee-free UPI payments (default)** — `POST /api/payments/create-order` returns a per-booking UPI intent (`upi://pay?pa=...&am=...`) rendered as a scannable QR; amount is server-computed from `RATE_TABLE`. Confirmed manually by an admin via `POST /api/payments/:id/mark-paid` (no gateway fees).
+- **Hardened Payments** — Razorpay path retained for later migration: signature verification using database-stored `razorpayOrderId` to prevent tampering (only used when `RAZORPAY_*` keys are set)
+- Payment create-order (15% platform fee, UPI QR by default / Razorpay when keys set) + verify (fixed signature check) + get by booking + admin mark-paid
 - **Server-side pricing** — `RATE_TABLE` in constants.ts is single source of truth; clients cannot supply `amount` or `hourlyRate`
 - **Payment access guard** — GET `/payments/booking/:bookingId` validates caller owns booking or is admin
 - Admin stats with auth + role guard (`/dashboard`, `/revenue/weekly`)
@@ -260,8 +261,10 @@ These are stored as env vars on Render. For local dev, add to `services/api/.env
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash dashboard → REST API tab | ✅ Set on Render |
 | `JWT_SECRET` | Generate any random string | ✅ Set on Render |
 | `SENTRY_DSN` | Sentry → create project → client key | ❌ Not set |
-| `RAZORPAY_KEY_ID` | Razorpay dashboard | ❌ Not set |
-| `RAZORPAY_KEY_SECRET` | Razorpay dashboard | ❌ Not set |
+| `RAZORPAY_KEY_ID` | Razorpay dashboard | ❌ Not set (only for later migration) |
+| `RAZORPAY_KEY_SECRET` | Razorpay dashboard | ❌ Not set (only for later migration) |
+| `UPI_VPA` | Your UPI ID (e.g. `name@oksbi`) | ❌ Not set — required for fee-free payments |
+| `UPI_NAME` | UPI display name | ✅ Optional (defaults `HomeHelp`) |
 | `GOOGLE_MAPS_API_KEY` | Google Cloud Console | ❌ Not set |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | Firebase Console → Service Account → Generate Key | ❌ Not set on Render |
 | `FCM_SERVER_KEY` | Firebase project settings | ❌ Not set |
@@ -298,7 +301,8 @@ See: `services/api/src/routes/` (new: `users.ts`, enhanced: `payouts.ts` + `stat
 | `/api/workers` | GET/POST | ✅ Live | List/create workers |
 | `/api/workers/:id` | GET/PATCH | ✅ Live | Get/update worker (auth-gated) |
 | `/api/workers/available/:mode` | GET | ✅ Live | Filter workers by mode |
-| `/api/payments/create-order` | POST | ✅ Live | Create payment + Razorpay order |
+| `/api/payments/create-order` | POST | ✅ Live | Create payment + UPI intent (or Razorpay order when keys set) |
+| `/api/payments/:id/mark-paid` | POST | ✅ Live | Admin confirms a manual (UPI) payment |
 | `/api/payments/verify` | POST | ✅ Live | Capture payment (fixed signature check) |
 | `/api/payments/booking/:bookingId` | GET | ✅ Live | Get payment by booking |
 | `/api/stats/dashboard` | GET | ✅ Live | Live admin dashboard stats (auth+admin) |

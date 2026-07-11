@@ -139,6 +139,9 @@ export const api = {
 
   getPayment: (bookingId: string) => fetchAPI(`/api/payments/booking/${bookingId}`),
 
+  markPaymentPaid: (paymentId: string) =>
+    fetchAPI(`/api/payments/${paymentId}/mark-paid`, { method: 'POST' }),
+
   getAnalytics: (params?: { startDate?: string; endDate?: string }) =>
     fetchAPI('/api/stats/analytics' + buildQuery(params as Record<string, string | number>)),
 

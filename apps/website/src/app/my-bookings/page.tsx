@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
+import { UpiPayment } from '@/components/UpiPayment';
 import { getToken, clearToken, login } from '@/lib/auth';
 import type { Booking, BookingStatus } from '@/lib/types';
 
@@ -111,6 +112,7 @@ function LoginView({ onOk }: { onOk: () => void }) {
 
 function BookingCard({ b, onCancel }: { b: Booking; onCancel: (id: string) => void }) {
   const canCancel = b.status === 'pending' || b.status === 'assigned';
+  const showPayment = b.status !== 'completed' && b.status !== 'cancelled';
   return (
     <div className="bg-white rounded-2xl border border-[#E4DFD6] shadow-sm p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
@@ -178,6 +180,8 @@ function BookingCard({ b, onCancel }: { b: Booking; onCancel: (id: string) => vo
           <Button variant="destructive" size="sm" onClick={() => onCancel(b.id)}>Cancel Booking</Button>
         </div>
       )}
+
+      {showPayment && <UpiPayment bookingId={b.id} />}
     </div>
   );
 }

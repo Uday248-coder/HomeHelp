@@ -29,6 +29,7 @@ enum BookingStatus {
 enum PaymentStatus {
   pending
   captured
+  paid
   refunded
 }
 

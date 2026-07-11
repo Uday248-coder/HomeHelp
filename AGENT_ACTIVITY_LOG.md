@@ -139,4 +139,16 @@
 **Types:** `lib/types.ts` gained `Booking`, `BookingStatus`, `WorkerInfo`.
 **Docs:** Updated `AGENTS.md` (website app pages + a "Website Booking Flow & Architecture" section + monorepo structure) and this log.
 **Verification:** `tsc --noEmit` clean on services/api + apps/website; `vitest run` → 14/14 pass. Live end-to-end of the web loop was NOT re-run this session because Render was in a free-tier sleep and unreachable from the sandbox at commit time (founder confirmed `/health` works in-browser). Code is straightforward and type-safe; recommend a quick in-browser pass: book on `/book` → track on `/my-bookings` → accept/start/complete on `/worker`.
+
+## [2026-07-11 10:00:00]
+**Reason:** Founder chose fee-free payments (their personal GPay/UPI) over Razorpay for launch, confirmed **dynamic per-booking UPI QR** + **admin-only mark-paid** (migrate to Razorpay later). Phase 1 of the agreed 1→2→3 roadmap (prod-ready payments; worker verification and mobile APK/push follow).
+**Backend (`services/api`):**
+- `prisma/schema.prisma`: added `paid` to `PaymentStatus` enum (distinguishes manual UPI confirmation from Razorpay `captured`). `prisma db push` applied to prod Neon; client regenerated.
+- `.env.example`: documented `UPI_VPA` (your UPI ID) + `UPI_NAME` (display name).
+- `routes/payments.ts`: `create-order` is now **idempotent** (reuses the existing payment row per booking; unique `bookingId`), computes amount server-side, and when `RAZORPAY_*` keys are absent returns a per-booking UPI intent `upi://pay?pa=<VPA>&pn=<NAME>&am=<amount>&cu=INR&tn=HomeHelp Booking <id>` (plus structured `upi` fields for QR rendering). Razorpay path preserved + auto-backfills order id when keys are present. Added `POST /api/payments/:id/mark-paid` (adminMiddleware) → sets status `paid` (no-op if already paid/captured), logs the confirming admin.
+**Frontend (website):** installed `qrcode.react`; new `src/components/UpiPayment.tsx` (calls `create-order`, renders `QRCodeSVG` of the UPI link + a tap-to-pay deep link + "admin confirms" note; shows a green "Payment received" state when paid/captured). Embedded on the `/book` success step and every active `/my-bookings` card.
+**Frontend (admin):** `lib/api.ts` gained `markPaymentPaid(paymentId)`; `app/bookings/page.tsx` shows a Paid/Pending badge under the amount and a **"Mark Paid"** action on rows whose payment is pending.
+**Docs:** Updated `AGENTS.md` (payments bullets, env table with `UPI_VPA`/`UPI_NAME`, endpoint table with mark-paid) and `README.md` (integrations table, payments summary, env table). Razorpay reframed as a dormant future-migration path.
+**Verification:** `tsc --noEmit` clean on services/api + apps/website + apps/admin; `vitest run` → 14/14 pass; `prisma db push` in sync.
+**Blocked on founder:** set `UPI_VPA` (+ optional `UPI_NAME`) and `RESEND_API_KEY` on Render, then in-browser pass: book → scan QR/pay via GPay → admin **Mark Paid** → customer `/my-bookings` flips to "Payment received". Live e2e not run from sandbox (Render free-tier sleep).
 **Status:** Committed and pushed to `main`.

@@ -25,7 +25,8 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 | **Neon Postgres** | Database (serverless PostgreSQL) | ✅ **Connected** — Prisma ORM running migrations | ✅ `DATABASE_URL` |
 | **Upstash Redis** | OTP storage + rate limiting cache | ✅ **Connected** — serverless Redis SDK | ✅ `UPSTASH_REDIS_REST_URL` + `TOKEN` |
 | **Prisma** | ORM for database access | ✅ **Connected** — 6 models, full migrations | N/A |
-| **Razorpay** | Payment processing | ⚠️ **Mock mode** — works with auto-generated mock order IDs, needs live keys for real payments | ❌ `RAZORPAY_KEY_ID` + `SECRET` not set |
+| **UPI (fee-free)** | Payment collection via per-booking UPI QR, admin-confirmed | ✅ **Default** — needs your UPI ID (`UPI_VPA`); no gateway fees | ❌ `UPI_VPA` not set |
+| **Razorpay** | Payment processing (future migration) | ⚠️ **Dormant** — only used when `RAZORPAY_*` keys are set, otherwise UPI QR is used | ❌ `RAZORPAY_KEY_ID` + `SECRET` not set |
 | **Sentry** | Error tracking | 🔌 **Wired in code** — initialized but DSN is empty, no errors being captured | ❌ `SENTRY_DSN` not set |
 | **Firebase Auth** | Phone OTP + Google Sign-In | ❌ **Removed** — migrated to email/password auth (see below) | ❌ N/A |
 | **Resend** | Transactional email (password reset + booking OTP) | ⚠️ **Wired in code** — needs `RESEND_API_KEY` to actually send | ❌ `RESEND_API_KEY` not set |
@@ -42,7 +43,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **Admin roles**: `adminMiddleware` reusable guard, `isAdmin` field on User model, admin-gated endpoints
 - **Booking CRUD**: Create, list, detail, cancel, assign worker, start (OTP-gated), complete (OTP+rating), generate OTP — all working with proper null-safety checks
 - **Workers**: CRUD with auth-gated POST/PATCH, availability filter by mode, worker self-service endpoints (`/me`, `/me/availability`)
-- **Payments**: Create Razorpay order with 15% platform fee + auto-mock fallback, verify signature, get by booking, admin-only capture guard
+- **Payments**: Fee-free UPI QR by default — `create-order` returns a per-booking `upi://pay` intent (amount from server `RATE_TABLE`, 15% platform fee tracked), admin confirms via `POST /api/payments/:id/mark-paid`; Razorpay path retained (signature verify) for a later migration when keys are set
 - **Payouts**: Full payouts route (`GET /api/payouts` paginated admin, `GET /:id`, `GET /me` for workers)
 - **Stats**: Dashboard stats + weekly revenue, admin-only
 - **Waitlist**: DB-persisted signups via Prisma
@@ -250,8 +251,10 @@ Set these on Render (API) and Vercel (website + admin):
 | `UPSTASH_REDIS_REST_TOKEN` | ✅ | Redis auth |
 | `JWT_SECRET` | ✅ | Token signing |
 | `NEXT_PUBLIC_API_URL` | ✅ | Frontend → API URL |
-| `RAZORPAY_KEY_ID` | ❌ | Live payments |
-| `RAZORPAY_KEY_SECRET` | ❌ | Live payments |
+| `UPI_VPA` | ❌ | Fee-free UPI payment collection (your UPI ID) |
+| `UPI_NAME` | ✅ | UPI display name (defaults `HomeHelp`) |
+| `RAZORPAY_KEY_ID` | ❌ | Live payments (future migration only) |
+| `RAZORPAY_KEY_SECRET` | ❌ | Live payments (future migration only) |
 | `SENTRY_DSN` | ❌ | Error tracking |
 | `GOOGLE_MAPS_API_KEY` | ❌ | Maps + geocoding |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | ❌ | Removed — Firebase auth no longer used |

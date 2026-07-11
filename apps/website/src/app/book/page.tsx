@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
+import { UpiPayment } from '@/components/UpiPayment';
 import { getToken, setToken } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
@@ -431,6 +432,7 @@ export default function BookPage() {
                   {scheduleType === 'now' ? 'Starting now' : `${scheduledDate} at ${scheduledTime}`}
                 </p>
               </div>
+              {bookingId && <UpiPayment bookingId={bookingId} />}
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <a href="/book"><Button size="lg">Book Another</Button></a>
                 <a href="/my-bookings"><Button variant="outline" size="lg">Track My Bookings →</Button></a>
