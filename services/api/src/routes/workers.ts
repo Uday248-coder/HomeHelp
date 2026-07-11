@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { canActivate } from '../lib/eligibility';
 
 export const workersRouter = Router();
 
@@ -20,6 +21,7 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
         isActive: true,
         aadhaarVerified: true,
         licenseVerified: true,
+        deactivationReason: true,
         totalJobs: true,
       },
     });
@@ -140,8 +142,23 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    const { name, photoUrl, aadhaarVerified, licenseVerified, isAvailable, isActive, currentLat, currentLng } = req.body;
+    const { name, photoUrl, aadhaarVerified, licenseVerified, isAvailable, isActive, currentLat, currentLng, deactivationReason } = req.body;
     const workerId = req.params.id as string;
+
+    const existing = await prisma.worker.findUnique({ where: { id: workerId } });
+    if (!existing) return res.status(404).json({ error: 'Worker not found' });
+
+    // Activation guard: a worker can only be activated once the required
+    // verification is in place (Aadhaar for all; License for driver-only types).
+    if (isActive === true) {
+      const check = canActivate({
+        workerType: existing.workerType,
+        aadhaarVerified: aadhaarVerified !== undefined ? aadhaarVerified : existing.aadhaarVerified,
+        licenseVerified: licenseVerified !== undefined ? licenseVerified : existing.licenseVerified,
+      });
+      if (!check.ok) return res.status(400).json({ error: check.reason });
+    }
+
     const worker = await prisma.worker.update({
       where: { id: workerId },
       data: {
@@ -151,6 +168,10 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
         ...(licenseVerified !== undefined && { licenseVerified }),
         ...(isAvailable !== undefined && { isAvailable }),
         ...(isActive !== undefined && { isActive }),
+        // Clear the archive reason on activation; set/keep it otherwise.
+        ...(isActive === true
+          ? { deactivationReason: null }
+          : deactivationReason !== undefined && { deactivationReason }),
         ...(currentLat !== undefined && { currentLat: parseFloat(currentLat) }),
         ...(currentLng !== undefined && { currentLng: parseFloat(currentLng) }),
       },
@@ -200,11 +221,15 @@ workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
 workersRouter.get('/available/:mode', authMiddleware, async (req, res) => {
   try {
     const mode = req.params.mode;
+    const isDriver = mode === 'driver';
     const workers = await prisma.worker.findMany({
       where: {
         isAvailable: true,
         isActive: true,
-        workerType: mode === 'driver' ? { in: ['driver', 'both'] } : { in: ['home_help', 'both'] },
+        workerType: isDriver ? { in: ['driver', 'both'] } : { in: ['home_help', 'both'] },
+        // Verification gate: Aadhaar for all, License additionally for driving.
+        aadhaarVerified: true,
+        ...(isDriver && { licenseVerified: true }),
       },
       select: {
         id: true,

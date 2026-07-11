@@ -81,7 +81,7 @@ The website is a **Next.js App Router** app. It is the single place where the *e
 - **UI kit** (`src/components/ui/`): `Button`, `Card`, `Input`, `Textarea`, `Badge` — same variants used across pages.
 - **Data access**: pages call the backend directly via `fetch` + the `authedFetch` helper (Bearer token from `homehelp_token`). `src/lib/types.ts` holds shared DTOs (`Booking`, `BookingStatus`, `WorkerInfo`). `API_URL` = `NEXT_PUBLIC_API_URL` (defaults to the prod Render API).
 - **Customer↔Worker handoff**: the customer books → sees status on `/my-bookings` → the assigned worker accepts on `/worker` → the worker enters the **OTP the customer shares from `/my-bookings`** to Start/Complete. OTPs are returned only on the customer-owned `GET /api/bookings` (owner-scoped), never to the worker endpoint.
-- **Session model**: a single JWT in `localStorage` (`homehelp_token`) is shared by `/book`, `/my-bookings`, and `/worker`; each page renders its own inline login view when no token is present.
+- **Session model**: a single JWT in `localStorage` (`homehelp_token`) + `Authorization: Bearer` is shared by `/book`, `/my-bookings`, and `/worker`; each page renders its own inline login view when no token is present. (httpOnly-cookie migration is deferred until a custom domain exists — see Security Posture.)
 
 #### Mobile Apps (`apps/customer-app/`, `apps/worker-app/`) — Expo 56 (Fully Built)
 - **6 screens each** — Customer: Auth, Home, Bookings, BookingDetail, Profile; Worker: Auth, Dashboard, Jobs, ActiveJob, Earnings, Profile
@@ -232,7 +232,7 @@ HomeHelp/
 │   └── admin/            # Next.js 14 admin dashboard ✅
 ├── services/
 │   └── api/              # Express + TypeScript backend ✅
-│       └── scripts/      #   make-admin, seed-demo (operational scripts)
+│       └── scripts/      #   make-admin, create-admin, seed-demo (operational scripts)
 ├── .github/workflows/    # CI/CD ✅
 ├── package.json          # npm workspaces root
 ├── AGENTS.md             # This file
@@ -300,7 +300,7 @@ See: `services/api/src/routes/` (new: `users.ts`, enhanced: `payouts.ts` + `stat
 | `/api/bookings/admin/all` | GET | ✅ Live | Admin list all bookings (paginated) |
 | `/api/workers` | GET/POST | ✅ Live | List/create workers |
 | `/api/workers/:id` | GET/PATCH | ✅ Live | Get/update worker (auth-gated) |
-| `/api/workers/available/:mode` | GET | ✅ Live | Filter workers by mode |
+| `/api/workers/available/:mode` | GET | ✅ Live | Filter eligible workers by mode (Aadhaar for all; License for drivers) |
 | `/api/payments/create-order` | POST | ✅ Live | Create payment + UPI intent (or Razorpay order when keys set) |
 | `/api/payments/:id/mark-paid` | POST | ✅ Live | Admin confirms a manual (UPI) payment |
 | `/api/payments/verify` | POST | ✅ Live | Capture payment (fixed signature check) |
@@ -386,3 +386,20 @@ Full context in `HomeHelp_Bud101_Prompt.md`. TL;DR:
 ## Required Reading for Future Sessions
 
 Before making any changes to `services/api/`, read **`services/api/SECURITY_CHECKLIST.md`** — it contains the standing security requirements every route change must satisfy. Failure to follow these rules will reintroduce the same vulnerabilities this session fixed.
+
+## Worker Verification Gate (Phase 2 — current behavior)
+
+- **Policy:** Aadhaar required for all work; **driving License additionally required for driver jobs** (`home_help`/`driver`/`both` types).
+- Enforcement lives in `services/api/src/lib/eligibility.ts` (`isWorkerEligible`, `eligibleModes`, `canActivate`) and is applied in:
+  - `GET /api/bookings/available` — worker only sees modes they are verified for.
+  - `PATCH /api/bookings/:id/assign` — self-serve (must also be `isAvailable`) and admin assignment both gated.
+  - `GET /api/workers/available/:mode` — only returns Aadhaar(+License)-verified, active, available workers (this is the admin assign-modal list).
+  - `PATCH /api/workers/:id` — rejects `isActive:true` unless `canActivate` passes; sets/clears `deactivationReason`.
+- `Worker.deactivationReason` archives why a worker was deactivated; re-activation is server-blocked until conditions are met.
+- **Web worker portal** shows a pending-verification/pending-approval banner (no jobs shown until eligible). **Admin Workers page** has a status filter + Eligibility column; inline Verify/Activate actions are the approval UI.
+
+## Security Posture & Sessions (read before auth changes)
+
+- **Web + admin sessions currently use a single JWT in `localStorage` + `Authorization: Bearer`** (`homehelp_token` on website, `admin_token` on admin). This is NOT httpOnly-cookie auth despite some older doc wording.
+- **httpOnly-cookie migration is DEFERRED** until a custom domain exists (web + admin on one registrable domain, API on a subdomain) so the session cookie is *first-party* (`SameSite=Lax`). On the current free `vercel.app`/`onrender.com` split, a third-party cookie would be unreliable in Chrome.
+- **Mitigations shipped now:** a CI **secret-guard** (`.github/workflows/ci.yml` + `scripts/secret-guard.mjs`) blocks server secrets from reaching client bundles; per-app **CSP middleware** (`apps/website/src/middleware.ts`, `apps/admin/src/middleware.ts`) with nonces mitigates XSS token theft. Mobile apps keep Bearer + `expo-secure-store` (no cookie support).

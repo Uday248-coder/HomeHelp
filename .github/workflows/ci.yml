@@ -7,7 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  secret-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Scan client code for leaked server secrets
+        run: node scripts/secret-guard.mjs
+
   lint-build:
+    needs: secret-guard
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,3 +33,5 @@ jobs:
       - run: npm ci
       - run: npm run lint --workspace=${{ matrix.workspace }}
       - run: npm run build --workspace=${{ matrix.workspace }}
+      - name: Re-scan built browser bundles for leaked secrets
+        run: node scripts/secret-guard.mjs

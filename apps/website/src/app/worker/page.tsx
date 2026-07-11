@@ -107,11 +107,20 @@ function JobCard({ b, mode, onAccept, onStart, onComplete, busy }: {
   );
 }
 
+interface WorkerProfile {
+  workerType: 'home_help' | 'driver' | 'both';
+  isActive: boolean;
+  aadhaarVerified: boolean;
+  licenseVerified: boolean;
+  deactivationReason?: string | null;
+}
+
 export default function WorkerPortalPage() {
   const [token, setTokenState] = useState<string | null>(null);
   const [mode, setMode] = useState<'home_help' | 'driver'>('home_help');
   const [available, setAvailable] = useState<Booking[]>([]);
   const [mine, setMine] = useState<Booking[]>([]);
+  const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -121,12 +130,14 @@ export default function WorkerPortalPage() {
     if (!t) { setTokenState(null); setLoading(false); return; }
     setTokenState(t); setLoading(true); setError('');
     try {
-      const [av, my] = await Promise.all([
+      const [av, my, me] = await Promise.all([
         fetch(`${API}/api/bookings/available?mode=${mode}`, { headers: { Authorization: `Bearer ${t}` } }).then((r) => r.json()),
         fetch(`${API}/api/bookings/worker`, { headers: { Authorization: `Bearer ${t}` } }).then((r) => r.json()),
+        fetch(`${API}/api/workers/me`, { headers: { Authorization: `Bearer ${t}` } }).then((r) => (r.ok ? r.json() : null)),
       ]);
       setAvailable(av.bookings || []);
       setMine(my.bookings || []);
+      setProfile(me?.worker ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally { setLoading(false); }
@@ -138,7 +149,7 @@ export default function WorkerPortalPage() {
     setBusy(true); setError('');
     try {
       const res = await fetch(`${API}/api/bookings/${id}${path}`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: body ? JSON.stringify(body) : undefined,
       });
@@ -165,6 +176,27 @@ export default function WorkerPortalPage() {
 
       <main className="container-page max-w-3xl mx-auto px-4 py-8">
         {error && <div className="px-4 py-3 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-sm mb-4">{error}</div>}
+        {profile && (() => {
+          const needsAadhaar = !profile.aadhaarVerified;
+          const needsLicense = (profile.workerType === 'driver' || profile.workerType === 'both') && !profile.licenseVerified;
+          const notActive = !profile.isActive;
+          if (!needsAadhaar && !needsLicense && !notActive) return null;
+          const items = [
+            needsAadhaar && 'Aadhaar verification',
+            needsLicense && 'Driving license verification',
+          ].filter(Boolean) as string[];
+          return (
+            <div className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm mb-4">
+              <p className="font-medium">
+                {notActive ? 'Your worker account is pending approval.' : 'Verification pending.'}
+              </p>
+              {items.length > 0 && (
+                <p className="mt-1">Awaiting: {items.join(' and ')}. You can’t take {profile.workerType === 'driver' ? 'driver' : 'these'} jobs until an admin completes this.</p>
+              )}
+              {profile.deactivationReason && <p className="mt-1">Note: {profile.deactivationReason}</p>}
+            </div>
+          );
+        })()}
 
         <section className="mb-8">
           <div className="flex items-center justify-between mb-3">

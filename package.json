@@ -16,6 +16,7 @@
     "build:admin": "npm -w apps/admin run build",
     "build:api": "npm -w services/api run build",
     "lint": "npm -w services/api run lint && npm -w apps/website run lint && npm -w apps/admin run lint",
-    "typecheck": "npm -w services/api run typecheck"
+    "typecheck": "npm -w services/api run typecheck",
+    "secret-guard": "node scripts/secret-guard.mjs"
   }
 }

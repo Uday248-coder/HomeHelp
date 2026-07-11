@@ -19,6 +19,7 @@ export default function WorkersPage() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const fetchWorkers = useCallback(async () => {
     if (!token) return;
@@ -79,10 +80,31 @@ export default function WorkersPage() {
     }
   };
 
+  // Mirrors backend policy: Aadhaar for all; License additionally for driving.
+  const workerEligibility = (w: Worker): { label: string; tone: 'ok' | 'warn' | 'off' } => {
+    if (!w.isActive) return { label: 'Inactive', tone: 'off' };
+    if (!w.aadhaarVerified) return { label: 'Needs Aadhaar', tone: 'warn' };
+    const canDrive = w.workerType === 'driver' || w.workerType === 'both';
+    if (canDrive && !w.licenseVerified) {
+      return w.workerType === 'both'
+        ? { label: 'Home-help only', tone: 'warn' }
+        : { label: 'Needs License', tone: 'warn' };
+    }
+    return { label: 'Eligible', tone: 'ok' };
+  };
+
+  const awaitingVerification = (w: Worker) =>
+    !w.aadhaarVerified || ((w.workerType === 'driver' || w.workerType === 'both') && !w.licenseVerified);
+
   const filteredWorkers = workers.filter((w) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return w.name.toLowerCase().includes(q) || (w.phoneNumber || '').includes(q);
+    if (search) {
+      const q = search.toLowerCase();
+      if (!(w.name.toLowerCase().includes(q) || (w.phoneNumber || '').includes(q))) return false;
+    }
+    if (statusFilter === 'active' && !w.isActive) return false;
+    if (statusFilter === 'inactive' && w.isActive) return false;
+    if (statusFilter === 'pending' && !awaitingVerification(w)) return false;
+    return true;
   });
 
   if (!token) return <LoginScreen />;
@@ -130,6 +152,16 @@ export default function WorkersPage() {
                 <option value="driver">Driver</option>
                 <option value="both">Both</option>
               </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-9 px-3 bg-background border border-border rounded-lg text-sm text-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent hover:border-foreground/20"
+              >
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Archived / Inactive</option>
+                <option value="pending">Awaiting Verification</option>
+              </select>
             </div>
 
             {loading ? (
@@ -167,6 +199,7 @@ export default function WorkersPage() {
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Aadhaar</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">License</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Eligibility</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Avg Rating</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Total Jobs</th>
                         <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider text-right">Quick Action</th>
@@ -225,8 +258,21 @@ export default function WorkersPage() {
                             {w.isActive ? (
                               <span className="status-badge status-active">Active</span>
                             ) : (
-                              <span className="status-badge status-pending">Inactive</span>
+                              <span className="status-badge status-pending" title={w.deactivationReason || undefined}>
+                                Inactive
+                              </span>
                             )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const e = workerEligibility(w);
+                              const cls = e.tone === 'ok'
+                                ? 'text-success'
+                                : e.tone === 'warn'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-muted-foreground';
+                              return <span className={`text-xs font-medium ${cls}`}>{e.label}</span>;
+                            })()}
                           </td>
                           <td className="px-4 py-3">
                             <span className="inline-flex items-center gap-1 text-foreground font-medium">

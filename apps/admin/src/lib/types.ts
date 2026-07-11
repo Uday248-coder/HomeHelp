@@ -42,6 +42,7 @@ export interface Worker {
   totalJobs: number;
   isAvailable: boolean;
   isActive: boolean;
+  deactivationReason?: string | null;
 }
 
 export interface WeeklyRevenue {

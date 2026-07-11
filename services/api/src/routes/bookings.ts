@@ -4,6 +4,7 @@ import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { RATE_TABLE } from '../lib/constants';
 import { sendOtpEmail } from '../lib/mailer';
 import { Prisma } from '@prisma/client';
+import { isWorkerEligible, eligibleModes, type BookingMode } from '../lib/eligibility';
 
 export const bookingsRouter = Router();
 
@@ -141,13 +142,25 @@ bookingsRouter.get('/available', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Only active workers can view available bookings' });
     }
 
+    // Only surface bookings this worker is verified + typed to take
+    // (Aadhaar for all, License additionally for driving).
+    const allowedModes = eligibleModes(worker);
+    if (allowedModes.length === 0) {
+      return res.json({ bookings: [] });
+    }
+
     const mode = req.query.mode as string | undefined;
     const where: Prisma.BookingWhereInput = {
       status: 'pending',
       workerId: null,
     };
     if (mode && ['home_help', 'driver'].includes(mode)) {
+      if (!allowedModes.includes(mode as BookingMode)) {
+        return res.json({ bookings: [] });
+      }
       where.mode = mode as Prisma.BookingWhereInput['mode'];
+    } else {
+      where.mode = { in: allowedModes };
     }
     const bookings = await prisma.booking.findMany({
       where,
@@ -255,6 +268,16 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
 
     const worker = await prisma.worker.findUnique({ where: { id: workerId } });
     if (!worker) return res.status(404).json({ error: 'Worker not found' });
+
+    // Gate on verification + type + active status. Self-serve accept also
+    // requires the worker to be marked available.
+    if (!isWorkerEligible(booking.mode as BookingMode, worker, { requireAvailable: !isAdmin })) {
+      return res.status(403).json({
+        error: booking.mode === 'driver'
+          ? 'Worker must be active with verified Aadhaar and License to take driver jobs'
+          : 'Worker must be active with verified Aadhaar to take this job',
+      });
+    }
 
     const updated = await prisma.booking.update({
       where: { id: getId(req) },

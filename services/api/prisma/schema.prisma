@@ -81,6 +81,7 @@ model Worker {
   totalJobs        Int          @default(0) @map("total_jobs")
   isAvailable      Boolean      @default(true) @map("is_available")
   isActive         Boolean      @default(true) @map("is_active")
+  deactivationReason String?    @map("deactivation_reason")
   currentLat       Decimal?     @map("current_lat") @db.Decimal(10, 7)
   currentLng       Decimal?     @map("current_lng") @db.Decimal(10, 7)
   createdAt        DateTime     @default(now()) @map("created_at")
