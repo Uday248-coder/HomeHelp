@@ -15,3 +15,6 @@ services/api/firebase-service-account.json
 
 # Built APKs (kept locally for easy sideload; regenerate via documented build steps)
 *.apk
+
+# litellm fusion config (contains API key references)
+fusion_config.yaml
