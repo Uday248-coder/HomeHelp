@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { RATE_TABLE } from '../lib/constants';
@@ -44,6 +45,14 @@ bookingsRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
+const generateOtpLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OTP requests, please try again later' },
+});
+
 bookingsRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { mode, serviceType, scheduledAt, customerAddress, customerLat, customerLng, durationHours } = req.body;
@@ -59,6 +68,24 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid mode for pricing' });
     }
 
+    // Validate coordinates if provided (lat: -90..90, lng: -180..180)
+    const lat = customerLat !== undefined && customerLat !== '' ? parseFloat(customerLat) : null;
+    const lng = customerLng !== undefined && customerLng !== '' ? parseFloat(customerLng) : null;
+    if (lat !== null && (isNaN(lat) || lat < -90 || lat > 90)) {
+      return res.status(400).json({ error: 'Invalid customer latitude' });
+    }
+    if (lng !== null && (isNaN(lng) || lng < -180 || lng > 180)) {
+      return res.status(400).json({ error: 'Invalid customer longitude' });
+    }
+
+    const duration = durationHours !== undefined && durationHours !== '' ? parseFloat(durationHours) : null;
+    if (duration !== null && (isNaN(duration) || duration <= 0)) {
+      return res.status(400).json({ error: 'Invalid durationHours' });
+    }
+
+    // Server-side total computed from the rate table — never trust client amounts.
+    const totalAmount = duration ? Math.round(hourlyRate * duration) : null;
+
     const booking = await prisma.booking.create({
       data: {
         userId: req.user!.userId,
@@ -66,10 +93,11 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
         serviceType,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         customerAddress,
-        customerLat: customerLat ? parseFloat(customerLat) : null,
-        customerLng: customerLng ? parseFloat(customerLng) : null,
-        durationHours: durationHours ? parseFloat(durationHours) : null,
+        customerLat: lat,
+        customerLng: lng,
+        durationHours: duration,
         hourlyRate,
+        totalAmount,
         status: 'pending',
       },
       select: {
@@ -367,7 +395,7 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
   }
 });
 
-bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) => {
+bookingsRouter.patch('/:id/generate-otp', generateOtpLimiter, async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
     if (!user?.isAdmin) {
@@ -396,7 +424,8 @@ bookingsRouter.patch('/:id/generate-otp', async (req: Request, res: Response) =>
     if (booking.user?.email) {
       await sendOtpEmail(booking.user.email, getId(req), type, otp);
     } else {
-      console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP: ${otp}`);
+      // Never log the full OTP — mask all but the first digit.
+      console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP generated: ${otp[0]}***`);
     }
 
     return res.json({ message: `${type} OTP generated` });

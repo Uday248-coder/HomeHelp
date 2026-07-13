@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
@@ -12,62 +11,39 @@ import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constan
 import { api } from '../../src/api/client';
 import { Booking } from '../../src/types';
 import { useRouter } from 'expo-router';
-
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: '#FEF3C7', text: '#92400E', label: 'Pending' },
-  assigned: { bg: '#DBEAFE', text: '#1E40AF', label: 'Assigned' },
-  in_progress: { bg: '#D1FAE5', text: '#065F46', label: 'In Progress' },
-  completed: { bg: '#F3F4F6', text: '#374151', label: 'Completed' },
-  cancelled: { bg: '#FEE2E2', text: '#991B1B', label: 'Cancelled' },
-};
+import { Screen, ScreenHeader, StatusBadge, LoadingView, EmptyState } from '../../src/components/ui';
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', {
+  return new Date(dateStr).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
 }
 
-function BookingItem({
-  item,
-  onPress,
-}: {
-  item: Booking;
-  onPress: (id: string) => void;
-}) {
-  const statusStyle = STATUS_COLORS[item.status] || STATUS_COLORS.pending;
-
+function BookingItem({ item, onPress }: { item: Booking; onPress: (id: string) => void }) {
   return (
-    <TouchableOpacity style={styles.bookingCard} onPress={() => onPress(item.id)}>
+    <TouchableOpacity style={styles.bookingCard} onPress={() => onPress(item.id)} activeOpacity={0.92}>
       <View style={styles.bookingHeader}>
-        <View style={styles.bookingTitleRow}>
-          <Text style={styles.serviceType}>{item.serviceType}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Text style={[styles.statusText, { color: statusStyle.text }]}>
-              {statusStyle.label}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.modeText}>
-          {item.mode === 'home_help' ? 'Home Help' : 'Driver'}
-        </Text>
+        <Text style={styles.serviceType}>{item.serviceType}</Text>
+        <StatusBadge status={item.status} />
       </View>
-
+      <Text style={styles.modeText}>
+        {item.mode === 'home_help' ? 'Home Help' : 'Driver'}
+      </Text>
       <View style={styles.bookingDetails}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Date</Text>
+          <Text style={styles.detailLabel}>Booked</Text>
           <Text style={styles.detailValue}>{formatDate(item.createdAt)}</Text>
         </View>
-        {item.durationHours && (
+        {item.durationHours ? (
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Duration</Text>
             <Text style={styles.detailValue}>{item.durationHours}h</Text>
           </View>
-        )}
+        ) : null}
         <View style={styles.amountContainer}>
-          <Text style={styles.amountLabel}>Total</Text>
+          <Text style={styles.amountLabel}>Amount</Text>
           <Text style={styles.amountText}>₹{item.totalAmount ?? '0'}</Text>
         </View>
       </View>
@@ -103,22 +79,20 @@ export default function BookingsScreen() {
   }
 
   function handlePress(id: string) {
-    router.push({
-      pathname: '/booking/[id]',
-      params: { id },
-    });
+    router.push({ pathname: '/booking/[id]', params: { id } });
   }
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Screen>
+        <LoadingView message="Loading your bookings…" />
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
+      <ScreenHeader title="My Bookings" subtitle="Track your service requests" />
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
@@ -133,32 +107,21 @@ export default function BookingsScreen() {
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconCircle} />
-            <Text style={styles.emptyTitle}>No bookings yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Your upcoming service bookings will appear here.
-            </Text>
-          </View>
+          <EmptyState
+            icon="📋"
+            title="No bookings yet"
+            message="Your upcoming service bookings will appear here."
+          />
         }
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
   listContent: {
     padding: spacing.lg,
+    paddingTop: 0,
     paddingBottom: spacing.xxl,
   },
   emptyContainer: {
@@ -174,9 +137,6 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   bookingHeader: {
-    marginBottom: spacing.lg,
-  },
-  bookingTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -187,16 +147,7 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weightBold,
     color: colors.text,
     flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.full,
-    marginLeft: spacing.sm,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: fonts.weightSemiBold,
+    marginRight: spacing.sm,
   },
   modeText: {
     fontSize: fonts.sizeSm,
@@ -207,13 +158,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.md,
+    marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  detailItem: {
-    flex: 1,
-  },
+  detailItem: { flex: 1 },
   detailLabel: {
     fontSize: 10,
     color: colors.textMuted,
@@ -226,9 +176,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: fonts.weightMedium,
   },
-  amountContainer: {
-    alignItems: 'flex-end',
-  },
+  amountContainer: { alignItems: 'flex-end' },
   amountLabel: {
     fontSize: 10,
     color: colors.textMuted,
@@ -240,31 +188,5 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizeMd,
     fontWeight: fonts.weightBold,
     color: colors.primary,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
-    ...shadows.card,
-  },
-  emptyTitle: {
-    fontSize: fonts.sizeXl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  emptySubtitle: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xl,
   },
 });

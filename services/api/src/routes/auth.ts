@@ -20,10 +20,15 @@ export const authRouter = Router();
 
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, name, phoneNumber } = req.body;
+    const { email, password, name, phoneNumber, termsAccepted } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Terms must be accepted server-side; client checkbox alone is not trustable.
+    if (!termsAccepted) {
+      return res.status(400).json({ error: 'You must accept the terms and conditions' });
     }
 
     if (!validateEmail(email)) {

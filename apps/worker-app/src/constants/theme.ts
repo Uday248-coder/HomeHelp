@@ -3,15 +3,32 @@ export const colors = {
   primaryDark: '#122D26',
   secondary: '#C4774B',
   background: '#F6F4EF',
+  surface: '#FFFFFF',
   card: '#FFFFFF',
   text: '#1A2C2B',
   textMuted: '#6B7280',
+  textSecondary: '#8A9493',
   success: '#16A34A',
   warning: '#F59E0B',
   error: '#DC2626',
   border: '#E5E7EB',
+  divider: '#EFEAE3',
+  overlay: 'rgba(26, 44, 43, 0.45)',
   white: '#FFFFFF',
   black: '#000000',
+  statusPending: '#B45309',
+  statusAssigned: '#1D4ED8',
+  statusInProgress: '#0F766E',
+  statusCompleted: '#16A34A',
+  statusCancelled: '#B91C1C',
+};
+
+export const statusColors: Record<string, string> = {
+  pending: colors.statusPending,
+  assigned: colors.statusAssigned,
+  in_progress: colors.statusInProgress,
+  completed: colors.statusCompleted,
+  cancelled: colors.statusCancelled,
 };
 
 export const spacing = {
@@ -23,52 +40,50 @@ export const spacing = {
   xxl: 48,
 };
 
-export const borderRadius = {
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  full: 999,
-};
-
 export const fonts = {
+  display: 'Georgia, "Times New Roman", serif',
   sizeXs: 12,
   sizeSm: 14,
   sizeMd: 16,
   sizeLg: 18,
   sizeXl: 22,
   sizeXxl: 28,
-  sizeXxxl: 34,
+  sizeTitle: 32,
   weightRegular: '400' as const,
   weightMedium: '500' as const,
   weightSemiBold: '600' as const,
   weightBold: '700' as const,
 };
 
-export const fontSize = {
-  xs: 12,
-  sm: 14,
+export const borderRadius = {
+  sm: 10,
   md: 16,
-  lg: 18,
-  xl: 22,
-  xxl: 28,
-  xxxl: 34,
+  lg: 24,
+  xl: 32,
+  full: 999,
 };
 
 export const shadows = {
   card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#1A2C2B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
   },
   button: {
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  soft: {
+    shadowColor: '#1A2C2B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 2,
   },
 };
 

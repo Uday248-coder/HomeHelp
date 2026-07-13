@@ -100,6 +100,7 @@ export default function JoinPage() {
           email: form.email,
           password: form.password,
           phoneNumber: form.phoneNumber || undefined,
+          termsAccepted: form.termsAccepted,
         }),
       });
       const authData = await authRes.json();

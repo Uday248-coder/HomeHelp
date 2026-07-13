@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
-import { colors, fontSize } from '../src/constants/theme';
+import { colors, fonts } from '../src/constants/theme';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 function RootLayoutNav() {
@@ -17,10 +18,11 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: colors.white,
-        headerTitleStyle: { fontWeight: '700', fontSize: fontSize.lg },
+        headerStyle: { backgroundColor: colors.white },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: fonts.weightSemiBold, fontSize: fonts.sizeLg },
         headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       {!token ? (
@@ -39,6 +41,7 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <StatusBar style="dark" />
       <RootLayoutNav />
     </AuthProvider>
   );

@@ -11,11 +11,12 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../src/constants/theme';
+import { colors, spacing, fonts, borderRadius, shadows } from '../src/constants/theme';
 import { api } from '../src/api/client';
 import { Booking } from '../src/types';
 import { useAuth } from '../src/context/AuthContext';
 import { locationService } from '../src/lib/location';
+import { Screen, ScreenHeader, Card, Button, StatusBadge, LoadingView, EmptyState } from '../src/components/ui';
 
 type ActionType = 'start' | 'complete' | null;
 
@@ -77,16 +78,14 @@ export default function ActiveJobScreen() {
       if (actionModal === 'start') {
         await api.startJob(selectedJob.id, otpInput);
         Alert.alert('Started', 'Job has been started!');
-        
-        // Start location tracking for this job
+
         if (worker && token) {
           await locationService.startTracking(selectedJob.id, worker.id);
         }
       } else {
         await api.completeJob(selectedJob.id, otpInput, rating);
         Alert.alert('Completed', 'Job has been marked complete!');
-        
-        // Stop location tracking
+
         locationService.stopTracking();
       }
       setActionModal(null);
@@ -104,27 +103,12 @@ export default function ActiveJobScreen() {
     loadActiveJobs();
   }
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case 'assigned':
-        return { label: 'Assigned', color: colors.warning };
-      case 'in_progress':
-        return { label: 'In Progress', color: colors.primary };
-      default:
-        return { label: status, color: colors.textMuted };
-    }
-  }
-
   function renderJob(job: Booking) {
-    const badge = getStatusBadge(job.status);
-
     return (
-      <View key={job.id} style={styles.card}>
+      <Card key={job.id} style={styles.card}>
         <View style={styles.cardTop}>
           <Text style={styles.serviceType}>{job.serviceType}</Text>
-          <View style={[styles.badge, { backgroundColor: badge.color + '20' }]}>
-            <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
-          </View>
+          <StatusBadge status={job.status} />
         </View>
 
         {job.user ? (
@@ -145,53 +129,45 @@ export default function ActiveJobScreen() {
 
         <View style={styles.actions}>
           {job.status === 'assigned' && (
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => openActionModal(job, 'start')}
-            >
-              <Text style={styles.actionBtnText}>Start Job</Text>
-            </TouchableOpacity>
+            <Button title="Start Job" onPress={() => openActionModal(job, 'start')} />
           )}
           {job.status === 'in_progress' && (
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.success }]}
+            <Button
+              title="Complete Job"
+              variant="primary"
               onPress={() => openActionModal(job, 'complete')}
-            >
-              <Text style={styles.actionBtnText}>Complete Job</Text>
-            </TouchableOpacity>
+            />
           )}
         </View>
 
         <TouchableOpacity style={styles.emergencyBtn}>
           <Text style={styles.emergencyText}>🚨 Emergency Contact</Text>
         </TouchableOpacity>
-      </View>
+      </Card>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Screen>
+        <LoadingView message="Loading your active jobs..." />
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
+      <ScreenHeader title="Active Jobs" subtitle="Track and complete your shifts" />
       <ScrollView
         contentContainerStyle={jobs.length === 0 ? styles.emptyContainer : styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <Text style={styles.heading}>Active Job</Text>
         {jobs.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>No active jobs</Text>
-            <Text style={styles.emptySub}>
-              Accept a job from the Jobs tab to get started
-            </Text>
-          </View>
+          <EmptyState
+            icon="🔍"
+            title="No active jobs"
+            message="Accept a job from the Jobs tab to get started"
+          />
         ) : (
           jobs.map(renderJob)
         )}
@@ -256,42 +232,23 @@ export default function ActiveJobScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
   content: {
     padding: spacing.md,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
   emptyContainer: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
-  heading: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadow.card,
   },
   cardTop: {
     flexDirection: 'row',
@@ -300,27 +257,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   serviceType: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    fontSize: fonts.sizeLg,
+    fontWeight: fonts.weightBold,
     color: colors.text,
     flex: 1,
   },
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  badgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
-  },
   customerName: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.text,
     marginBottom: 2,
   },
   address: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },
@@ -330,7 +278,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   detail: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.text,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.sm,
@@ -338,20 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  actionBtnText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    marginTop: spacing.xs,
   },
   emergencyBtn: {
     marginTop: spacing.sm,
@@ -360,30 +295,12 @@ const styles = StyleSheet.create({
   },
   emergencyText: {
     color: colors.error,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  empty: {
-    alignItems: 'center',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  emptySub: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
+    fontSize: fonts.sizeSm,
+    fontWeight: fonts.weightSemiBold,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     padding: spacing.lg,
   },
@@ -391,29 +308,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    ...shadow.card,
+    ...shadows.card,
   },
   modalTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontSize: fonts.sizeXl,
+    fontWeight: fonts.weightBold,
     color: colors.text,
     marginBottom: spacing.xs,
   },
   modalSub: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
     marginBottom: spacing.lg,
   },
   otpInput: {
     backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    fontSize: fontSize.xl,
+    fontSize: fonts.sizeXxl,
     color: colors.text,
     textAlign: 'center',
     letterSpacing: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
@@ -424,9 +341,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingLabel: {
-    fontSize: fontSize.md,
+    fontSize: fonts.sizeMd,
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: fonts.weightSemiBold,
     marginRight: spacing.sm,
   },
   star: {
@@ -442,27 +359,27 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
     borderColor: colors.border,
   },
   cancelText: {
     color: colors.textMuted,
-    fontSize: fontSize.md,
-    fontWeight: '600',
+    fontSize: fonts.sizeMd,
+    fontWeight: fonts.weightSemiBold,
   },
   confirmBtn: {
     flex: 1,
     backgroundColor: colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
   },
   confirmText: {
     color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    fontSize: fonts.sizeMd,
+    fontWeight: fonts.weightBold,
   },
 });

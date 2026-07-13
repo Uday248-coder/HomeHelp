@@ -4,12 +4,18 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../../src/constants/theme';
+import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { api } from '../../src/api/client';
 import { Payout } from '../../src/types';
+import { Screen, ScreenHeader, Card, LoadingView, EmptyState } from '../../src/components/ui';
+
+const PAYOUT_STATUS: Record<string, { color: string; label: string }> = {
+  processed: { color: colors.success, label: 'Paid' },
+  pending: { color: colors.warning, label: 'Pending' },
+  failed: { color: colors.error, label: 'Failed' },
+};
 
 export default function EarningsScreen() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -51,34 +57,19 @@ export default function EarningsScreen() {
     })
     .reduce((sum, p) => (p.status === 'processed' ? sum + p.amount : sum), 0);
 
-  function getStatusStyle(status: string) {
-    switch (status) {
-      case 'processed':
-        return { bg: colors.success + '20', text: colors.success };
-      case 'pending':
-        return { bg: colors.warning + '20', text: colors.warning };
-      case 'failed':
-        return { bg: colors.error + '20', text: colors.error };
-      default:
-        return { bg: colors.border, text: colors.textMuted };
-    }
-  }
-
   function renderPayout({ item }: { item: Payout }) {
-    const statusStyle = getStatusStyle(item.status);
+    const status = PAYOUT_STATUS[item.status] || PAYOUT_STATUS.pending;
     const startDate = new Date(item.weekStart).toLocaleDateString();
     const endDate = new Date(item.weekEnd).toLocaleDateString();
 
     return (
-      <View style={styles.payoutCard}>
+      <Card style={styles.payoutCard}>
         <View style={styles.payoutTop}>
           <Text style={styles.weekRange}>
-            {startDate} - {endDate}
+            {startDate} – {endDate}
           </Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Text style={[styles.statusText, { color: statusStyle.text }]}>
-              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-            </Text>
+          <View style={[styles.statusBadge, { backgroundColor: status.color + '1A', borderColor: status.color + '40' }]}>
+            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
         </View>
         <Text style={styles.amount}>₹{item.amount}</Text>
@@ -87,20 +78,22 @@ export default function EarningsScreen() {
             Paid on {new Date(item.paidAt).toLocaleDateString()}
           </Text>
         )}
-      </View>
+      </Card>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Screen>
+        <LoadingView message="Loading your earnings..." />
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
+      <ScreenHeader title="Earnings" subtitle="Track your weekly payouts" />
+
       <View style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
@@ -120,50 +113,40 @@ export default function EarningsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderPayout}
         contentContainerStyle={payouts.length === 0 ? styles.emptyContainer : styles.list}
-        ListHeaderComponent={
-          <Text style={styles.sectionTitle}>Payout History</Text>
-        }
+        ListHeaderComponent={<Text style={styles.sectionTitle}>Payout History</Text>}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>💰</Text>
-            <Text style={styles.emptyTitle}>No earnings yet</Text>
-            <Text style={styles.emptySub}>
-              Complete jobs to see your earnings here
-            </Text>
-          </View>
+          <EmptyState
+            icon="💰"
+            title="No earnings yet"
+            message="Complete jobs to see your earnings here"
+          />
         }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
   list: {
     padding: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
   emptyContainer: {
-    flex: 1,
-    padding: spacing.md,
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
   },
   summaryCard: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     backgroundColor: colors.primary,
-    margin: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    ...shadow.card,
+    ...shadows.button,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -176,32 +159,28 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     marginHorizontal: spacing.md,
   },
   summaryLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: 'rgba(255,255,255,0.8)',
     marginBottom: spacing.xs,
   },
   summaryValue: {
-    fontSize: fontSize.xl,
-    fontWeight: '800',
+    fontSize: fonts.sizeXxl,
+    fontWeight: fonts.weightBold,
     color: colors.white,
   },
   sectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
+    fontSize: fonts.sizeLg,
+    fontWeight: fonts.weightSemiBold,
     color: colors.text,
     marginBottom: spacing.md,
-    marginTop: spacing.sm,
+    marginHorizontal: spacing.md,
   },
   payoutCard: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadow.card,
   },
   payoutTop: {
     flexDirection: 'row',
@@ -210,46 +189,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   weekRange: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: fonts.weightMedium,
   },
   statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
   },
   statusText: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontSize: fonts.sizeXs,
+    fontWeight: fonts.weightSemiBold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   amount: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontSize: fonts.sizeXxl,
+    fontWeight: fonts.weightBold,
     color: colors.text,
   },
   paidDate: {
-    fontSize: fontSize.xs,
+    fontSize: fonts.sizeXs,
     color: colors.textMuted,
     marginTop: spacing.xs,
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: spacing.xl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  emptySub: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 });

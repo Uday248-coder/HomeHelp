@@ -14,14 +14,7 @@ import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constan
 import { api } from '../../src/api/client';
 import { Booking } from '../../src/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-
-const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: '#fef3c7', text: '#92400e', label: 'Pending' },
-  assigned: { bg: '#dbeafe', text: '#1e40af', label: 'Assigned' },
-  in_progress: { bg: '#d1fae5', text: '#065f46', label: 'In Progress' },
-  completed: { bg: '#f3f4f6', text: '#374151', label: 'Completed' },
-  cancelled: { bg: '#fee2e2', text: '#991b1b', label: 'Cancelled' },
-};
+import { StatusBadge } from '../../src/components/ui';
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return '—';
@@ -178,16 +171,10 @@ export default function BookingDetailScreen() {
 
   if (!booking) return null;
 
-  const statusStyle = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.statusSection}>
-        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-          <Text style={[styles.statusText, { color: statusStyle.text }]}>
-            {statusStyle.label}
-          </Text>
-        </View>
+        <StatusBadge status={booking.status} />
         <Text style={styles.modeLabel}>
           {booking.mode === 'home_help' ? '🧹 Home Help' : '🚗 Driver'}
         </Text>

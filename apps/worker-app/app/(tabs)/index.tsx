@@ -4,15 +4,15 @@ import {
   Text,
   Switch,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   RefreshControl,
   SafeAreaView,
 } from 'react-native';
-import { colors, spacing, borderRadius, fonts, shadows } from '../../src/constants/theme';
+import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/api/client';
 import { useRouter } from 'expo-router';
+import { ScreenHeader, Card, Button } from '../../src/components/ui';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -78,15 +78,19 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.userName}>{worker?.name || 'Worker'}</Text>
-          </View>
-          <View style={styles.profilePlaceholder} />
-        </View>
+        <ScreenHeader
+          title={`Hi, ${worker?.name?.split(' ')[0] || 'Partner'}`}
+          subtitle="Here's your day at a glance"
+          right={
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(worker?.name || 'W').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          }
+        />
 
-        <View style={styles.availabilityCard}>
+        <Card style={styles.availabilityCard}>
           <View style={styles.availabilityRow}>
             <View style={styles.availInfo}>
               <Text style={styles.availLabel}>Work Status</Text>
@@ -102,7 +106,7 @@ export default function DashboardScreen() {
               disabled={toggling}
             />
           </View>
-        </View>
+        </Card>
 
         <Text style={styles.sectionTitle}>Your Performance</Text>
         <View style={styles.statsGrid}>
@@ -116,16 +120,13 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.primaryButton}
+        <Button
+          title="Find Available Jobs"
           onPress={() => router.push('/(tabs)/jobs')}
-        >
-          <Text style={styles.primaryButtonText}>Find Available Jobs</Text>
-        </TouchableOpacity>
+          style={styles.cta}
+        />
 
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
+        <Button title="Sign Out" variant="ghost" onPress={logout} style={styles.logout} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -141,36 +142,24 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  greeting: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-  },
-  userName: {
-    fontSize: fonts.sizeXxl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-  },
-  profilePlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primary,
-    opacity: 0.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: fonts.sizeLg,
+    fontWeight: fonts.weightBold,
+    color: colors.white,
   },
   availabilityCard: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
     marginBottom: spacing.xl,
-    ...shadows.card,
   },
   availabilityRow: {
     flexDirection: 'row',
@@ -181,7 +170,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   availLabel: {
-    fontSize: fonts.sizeSm,
+    fontSize: fonts.sizeXs,
     fontWeight: fonts.weightSemiBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
@@ -226,30 +215,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: fonts.weightMedium,
   },
-  primaryButton: {
-    height: 56,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.button,
+  cta: {
+    marginTop: spacing.sm,
   },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightBold,
-  },
-  logoutButton: {
-    marginTop: spacing.xl,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: borderRadius.md,
-    backgroundColor: '#FEE2E2',
-  },
-  logoutText: {
-    color: colors.error,
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightBold,
+  logout: {
+    marginTop: spacing.md,
   },
 });
-

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize } from '../../src/constants/theme';
+import { colors, fonts } from '../../src/constants/theme';
 
 export default function TabsLayout() {
   return (
@@ -9,7 +9,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
-          fontSize: fontSize.xs,
+          fontSize: fonts.sizeXs,
           fontWeight: '600',
         },
         tabBarStyle: {
@@ -20,12 +20,14 @@ export default function TabsLayout() {
           height: 60,
         },
         headerStyle: {
-          backgroundColor: colors.primary,
+          backgroundColor: colors.white,
         },
-        headerTintColor: colors.white,
+        headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: '700',
+          fontWeight: fonts.weightSemiBold,
+          fontSize: fonts.sizeLg,
         },
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen

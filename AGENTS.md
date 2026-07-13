@@ -23,8 +23,7 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 #### Backend API (`services/api/`)
 - Email/password auth: `POST /api/auth/register` + `POST /api/auth/login` (bcrypt), `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/forgot-password` + `POST /api/auth/reset-password` (hashed token + 1h expiry)
 - **Security Hardening** — JWT authentication using `httpOnly`, `secure`, `sameSite: 'lax'` cookies (prevents XSS theft)
-- **Authentication** — Logout implementation and Firebase Auth integration (`POST /api/auth/firebase` verifies Firebase ID token, upserts user, returns JWT in cookie and response body)
-- **Lazy Firebase Initialization** — Firebase admin initialized on first use to prevent API boot crashes if credentials are missing
+- **Authentication** — Email/password only (bcrypt). `POST /api/auth/register` + `POST /api/auth/login` issue a JWT in an `httpOnly`, `secure`, `sameSite: 'lax'` cookie (and also return it in the body for token-based clients). There is **no Firebase dependency anywhere** in the codebase.
 - **Comprehensive Error Logging** — All route catch blocks now log errors with prefix for searchable logs
 - **Real-time Communication** — Socket.io integration for worker location tracking
 - Admin role system (`isAdmin` field on User model)
@@ -158,7 +157,7 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 | Badge | `website/src/components/ui/Badge.tsx` | 6 variants, optional dot indicator, 2 sizes |
 | Input | `website/src/components/ui/Input.tsx` | label, error, helperText, aria-invalid, aria-describedby |
 | Sidebar | `admin/src/components/Sidebar.tsx` | Gradient logo, collapsible mobile, dark/light toggle, logout |
-| LoginScreen | `admin/src/components/LoginScreen.tsx` | Ambient glow bg, Firebase phone auth, reCAPTCHA, OTP flow |
+| LoginScreen | `admin/src/components/LoginScreen.tsx` | Ambient glow bg, email + password login |
 | StatCard | `admin/src/components/dashboard/StatCard.tsx` | 5 color themes, group-hover icon scale, trend text |
 | BarChart | `admin/src/components/dashboard/BarChart.tsx` | Gradient bars, hover highlight + tooltip, empty state |
 | DonutChart | `admin/src/components/dashboard/DonutChart.tsx` | SVG arc segments, hover brightness, legend |
@@ -202,8 +201,7 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 - **`POST `/api/workers` admin-gated** — worker creation now requires admin role
 - **`GET `/api/workers/available/:mode` auth-gated** with field select (phone/coordinates excluded)
 - **Global + auth rate limiting** in `index.ts`
-- **Lazy Firebase Initialization** — prevents API crashes when service account is missing
-- **Token response in Auth** — /api/auth/firebase and /api/auth/verify-otp now return tokens for token-based clients
+- **Token response in Auth** — `/api/auth/register` and `/api/auth/login` return a JWT (Bearer) for token-based clients (mobile apps, website)
 - **Comprehensive Error Logging** — all route catch blocks now log with searchable prefixes
 - **Real-time location tracking** — Socket.io implementation for worker tracking
 
@@ -215,7 +213,7 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma |
 | OTP/Cache | Upstash Redis |
-| Auth | **Firebase Auth (phone) + JWT (custom/httpOnly cookies)** — Zero-cost via test numbers |
+| Auth | **Email/password (bcrypt) + JWT (custom/httpOnly cookies)** |
 | Error tracking | Sentry (wired, no DSN) |
 | Deploy (API) | Render |
 | Deploy (web) | Vercel |
@@ -240,16 +238,14 @@ HomeHelp/
 └── HomeHelp_Bud101_Prompt.md  # Full product brief
 ```
 
-## Firebase Test Phone Auth (Zero-Cost Setup)
+## Authentication (Email/Password Only)
 
-Auth uses Firebase Phone Authentication with test numbers — no real SMS, no paid gateway.
+Auth is **email/password only** via bcrypt — there is no Firebase, SMS, or phone-OTP dependency anywhere in the codebase. JWTs are issued in `httpOnly`, `secure`, `sameSite: 'lax'` cookies (and returned in the response body for the mobile apps / website token clients).
 
-**Console setup:** Firebase Console → Authentication → Sign-in method → Phone → Enable
-**Test numbers:** Add `+91 9999988888` with test OTP `123456` under Test phone numbers
-**Authorized domains:** Add `homehelp-admin.vercel.app`, `homehelp-website.vercel.app`, `localhost`
-**Service key:** Generate from Service accounts tab → set `FIREBASE_SERVICE_ACCOUNT_KEY` on Render
-
-**UI hints:** LoginScreen and `/join` page show test number hints in development mode.
+- `POST /api/auth/register` — create account (requires `termsAccepted: true` server-side)
+- `POST /api/auth/login` — email + password
+- `POST /api/auth/forgot-password` → `POST /api/auth/reset-password` (hashed token, 1h expiry)
+- The legacy `FIREBASE_SERVICE_ACCOUNT_KEY` / `FCM_SERVER_KEY` env vars are **unused** and can be deleted.
 
 ## Credentials Needed
 
@@ -267,8 +263,8 @@ These are stored as env vars on Render. For local dev, add to `services/api/.env
 | `UPI_VPA` | Your UPI ID (e.g. `name@oksbi`) | ❌ Not set — required for fee-free payments |
 | `UPI_NAME` | UPI display name | ✅ Optional (defaults `HomeHelp`) |
 | `GOOGLE_MAPS_API_KEY` | Google Cloud Console | ❌ Not set |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | Firebase Console → Service Account → Generate Key | ❌ Not set on Render |
-| `FCM_SERVER_KEY` | Firebase project settings | ❌ Not set |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | Unused — can be deleted | — |
+| `FCM_SERVER_KEY` | Unused — can be deleted | — |
 
 ## Database Schema (Prisma)
 
@@ -288,9 +284,7 @@ See: `services/api/src/routes/` (new: `users.ts`, enhanced: `payouts.ts` + `stat
 |-------|--------|--------|-------------|
 | `/health` | GET | ✅ Live | Health check |
 | `/api/auth/send-otp` | POST | ✅ Live | Sends OTP via Redis (rate-limited) |
-| `/api/auth/verify-otp` | POST | ✅ Live | Verifies OTP, returns JWT in cookie |
 | `/api/auth/me` | GET | ✅ Live | Get current user |
-| `/api/auth/firebase` | POST | ✅ Live | Verify Firebase ID token, return JWT in cookie |
 | `/api/bookings` | GET/POST | ✅ Live | List/create bookings (auth) |
 | `/api/bookings/:id` | GET | ✅ Live | Get booking detail |
 | `/api/bookings/:id/cancel` | PATCH | ✅ Live | Cancel booking |
@@ -326,19 +320,17 @@ See: `services/api/src/routes/` (new: `users.ts`, enhanced: `payouts.ts` + `stat
 4. **Run migrations**: `npm run db:migrate` in `services/api`
 5. **Start dev**: `npm run dev:api` for backend, `npm run dev:website` for frontend
 
-**Firebase setup:** Enable Phone sign-in in Firebase Console → add test number `+91 9999988888` with OTP `123456`. No real SMS, unlimited free OTP.
-
 No special setup needed. The workspace config, TypeScript, Prisma, and all dependencies are ready.
 
 ## What to Build Next (Priority Order)
 
 ### Phase 0 — Polish & Production (In Progress)
-1. Firebase Phone Auth via test numbers for unlimited free OTP — MSG91 removed, all SMS code deleted
-2. Set Sentry DSN — ✅ Code wired, set `SENTRY_DSN` on Render
+1. ~~Firebase Phone Auth~~ — Removed. Auth is email/password only; no Firebase dependency remains.
+2. Set Sentry DSN — ✅ Code wired, set `SENTRY_DSN` on Render (optional)
 3. Loading skeleton polish for admin dashboard — ✅ Done in Session 6
 4. **Set `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website** ✅
-5. **Set `FIREBASE_SERVICE_ACCOUNT_KEY` env var on Render** — ✅ Code reads from env, just need to set it
-6. **Add Vercel URLs to Firebase authorized domains** — Config only
+5. **Set strong `JWT_SECRET` on Render** — required (generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+6. **Create first admin** — `npm run create-admin -- admin@homehelp.ai <password>` (scripts/create-admin.ts upserts an admin user from scratch)
 
 ### Phase 1 — Mobile apps (2+ weeks)
 7. Customer Expo app (React Native) with mode switcher

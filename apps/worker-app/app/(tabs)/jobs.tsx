@@ -3,15 +3,14 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../../src/constants/theme';
+import { colors, spacing, fonts, borderRadius } from '../../src/constants/theme';
 import { api } from '../../src/api/client';
 import { Booking } from '../../src/types';
+import { Screen, ScreenHeader, Card, Button, LoadingView, EmptyState } from '../../src/components/ui';
 
 export default function JobsScreen() {
   const [jobs, setJobs] = useState<Booking[]>([]);
@@ -59,7 +58,7 @@ export default function JobsScreen() {
 
   function renderJob({ item }: { item: Booking }) {
     return (
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.modeIcon}>{getModeIcon(item.mode)}</Text>
           <View style={styles.cardHeaderText}>
@@ -88,80 +87,60 @@ export default function JobsScreen() {
           ) : null}
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.acceptBtn,
-            acceptingId === item.id && styles.acceptBtnDisabled,
-          ]}
+        <Button
+          title={acceptingId === item.id ? 'Accepting...' : 'Accept Job'}
           onPress={() => handleAccept(item.id)}
+          loading={acceptingId === item.id}
           disabled={acceptingId === item.id}
-        >
-          {acceptingId === item.id ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <Text style={styles.acceptBtnText}>Accept Job</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        />
+      </Card>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Screen>
+        <LoadingView message="Finding jobs near you..." />
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
+      <ScreenHeader title="Available Jobs" subtitle="Pick up a shift near you" />
       <FlatList
         data={jobs}
         keyExtractor={(item) => item.id}
         renderItem={renderJob}
         contentContainerStyle={jobs.length === 0 ? styles.emptyContainer : styles.list}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📭</Text>
-            <Text style={styles.emptyTitle}>No jobs available</Text>
-            <Text style={styles.emptySub}>Check back later for new opportunities</Text>
-          </View>
+          <EmptyState
+            icon="📭"
+            title="No jobs available"
+            message="Check back later for new opportunities"
+          />
         }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
   list: {
     padding: spacing.md,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
   emptyContainer: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadow.card,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -176,20 +155,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   serviceType: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    fontSize: fonts.sizeLg,
+    fontWeight: fonts.weightBold,
     color: colors.text,
   },
   modeLabel: {
-    fontSize: fontSize.xs,
+    fontSize: fonts.sizeXs,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: fonts.weightSemiBold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
     marginTop: 2,
   },
   address: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
     marginBottom: spacing.sm,
+    lineHeight: 20,
   },
   detailsRow: {
     flexDirection: 'row',
@@ -198,43 +180,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   detail: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.text,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
-  },
-  acceptBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  acceptBtnDisabled: {
-    opacity: 0.7,
-  },
-  acceptBtnText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '700',
-  },
-  empty: {
-    alignItems: 'center',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  emptySub: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 });

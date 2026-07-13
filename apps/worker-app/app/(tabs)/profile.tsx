@@ -1,11 +1,19 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../../src/constants/theme';
+import { View, Text, Alert, StyleSheet } from 'react-native';
+import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
+import { ScreenScroll, ScreenHeader, Card, Button } from '../../src/components/ui';
 
 export default function ProfileScreen() {
   const { worker, logout } = useAuth();
 
   if (!worker) return null;
+
+  function handleLogout() {
+    Alert.alert('Logout', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', style: 'destructive', onPress: logout },
+    ]);
+  }
 
   function renderStars(rating: number) {
     return (
@@ -33,34 +41,39 @@ export default function ProfileScreen() {
     }
   }
 
+  const initial = (worker.name || 'W').charAt(0).toUpperCase();
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.avatarCircle}>
-        <Text style={styles.avatarText}>
-          {(worker.name || 'W').charAt(0).toUpperCase()}
-        </Text>
+    <ScreenScroll>
+      <ScreenHeader title="Profile" subtitle="Your partner account" />
+
+      <View style={styles.avatarSection}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+        <Text style={styles.userName}>{worker.name || 'Worker'}</Text>
+        <Text style={styles.userSubtext}>{worker.phoneNumber || 'No phone linked'}</Text>
+        <View style={styles.typeChip}>
+          <Text style={styles.typeChipText}>{getWorkerTypeLabel(worker.workerType)}</Text>
+        </View>
       </View>
 
-      <Text style={styles.name}>{worker.name || 'Worker'}</Text>
-      <Text style={styles.phone}>{worker.phoneNumber}</Text>
-      <Text style={styles.type}>{getWorkerTypeLabel(worker.workerType)}</Text>
-
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Rating</Text>
         {renderStars(worker.averageRating)}
-      </View>
+      </Card>
 
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Verification Status</Text>
 
         <View style={styles.verifRow}>
           <Text style={styles.verifLabel}>Aadhaar</Text>
           {worker.aadhaarVerified ? (
-            <View style={[styles.verifBadge, { backgroundColor: colors.success + '20' }]}>
-              <Text style={[styles.verifBadgeText, { color: colors.success }]}>Verified ✅</Text>
+            <View style={[styles.verifBadge, { backgroundColor: colors.success + '1A', borderColor: colors.success + '40' }]}>
+              <Text style={[styles.verifBadgeText, { color: colors.success }]}>Verified</Text>
             </View>
           ) : (
-            <View style={[styles.verifBadge, { backgroundColor: colors.warning + '20' }]}>
+            <View style={[styles.verifBadge, { backgroundColor: colors.warning + '1A', borderColor: colors.warning + '40' }]}>
               <Text style={[styles.verifBadgeText, { color: colors.warning }]}>Pending</Text>
             </View>
           )}
@@ -69,92 +82,86 @@ export default function ProfileScreen() {
         <View style={[styles.verifRow, { marginTop: spacing.sm }]}>
           <Text style={styles.verifLabel}>License</Text>
           {worker.licenseVerified ? (
-            <View style={[styles.verifBadge, { backgroundColor: colors.success + '20' }]}>
-              <Text style={[styles.verifBadgeText, { color: colors.success }]}>Verified ✅</Text>
+            <View style={[styles.verifBadge, { backgroundColor: colors.success + '1A', borderColor: colors.success + '40' }]}>
+              <Text style={[styles.verifBadgeText, { color: colors.success }]}>Verified</Text>
             </View>
           ) : (
-            <View style={[styles.verifBadge, { backgroundColor: colors.warning + '20' }]}>
+            <View style={[styles.verifBadge, { backgroundColor: colors.warning + '1A', borderColor: colors.warning + '40' }]}>
               <Text style={[styles.verifBadgeText, { color: colors.warning }]}>Pending</Text>
             </View>
           )}
         </View>
-      </View>
+      </Card>
 
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Stats</Text>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{worker.totalJobs}</Text>
           <Text style={styles.statLabel}>Total Jobs Completed</Text>
         </View>
         <View style={[styles.statItem, { marginTop: spacing.md }]}>
-          <Text style={styles.statValue}>
+          <Text style={[styles.statValue, { color: worker.isActive ? colors.success : colors.error }]}>
             {worker.isActive ? 'Active' : 'Inactive'}
           </Text>
           <Text style={styles.statLabel}>Account Status</Text>
         </View>
-      </View>
+      </Card>
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <Button title="Sign Out" variant="secondary" onPress={handleLogout} style={styles.logout} />
+    </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
+  avatarSection: {
     alignItems: 'center',
-    padding: spacing.lg,
-    paddingTop: spacing.xxl,
+    marginBottom: spacing.xl,
   },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
+    ...shadows.button,
   },
   avatarText: {
-    fontSize: fontSize.xxxl,
-    fontWeight: '700',
+    fontSize: 34,
+    fontWeight: fonts.weightBold,
     color: colors.white,
   },
-  name: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
+  userName: {
+    fontSize: fonts.sizeXxl,
+    fontWeight: fonts.weightBold,
     color: colors.text,
   },
-  phone: {
-    fontSize: fontSize.sm,
+  userSubtext: {
+    fontSize: fonts.sizeMd,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 4,
   },
-  type: {
-    fontSize: fontSize.sm,
+  typeChip: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  typeChipText: {
+    fontSize: fonts.sizeSm,
+    fontWeight: fonts.weightSemiBold,
     color: colors.primary,
-    fontWeight: '600',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
   },
-  card: {
-    width: '100%',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadow.card,
-  },
+  card: { marginBottom: spacing.md },
   cardTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    fontSize: fonts.sizeLg,
+    fontWeight: fonts.weightBold,
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   starsRow: {
     flexDirection: 'row',
@@ -169,7 +176,7 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
   ratingText: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
     marginLeft: spacing.sm,
   },
@@ -179,43 +186,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   verifLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.text,
   },
   verifBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
   },
   verifBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontSize: fonts.sizeXs,
+    fontWeight: fonts.weightSemiBold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   statItem: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontSize: fonts.sizeXxl,
+    fontWeight: fonts.weightBold,
     color: colors.primary,
   },
   statLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
     marginTop: 2,
   },
-  logoutBtn: {
-    width: '100%',
-    marginTop: spacing.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  logoutText: {
-    color: colors.error,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
+  logout: { marginTop: spacing.md },
 });

@@ -12,7 +12,6 @@
     "@base-ui/react": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "firebase": "^12.15.0",
     "lucide-react": "^1.23.0",
     "next": "14.2.35",
     "qrcode.react": "^3.2.0",

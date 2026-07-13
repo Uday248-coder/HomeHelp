@@ -1,5 +1,11 @@
 import { Resend } from 'resend';
 
+// TODO(email): No domain/budget yet — Resend can't reach real customers without a
+// verified domain. Migrate this module to Brevo (free 300/day, single-sender verify,
+// no domain required) when transactional email is enabled. Until then, calls no-op
+// with a console.warn when RESEND_API_KEY is unset, and reset links fall back to
+// devResetUrl / server logs.
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'HomeHelp <noreply@homehelp.ai>';
 

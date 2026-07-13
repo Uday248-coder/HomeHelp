@@ -87,6 +87,10 @@ const config: Config = {
           "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "slide-in": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
         "scale-in": {
           "0%": { opacity: "0", transform: "scale(0.95)" },
           "100%": { opacity: "1", transform: "scale(1)" },
@@ -99,6 +103,7 @@ const config: Config = {
       animation: {
         "fade-in": "fade-in 0.4s cubic-bezier(0.16,1,0.3,1) forwards",
         "fade-in-up": "fade-in-up 0.5s cubic-bezier(0.16,1,0.3,1) forwards",
+        "slide-in": "slide-in 0.25s cubic-bezier(0.16,1,0.3,1) forwards",
         "scale-in": "scale-in 0.3s cubic-bezier(0.16,1,0.3,1) forwards",
         "shimmer": "shimmer 2s linear infinite",
       },

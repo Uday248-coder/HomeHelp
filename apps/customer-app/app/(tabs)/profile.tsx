@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
+import { View, Text, Alert, StyleSheet } from 'react-native';
+import { colors, spacing, fonts, shadows } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
+import { ScreenScroll, ScreenHeader, Card, Button } from '../../src/components/ui';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -8,72 +9,61 @@ export default function ProfileScreen() {
   function handleLogout() {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: logout,
-      },
+      { text: 'Logout', style: 'destructive', onPress: logout },
     ]);
   }
 
+  const initial = (user?.name || user?.phoneNumber || '?').charAt(0).toUpperCase();
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScreenScroll>
+      <ScreenHeader title="Profile" subtitle="Your account at a glance" />
+
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.phoneNumber?.slice(-2) || '??'}
-          </Text>
+          <Text style={styles.avatarText}>{initial}</Text>
         </View>
         <Text style={styles.userName}>{user?.name || 'User'}</Text>
-        <Text style={styles.userSubtext}>{user?.phoneNumber ? `+91 ${user.phoneNumber}` : 'No phone linked'}</Text>
+        <Text style={styles.userSubtext}>
+          {user?.phoneNumber ? `+91 ${user.phoneNumber}` : 'No phone linked'}
+        </Text>
       </View>
 
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Account Details</Text>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Phone Number</Text>
+          <Text style={styles.infoLabel}>Phone</Text>
           <Text style={styles.infoValue}>+91 {user?.phoneNumber || 'N/A'}</Text>
         </View>
-        {user?.email && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email Address</Text>
+        {user?.email ? (
+          <View style={[styles.infoRow, styles.lastRow]}>
+            <Text style={styles.infoLabel}>Email</Text>
             <Text style={styles.infoValue}>{user.email}</Text>
           </View>
-        )}
-      </View>
+        ) : null}
+      </Card>
 
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>App Information</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Version</Text>
           <Text style={styles.infoValue}>1.0.0 (MVP)</Text>
         </View>
-        <View style={styles.infoRow}>
+        <View style={[styles.infoRow, styles.lastRow]}>
           <Text style={styles.infoLabel}>Operating City</Text>
           <Text style={styles.infoValue}>Kolkata</Text>
         </View>
-      </View>
+      </Card>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Sign Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <Button title="Sign Out" variant="secondary" onPress={handleLogout} style={styles.logout} />
+    </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
   avatarSection: {
     alignItems: 'center',
     marginBottom: spacing.xl,
-    marginTop: spacing.lg,
   },
   avatar: {
     width: 96,
@@ -86,7 +76,7 @@ const styles = StyleSheet.create({
     ...shadows.button,
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: fonts.weightBold,
     color: colors.white,
   },
@@ -100,13 +90,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 4,
   },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadows.card,
-  },
+  card: { marginBottom: spacing.md },
   cardTitle: {
     fontSize: fonts.sizeLg,
     fontWeight: fonts.weightBold,
@@ -121,6 +105,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  lastRow: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
+  },
   infoLabel: {
     fontSize: fonts.sizeSm,
     color: colors.textMuted,
@@ -131,17 +119,5 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weightSemiBold,
     color: colors.text,
   },
-  logoutButton: {
-    height: 56,
-    backgroundColor: '#FEE2E2',
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xl,
-  },
-  logoutText: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightBold,
-    color: colors.error,
-  },
+  logout: { marginTop: spacing.md },
 });

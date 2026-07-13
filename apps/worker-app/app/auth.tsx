@@ -2,17 +2,16 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
+  ScrollView,
   StyleSheet,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../src/constants/theme';
+import { colors, spacing, fonts, borderRadius, shadows } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
+import { Screen, Card, Button, Chip, TextField } from '../src/components/ui';
 
 type Mode = 'login' | 'register' | 'profile';
 
@@ -108,17 +107,19 @@ export default function AuthScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.logo}>HomeHelp</Text>
-        <Text style={styles.subtitle}>
-          {mode === 'profile' ? 'Complete your worker profile' : 'Worker Partner App'}
-        </Text>
+    <Screen>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <Text style={styles.logo}>HomeHelp</Text>
+            <Text style={styles.subtitle}>
+              {mode === 'profile' ? 'Complete your worker profile' : 'Worker Partner App'}
+            </Text>
+          </View>
 
-        <View style={styles.card}>
           {mode !== 'profile' && (
             <View style={styles.segment}>
               <TouchableOpacity
@@ -136,104 +137,88 @@ export default function AuthScreen() {
             </View>
           )}
 
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Your name"
-            placeholderTextColor={colors.textMuted}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
+          <Card>
+            <TextField
+              label="Full Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Your name"
+            />
 
-          <Text style={styles.label}>Worker Type</Text>
-          <View style={styles.typeRow}>
-            {WORKER_TYPES.map((t) => (
-              <TouchableOpacity
-                key={t.value}
-                style={[styles.typeBtn, workerType === t.value && styles.typeBtnActive]}
-                onPress={() => setWorkerType(t.value)}
-              >
-                <Text style={[styles.typeText, workerType === t.value && styles.typeTextActive]}>{t.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            <Text style={styles.label}>Worker Type</Text>
+            <View style={styles.typeRow}>
+              {WORKER_TYPES.map((t) => (
+                <Chip
+                  key={t.value}
+                  label={t.label}
+                  active={workerType === t.value}
+                  onPress={() => setWorkerType(t.value)}
+                />
+              ))}
+            </View>
 
-          {mode !== 'profile' && (
-            <>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="At least 6 characters"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-            </>
-          )}
-
-          <Text style={styles.label}>Phone (optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="+91 9876543210"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={
-              mode === 'login'
-                ? handleLogin
-                : mode === 'register'
-                ? handleRegister
-                : handleCompleteProfile
-            }
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.buttonText}>
-                {mode === 'login' ? 'Login' : mode === 'register' ? 'Create Account' : 'Save Profile'}
-              </Text>
+            {mode !== 'profile' && (
+              <>
+                <TextField
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                />
+                <TextField
+                  label="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="At least 6 characters"
+                  secureTextEntry
+                />
+              </>
             )}
-          </TouchableOpacity>
 
-          {mode !== 'profile' && (
-            <TouchableOpacity
-              style={styles.backLink}
-              onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
-            >
-              <Text style={styles.backLinkText}>
-                {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <TextField
+              label="Phone (optional)"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="+91 9876543210"
+            />
+
+            <Button
+              title={
+                loading
+                  ? 'Please wait...'
+                  : mode === 'login'
+                  ? 'Login'
+                  : mode === 'register'
+                  ? 'Create Account'
+                  : 'Save Profile'
+              }
+              onPress={
+                mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleCompleteProfile
+              }
+              loading={loading}
+              disabled={loading}
+            />
+
+            {mode !== 'profile' && (
+              <TouchableOpacity
+                style={styles.backLink}
+                onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+              >
+                <Text style={styles.backLinkText}>
+                  {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   inner: {
     flexGrow: 1,
@@ -241,31 +226,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
   logo: {
-    fontSize: fontSize.xxxl,
-    fontWeight: '800',
+    fontSize: fonts.sizeXxl,
+    fontWeight: fonts.weightBold,
+    fontFamily: fonts.display,
     color: colors.primary,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: fontSize.md,
+    fontSize: fonts.sizeMd,
     color: colors.textMuted,
     textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    ...shadow.card,
+    marginTop: spacing.sm,
   },
   segment: {
     flexDirection: 'row',
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     padding: 4,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   segmentBtn: {
     flex: 1,
@@ -275,73 +258,28 @@ const styles = StyleSheet.create({
   },
   segmentBtnActive: {
     backgroundColor: colors.card,
-    ...shadow.card,
+    ...shadows.card,
   },
   segmentText: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
+    fontSize: fonts.sizeMd,
+    fontWeight: fonts.weightSemiBold,
     color: colors.textMuted,
   },
   segmentTextActive: {
     color: colors.primary,
   },
   label: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: fonts.sizeXs,
+    fontWeight: fonts.weightSemiBold,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: spacing.sm,
     marginTop: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    fontSize: fontSize.md,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   typeRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-  },
-  typeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  typeBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  typeText: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  typeTextActive: {
-    color: colors.white,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    ...shadow.button,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '700',
   },
   backLink: {
     marginTop: spacing.md,
@@ -349,6 +287,7 @@ const styles = StyleSheet.create({
   backLinkText: {
     color: colors.primary,
     textAlign: 'center',
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
+    fontWeight: fonts.weightMedium,
   },
 });

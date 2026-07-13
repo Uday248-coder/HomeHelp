@@ -1,19 +1,10 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/api/client';
+import { ScreenScroll, ScreenHeader, Card, Button, Chip } from '../../src/components/ui';
 
 const SERVICE_OPTIONS: Record<string, { label: string; description: string; options: string[] }> = {
   home_help: {
@@ -55,7 +46,7 @@ export default function HomeScreen() {
         scheduledAt: scheduleNow ? undefined : new Date(Date.now() + 86400000).toISOString(),
       });
       Alert.alert('Success', 'Your booking has been created!', [
-        { text: 'View Details', onPress: () => router.push(`/booking/${booking.booking.id}`) }
+        { text: 'View Details', onPress: () => router.push(`/booking/${booking.booking.id}`) },
       ]);
       setAddress('');
     } catch (err: any) {
@@ -66,173 +57,100 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good day,</Text>
-            <Text style={styles.userName}>{user?.name || 'Valued Guest'}</Text>
-          </View>
-          <View style={styles.profilePlaceholder} />
-        </View>
+    <ScreenScroll>
+      <ScreenHeader
+        title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
+        subtitle="What do you need help with today?"
+      />
 
-        <Text style={styles.sectionTitle}>Choose a Service</Text>
-        <View style={styles.modeGrid}>
-          <TouchableOpacity
-            style={[styles.modeCard, mode === 'home_help' && styles.modeCardActive]}
-            onPress={() => {
-              setMode('home_help');
-              setServiceType(SERVICE_OPTIONS.home_help.options[0]);
-            }}
-          >
-            <View style={[styles.iconContainer, mode === 'home_help' && styles.iconContainerActive]}>
-              <Text style={styles.modeIcon}>🏠</Text>
-            </View>
-            <Text style={[styles.modeLabel, mode === 'home_help' && styles.modeLabelActive]}>
-              Home Help
-            </Text>
-            <Text style={styles.modeDesc}>{SERVICE_OPTIONS.home_help.description}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.modeCard, mode === 'driver' && styles.modeCardActive]}
-            onPress={() => {
-              setMode('driver');
-              setServiceType(SERVICE_OPTIONS.driver.options[0]);
-            }}
-          >
-            <View style={[styles.iconContainer, mode === 'driver' && styles.iconContainerActive]}>
-              <Text style={styles.modeIcon}>🚗</Text>
-            </View>
-            <Text style={[styles.modeLabel, mode === 'driver' && styles.modeLabelActive]}>
-              Driver
-            </Text>
-            <Text style={styles.modeDesc}>{SERVICE_OPTIONS.driver.description}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.bookingCard}>
-          <Text style={styles.cardTitle}>Booking Details</Text>
-          
-          <Text style={styles.label}>Service Type</Text>
-          <View style={styles.optionsGrid}>
-            {SERVICE_OPTIONS[mode].options.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.optionChip, serviceType === opt && styles.optionChipActive]}
-                onPress={() => setServiceType(opt)}
-              >
-                <Text style={[styles.optionChipText, serviceType === opt && styles.optionChipTextActive]}>
-                  {opt}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>Service Address</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter full address, including landmark"
-            placeholderTextColor={colors.textMuted}
-            value={address}
-            onChangeText={setAddress}
-            multiline
-          />
-
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Duration</Text>
-              <View style={styles.durationRow}>
-                {DURATION_OPTIONS.map((h) => (
-                  <TouchableOpacity
-                    key={h}
-                    style={[styles.durationChip, duration === h && styles.durationChipActive]}
-                    onPress={() => setDuration(h)}
-                  >
-                    <Text style={[styles.durationText, duration === h && styles.durationTextActive]}>
-                      {h}h
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+      <Text style={styles.sectionTitle}>Choose a Service</Text>
+      <View style={styles.modeGrid}>
+        {(['home_help', 'driver'] as const).map((m) => {
+          const active = mode === m;
+          return (
+            <TouchableOpacity
+              key={m}
+              style={[styles.modeCard, active && styles.modeCardActive]}
+              onPress={() => {
+                setMode(m);
+                setServiceType(SERVICE_OPTIONS[m].options[0]);
+              }}
+            >
+              <View style={[styles.iconContainer, active && styles.iconContainerActive]}>
+                <Text style={styles.modeIcon}>{m === 'home_help' ? '🏠' : '🚗'}</Text>
               </View>
-            </View>
-          </View>
-
-          <Text style={styles.label}>Schedule</Text>
-          <View style={styles.scheduleRow}>
-            <TouchableOpacity
-              style={[styles.scheduleBtn, scheduleNow && styles.scheduleBtnActive]}
-              onPress={() => setScheduleNow(true)}
-            >
-              <Text style={[styles.scheduleBtnText, scheduleNow && styles.scheduleBtnTextActive]}>Immediate</Text>
+              <Text style={[styles.modeLabel, active && styles.modeLabelActive]}>
+                {SERVICE_OPTIONS[m].label}
+              </Text>
+              <Text style={styles.modeDesc}>{SERVICE_OPTIONS[m].description}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.scheduleBtn, !scheduleNow && styles.scheduleBtnActive]}
-              onPress={() => setScheduleNow(false)}
-            >
-              <Text style={[styles.scheduleBtnText, !scheduleNow && styles.scheduleBtnTextActive]}>Scheduled</Text>
-            </TouchableOpacity>
-          </View>
+          );
+        })}
+      </View>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleBook}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Confirm Booking</Text>
-            )}
-          </TouchableOpacity>
+      <Card style={styles.bookingCard}>
+        <Text style={styles.cardTitle}>Booking Details</Text>
+
+        <Text style={styles.label}>Service Type</Text>
+        <View style={styles.optionsGrid}>
+          {SERVICE_OPTIONS[mode].options.map((opt) => (
+            <Chip key={opt} label={opt} active={serviceType === opt} onPress={() => setServiceType(opt)} />
+          ))}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+        <Text style={styles.label}>Service Address</Text>
+        <TextInput
+          style={styles.textArea}
+          placeholder="Enter full address, including landmark"
+          placeholderTextColor={colors.textSecondary}
+          value={address}
+          onChangeText={setAddress}
+          multiline
+          textAlignVertical="top"
+        />
+
+        <Text style={styles.label}>Duration (hours)</Text>
+        <View style={styles.durationRow}>
+          {DURATION_OPTIONS.map((h) => (
+            <Chip key={h} label={`${h}h`} active={duration === h} onPress={() => setDuration(h)} />
+          ))}
+        </View>
+
+        <Text style={styles.label}>Schedule</Text>
+        <View style={styles.scheduleRow}>
+          <ScheduleBtn label="Immediate" active={scheduleNow} onPress={() => setScheduleNow(true)} />
+          <ScheduleBtn label="Scheduled" active={!scheduleNow} onPress={() => setScheduleNow(false)} />
+        </View>
+
+        <Button title="Confirm Booking" onPress={handleBook} loading={loading} style={styles.cta} />
+      </Card>
+    </ScreenScroll>
+  );
+}
+
+function ScheduleBtn({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={[styles.scheduleBtn, active && styles.scheduleBtnActive]} onPress={onPress}>
+      <Text style={[styles.scheduleBtnText, active && styles.scheduleBtnTextActive]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    marginTop: spacing.md,
-  },
-  greeting: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-    fontWeight: fonts.weightRegular,
-  },
-  userName: {
-    fontSize: fonts.sizeXxl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-  },
-  profilePlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    opacity: 0.2,
-  },
   sectionTitle: {
     fontSize: fonts.sizeLg,
     fontWeight: fonts.weightSemiBold,
     color: colors.text,
     marginBottom: spacing.md,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   modeGrid: {
     flexDirection: 'row',
@@ -249,10 +167,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     ...shadows.card,
   },
-  modeCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#FFFFFF',
-  },
+  modeCardActive: { borderColor: colors.primary },
   iconContainer: {
     width: 56,
     height: 56,
@@ -262,21 +177,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  iconContainerActive: {
-    backgroundColor: '#E6EFEE',
-  },
-  modeIcon: {
-    fontSize: 24,
-  },
+  iconContainerActive: { backgroundColor: '#E6EFEE' },
+  modeIcon: { fontSize: 26 },
   modeLabel: {
     fontSize: fonts.sizeMd,
     fontWeight: fonts.weightBold,
     color: colors.textMuted,
     textAlign: 'center',
   },
-  modeLabelActive: {
-    color: colors.primary,
-  },
+  modeLabelActive: { color: colors.primary },
   modeDesc: {
     fontSize: 11,
     color: colors.textMuted,
@@ -284,12 +193,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 14,
   },
-  bookingCard: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    ...shadows.card,
-  },
+  bookingCard: { marginTop: spacing.sm },
   cardTitle: {
     fontSize: fonts.sizeXl,
     fontWeight: fonts.weightBold,
@@ -297,7 +201,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    fontSize: fonts.sizeSm,
+    fontSize: fonts.sizeXs,
     fontWeight: fonts.weightSemiBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
@@ -305,74 +209,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  optionChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  optionChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  optionChipText: {
-    fontSize: fonts.sizeSm,
-    color: colors.text,
-    fontWeight: fonts.weightMedium,
-  },
-  optionChipTextActive: {
-    color: colors.white,
-  },
-  input: {
-    minHeight: 80,
+  textArea: {
+    minHeight: 88,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
     borderColor: colors.border,
     padding: spacing.md,
     fontSize: fonts.sizeMd,
     color: colors.text,
     textAlignVertical: 'top',
   },
-  row: {
+  optionsGrid: {
     flexDirection: 'row',
-    gap: spacing.md,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   durationRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.sm,
-  },
-  durationChip: {
-    width: 44,
-    height: 36,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  durationChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  durationText: {
-    fontSize: fonts.sizeSm,
-    fontWeight: fonts.weightMedium,
-    color: colors.text,
-  },
-  durationTextActive: {
-    color: colors.white,
   },
   scheduleRow: {
     flexDirection: 'row',
@@ -383,8 +241,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
     borderColor: colors.border,
     alignItems: 'center',
   },
@@ -397,23 +255,6 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weightMedium,
     color: colors.text,
   },
-  scheduleBtnTextActive: {
-    color: colors.white,
-  },
-  primaryButton: {
-    height: 56,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.button,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  primaryButtonText: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightBold,
-    color: colors.white,
-  },
+  scheduleBtnTextActive: { color: colors.white },
+  cta: { marginTop: spacing.md },
 });

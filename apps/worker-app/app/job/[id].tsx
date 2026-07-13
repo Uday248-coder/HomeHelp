@@ -10,12 +10,13 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadow } from '../../src/constants/theme';
+import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { api } from '../../src/api/client';
 import { Booking } from '../../src/types';
 import { useAuth } from '../../src/context/AuthContext';
 import { locationService } from '../../src/lib/location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Screen, ScreenHeader, Card, Button, StatusBadge, LoadingView } from '../../src/components/ui';
 
 type ActionType = 'start' | 'complete' | null;
 
@@ -92,42 +93,25 @@ export default function JobDetailScreen() {
     }
   }
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case 'assigned':
-        return { label: 'Assigned', color: colors.warning };
-      case 'in_progress':
-        return { label: 'In Progress', color: colors.primary };
-      case 'completed':
-        return { label: 'Completed', color: colors.success };
-      case 'cancelled':
-        return { label: 'Cancelled', color: colors.error };
-      default:
-        return { label: status, color: colors.textMuted };
-    }
-  }
-
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Screen>
+        <LoadingView message="Loading job details..." />
+      </Screen>
     );
   }
 
   if (!job) return null;
 
-  const badge = getStatusBadge(job.status);
-
   return (
-    <View style={styles.container}>
+    <Screen>
+      <ScreenHeader title="Job Details" subtitle={job.serviceType} />
+
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
+        <Card>
           <View style={styles.cardTop}>
             <Text style={styles.serviceType}>{job.serviceType}</Text>
-            <View style={[styles.badge, { backgroundColor: badge.color + '20' }]}>
-              <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
-            </View>
+            <StatusBadge status={job.status} />
           </View>
 
           {job.user ? (
@@ -157,25 +141,15 @@ export default function JobDetailScreen() {
               <Text style={styles.detailValue}>₹{job.totalAmount}</Text>
             </View>
           ) : null}
-        </View>
+        </Card>
 
         {(job.status === 'assigned' || job.status === 'in_progress') && (
           <View style={styles.actions}>
             {job.status === 'assigned' && (
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => openActionModal('start')}
-              >
-                <Text style={styles.actionBtnText}>Start Job</Text>
-              </TouchableOpacity>
+              <Button title="Start Job" onPress={() => openActionModal('start')} />
             )}
             {job.status === 'in_progress' && (
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.success }]}
-                onPress={() => openActionModal('complete')}
-              >
-                <Text style={styles.actionBtnText}>Complete Job</Text>
-              </TouchableOpacity>
+              <Button title="Complete Job" onPress={() => openActionModal('complete')} />
             )}
           </View>
         )}
@@ -242,31 +216,18 @@ export default function JobDetailScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
   content: {
     padding: spacing.md,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadow.card,
   },
   cardTop: {
     flexDirection: 'row',
@@ -275,59 +236,39 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   serviceType: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    fontSize: fonts.sizeLg,
+    fontWeight: fonts.weightBold,
     color: colors.text,
     flex: 1,
   },
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  badgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
-  },
   customerName: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.text,
     marginBottom: 2,
   },
   address: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   detailsSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   detailLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
   },
   detailValue: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontSize: fonts.sizeSm,
+    fontWeight: fonts.weightSemiBold,
     color: colors.text,
   },
   actions: {
     marginBottom: spacing.md,
-  },
-  actionBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  actionBtnText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '700',
   },
   emergencyBtn: {
     paddingVertical: 8,
@@ -335,12 +276,12 @@ const styles = StyleSheet.create({
   },
   emergencyText: {
     color: colors.error,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontSize: fonts.sizeSm,
+    fontWeight: fonts.weightSemiBold,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     padding: spacing.lg,
   },
@@ -348,29 +289,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    ...shadow.card,
+    ...shadows.card,
   },
   modalTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontSize: fonts.sizeXl,
+    fontWeight: fonts.weightBold,
     color: colors.text,
     marginBottom: spacing.xs,
   },
   modalSub: {
-    fontSize: fontSize.sm,
+    fontSize: fonts.sizeSm,
     color: colors.textMuted,
     marginBottom: spacing.lg,
   },
   otpInput: {
     backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    fontSize: fontSize.xl,
+    fontSize: fonts.sizeXxl,
     color: colors.text,
     textAlign: 'center',
     letterSpacing: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
@@ -381,9 +322,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingLabel: {
-    fontSize: fontSize.md,
+    fontSize: fonts.sizeMd,
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: fonts.weightSemiBold,
     marginRight: spacing.sm,
   },
   star: {
@@ -399,27 +340,27 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
     borderColor: colors.border,
   },
   cancelText: {
     color: colors.textMuted,
-    fontSize: fontSize.md,
-    fontWeight: '600',
+    fontSize: fonts.sizeMd,
+    fontWeight: fonts.weightSemiBold,
   },
   confirmBtn: {
     flex: 1,
     backgroundColor: colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
   },
   confirmText: {
     color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '700',
+    fontSize: fonts.sizeMd,
+    fontWeight: fonts.weightBold,
   },
 });
