@@ -45,11 +45,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setWorker(workerData);
       }
     } catch (err: any) {
-      if (err?.response?.status === 404) {
+      const status = err?.response?.status;
+      if (status === 404) {
+        // Server explicitly says "no worker profile for this user" — surface
+        // the profile-creation UI instead of nuking the session.
         setNeedsWorkerProfile(true);
-      } else {
+      } else if (status === 401 || status === 403) {
+        // Token is invalid/expired — drop it so the next render prompts login.
         await SecureStore.deleteItemAsync('worker_token');
+        setToken(null);
+        setWorker(null);
       }
+      // Any other error (offline / unknown) → keep the token, let the user retry.
     } finally {
       setIsLoading(false);
     }

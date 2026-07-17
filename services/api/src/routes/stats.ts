@@ -49,6 +49,7 @@ statsRouter.get('/dashboard', async (req, res) => {
       recentBookings,
     });
   } catch (error) {
+    console.error('[stats] dashboard error:', error);
     return res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
@@ -88,6 +89,7 @@ statsRouter.get('/revenue/weekly', async (req, res) => {
 
     return res.json({ revenue });
   } catch (error) {
+    console.error('[stats] revenue/weekly error:', error);
     return res.status(500).json({ error: 'Failed to fetch revenue data' });
   }
 });
@@ -107,6 +109,9 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       topWorkers,
       modeRevenue,
       workerStats,
+      revenueByMode,
+      driverRevenue,
+      availableWorkers,
     ] = await Promise.all([
       prisma.payment.findMany({
         where: {
@@ -141,24 +146,24 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
         _count: { id: true },
         where: { isActive: true },
       }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: 'captured',
+          createdAt: { gte: startDate, lte: endDate },
+          booking: { mode: 'home_help' },
+        },
+      }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: 'captured',
+          createdAt: { gte: startDate, lte: endDate },
+          booking: { mode: 'driver' },
+        },
+      }),
+      prisma.worker.count({ where: { isAvailable: true, isActive: true } }),
     ]);
-
-    const revenueByMode = await prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: 'captured',
-        createdAt: { gte: startDate, lte: endDate },
-        booking: { mode: 'home_help' },
-      },
-    });
-    const driverRevenue = await prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: 'captured',
-        createdAt: { gte: startDate, lte: endDate },
-        booking: { mode: 'driver' },
-      },
-    });
 
     const dailyMap = new Map<string, number>();
     const cursor = new Date(startDate);
@@ -171,8 +176,6 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       dailyMap.set(key, (dailyMap.get(key) || 0) + Number(p.amount));
     }
     const dailyRevenueArray = Array.from(dailyMap.entries()).map(([date, revenue]) => ({ date, revenue }));
-
-    const availableCount = await prisma.worker.count({ where: { isAvailable: true, isActive: true } });
 
     return res.json({
       dailyRevenue: dailyRevenueArray,
@@ -193,10 +196,11 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       },
       workerStats: {
         total: workerStats._count.id,
-        available: availableCount,
+        available: availableWorkers,
       },
     });
   } catch (error) {
+    console.error('[stats] analytics error:', error);
     return res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });

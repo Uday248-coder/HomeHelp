@@ -15,6 +15,7 @@ function hashToken(token: string): string {
 }
 
 const isProduction = process.env.NODE_ENV === 'production';
+const isDebugAuth = process.env.DEBUG_AUTH === 'true';
 
 export const authRouter = Router();
 
@@ -24,6 +25,10 @@ authRouter.post('/register', async (req: Request, res: Response) => {
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
     // Terms must be accepted server-side; client checkbox alone is not trustable.
@@ -164,7 +169,7 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
       const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
       await sendPasswordResetEmail(email, resetUrl);
 
-      if (!isProduction) {
+      if (!isProduction && isDebugAuth) {
         console.log(`[auth] password reset link for ${email}: ${resetUrl}`);
         return res.json({ ...generic, devResetUrl: resetUrl });
       }

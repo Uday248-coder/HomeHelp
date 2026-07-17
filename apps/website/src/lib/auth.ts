@@ -24,9 +24,26 @@ export async function login(email: string, password: string): Promise<string> {
   return data.token;
 }
 
+export async function logout(): Promise<void> {
+  const token = getToken();
+  try {
+    await fetch(`${API_URL}/api/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  } catch {
+    // best-effort — server-side cookie clear is a hygiene nicety, not required for client auth
+  } finally {
+    clearToken();
+  }
+}
+
 export async function authedFetch(path: string, options: RequestInit = {}) {
   const token = getToken();
-  return fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -34,4 +51,17 @@ export async function authedFetch(path: string, options: RequestInit = {}) {
       ...(options.headers || {}),
     },
   });
+  // If the server kicks us out, drop the stale token so the next render prompts
+  // for login instead of looping on cryptic 401s.
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== 'undefined') {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      // Avoid redirect loops on the login page itself.
+      if (!window.location.pathname.startsWith('/book')) {
+        window.location.href = `/book?login=expired&next=${next}`;
+      }
+    }
+  }
+  return res;
 }

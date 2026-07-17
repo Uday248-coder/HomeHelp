@@ -53,7 +53,7 @@ export function canActivate(
   if (!w.aadhaarVerified) {
     return { ok: false, reason: 'Aadhaar verification required before activation' };
   }
-  if (w.workerType === 'driver' && !w.licenseVerified) {
+  if ((w.workerType === 'driver' || w.workerType === 'both') && !w.licenseVerified) {
     return { ok: false, reason: 'License verification required to activate a driver' };
   }
   return { ok: true };

@@ -42,30 +42,40 @@ usersRouter.get('/', adminMiddleware, async (req, res) => {
       prisma.user.count({ where }),
     ]);
 
-    const enriched = await Promise.all(
-      users.map(async (u) => {
-        const spent = await prisma.payment.aggregate({
-          _sum: { amount: true },
+    // Batch query: one fetch for all captured payments whose booking belongs
+    // to anyone on this page, then group in memory. Replaces the previous
+    // per-user payment.aggregate() N+1 (1 + N queries -> 2 queries).
+    const userIds = users.map((u) => u.id);
+    const capturedPayments = userIds.length
+      ? await prisma.payment.findMany({
           where: {
-            booking: { userId: u.id },
             status: 'captured',
+            booking: { userId: { in: userIds } },
           },
-        });
-        return {
-          id: u.id,
-          phoneNumber: u.phoneNumber,
-          name: u.name,
-          email: u.email,
-          isAdmin: u.isAdmin,
-          bookingCount: u._count.bookings,
-          totalSpent: spent._sum.amount || 0,
-          createdAt: u.createdAt,
-        };
-      }),
-    );
+          select: { amount: true, booking: { select: { userId: true } } },
+        })
+      : [];
+    const spentByUser = new Map<string, number>();
+    for (const p of capturedPayments) {
+      const uid = p.booking?.userId;
+      if (!uid) continue;
+      spentByUser.set(uid, (spentByUser.get(uid) || 0) + Number(p.amount));
+    }
+
+    const enriched = users.map((u) => ({
+      id: u.id,
+      phoneNumber: u.phoneNumber,
+      name: u.name,
+      email: u.email,
+      isAdmin: u.isAdmin,
+      bookingCount: u._count.bookings,
+      totalSpent: spentByUser.get(u.id) || 0,
+      createdAt: u.createdAt,
+    }));
 
     return res.json({ users: enriched, total, page, totalPages: Math.ceil(total / limit) });
   } catch (error) {
+    console.error('[users] list error:', error);
     return res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
@@ -100,6 +110,7 @@ usersRouter.get('/:id', adminMiddleware, async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('[users] detail error:', error);
     return res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
@@ -127,6 +138,7 @@ usersRouter.get('/:id/bookings', adminMiddleware, async (req, res) => {
 
     return res.json({ bookings });
   } catch (error) {
+    console.error('[users] bookings error:', error);
     return res.status(500).json({ error: 'Failed to fetch user bookings' });
   }
 });

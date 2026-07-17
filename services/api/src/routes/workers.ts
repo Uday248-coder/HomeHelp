@@ -5,6 +5,27 @@ import { canActivate } from '../lib/eligibility';
 
 export const workersRouter = Router();
 
+const BOOKING_SAFE_FIELDS = {
+  id: true, userId: true, mode: true, serviceType: true, status: true,
+  scheduledAt: true, startedAt: true, completedAt: true,
+  durationHours: true, hourlyRate: true, customerAddress: true,
+  ratingByUser: true, reviewText: true, createdAt: true, updatedAt: true,
+} as const;
+
+const PAYOUT_SAFE_FIELDS = {
+  id: true, workerId: true, amount: true, status: true,
+  weekStartDate: true, weekEndDate: true, processedAt: true,
+  createdAt: true, updatedAt: true,
+} as const;
+
+const WORKER_DETAIL_FIELDS = {
+  id: true, userId: true, name: true, workerType: true, phoneNumber: true,
+  photoUrl: true, experience: true, averageRating: true, totalJobs: true,
+  isAvailable: true, isActive: true, aadhaarVerified: true, licenseVerified: true,
+  currentLat: true, currentLng: true, deactivationReason: true,
+  createdAt: true, updatedAt: true,
+} as const;
+
 workersRouter.get('/', authMiddleware, async (_req, res) => {
   try {
     const workers = await prisma.worker.findMany({
@@ -103,11 +124,70 @@ workersRouter.post('/', authMiddleware, adminMiddleware, async (req, res) => {
   }
 });
 
+workersRouter.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const worker = await prisma.worker.findUnique({
+      where: { userId: req.user!.userId },
+      select: {
+        ...WORKER_DETAIL_FIELDS,
+        bookings: {
+          select: BOOKING_SAFE_FIELDS,
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        },
+        payouts: {
+          select: PAYOUT_SAFE_FIELDS,
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        },
+      },
+    });
+    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
+    return res.json({ worker });
+  } catch (err) {
+    console.error('[workers] fetch worker profile error:', err);
+    return res.status(500).json({ error: 'Failed to fetch worker profile' });
+  }
+});
+
+workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
+  try {
+    const { isAvailable } = req.body;
+    if (isAvailable === undefined) return res.status(400).json({ error: 'isAvailable is required' });
+
+    const worker = await prisma.worker.findUnique({
+      where: { userId: req.user!.userId },
+    });
+    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
+
+    const updated = await prisma.worker.update({
+      where: { id: worker.id },
+      data: { isAvailable },
+    });
+    return res.json({ worker: updated });
+  } catch (err) {
+    console.error('[workers] update availability error:', err);
+    return res.status(500).json({ error: 'Failed to update availability' });
+  }
+});
+
 workersRouter.get('/:id', authMiddleware, async (req, res) => {
   try {
     const worker = await prisma.worker.findUnique({
       where: { id: req.params.id },
-      include: { bookings: true, payouts: true },
+      select: {
+        ...WORKER_DETAIL_FIELDS,
+        bookings: {
+          select: BOOKING_SAFE_FIELDS,
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        },
+        payouts: {
+          select: PAYOUT_SAFE_FIELDS,
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        },
+      },
     });
     if (!worker) return res.status(404).json({ error: 'Worker not found' });
 
@@ -180,41 +260,6 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[workers] update worker error:', err);
     return res.status(500).json({ error: 'Failed to update worker' });
-  }
-});
-
-workersRouter.get('/me', authMiddleware, async (req, res) => {
-  try {
-    const worker = await prisma.worker.findUnique({
-      where: { userId: req.user!.userId },
-      include: { bookings: true, payouts: true },
-    });
-    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
-    return res.json({ worker });
-  } catch (err) {
-    console.error('[workers] fetch worker profile error:', err);
-    return res.status(500).json({ error: 'Failed to fetch worker profile' });
-  }
-});
-
-workersRouter.patch('/me/availability', authMiddleware, async (req, res) => {
-  try {
-    const { isAvailable } = req.body;
-    if (isAvailable === undefined) return res.status(400).json({ error: 'isAvailable is required' });
-
-    const worker = await prisma.worker.findUnique({
-      where: { userId: req.user!.userId },
-    });
-    if (!worker) return res.status(404).json({ error: 'Worker profile not found' });
-
-    const updated = await prisma.worker.update({
-      where: { id: worker.id },
-      data: { isAvailable },
-    });
-    return res.json({ worker: updated });
-  } catch (err) {
-    console.error('[workers] update availability error:', err);
-    return res.status(500).json({ error: 'Failed to update availability' });
   }
 });
 

@@ -10,10 +10,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import LoginScreen from '@/components/LoginScreen';
 
 export default function CustomersPage() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +26,6 @@ export default function CustomersPage() {
   const [bookingsLoading, setBookingsLoading] = useState(false);
 
   const fetchCustomers = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -40,7 +38,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, search]);
+  }, [page, search]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
@@ -77,8 +75,6 @@ export default function CustomersPage() {
     };
     return map[status] || 'neutral';
   };
-
-  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">

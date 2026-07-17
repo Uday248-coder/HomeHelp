@@ -10,10 +10,9 @@ interface AdminUser {
 }
 
 interface AuthContextType {
-  token: string | null;
-  user: AdminUser | null;
+  user: AdminUser | null | undefined;
+  isAdmin: boolean;
   isDark: boolean;
-  login: (token: string) => Promise<void>;
   logout: () => void;
   toggleDark: () => void;
 }
@@ -31,50 +30,53 @@ function getInitialDark(): boolean {
   return false;
 }
 
+async function fetchMe(): Promise<AdminUser | null> {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/me`,
+      { credentials: 'include' },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<AdminUser | null>(null);
+  const [user, setUser] = useState<AdminUser | null | undefined>(undefined);
   const [isDark, setIsDark] = useState(getInitialDark);
 
   useEffect(() => {
-    checkAuthCookie();
-  }, []);
-
-  async function loadUser(tokenValue: string) {
+    // One-time cleanup of the legacy localStorage Bearer token from the
+    // pre-cookie auth era. Safe to remove after the next deploy settles.
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${tokenValue}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) setUser(data.user);
-      }
+      localStorage.removeItem('admin_token');
     } catch {
-      // No valid session
+      // ignore quota / privacy-mode errors
     }
-  }
-
-  async function checkAuthCookie() {
-    const stored = localStorage.getItem('admin_token');
-    if (!stored) return;
-    setToken(stored);
-    await loadUser(stored);
-  }
-
-  const login = useCallback(async (newToken: string) => {
-    localStorage.setItem('admin_token', newToken);
-    setToken(newToken);
-    await loadUser(newToken);
+    let cancelled = false;
+    (async () => {
+      const me = await fetchMe();
+      if (!cancelled) setUser(me);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/logout`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('admin_token') || ''}` },
-    });
-    localStorage.removeItem('admin_token');
-    setToken(null);
-    setUser(null);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // best-effort — local state clear is what matters
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   const toggleDark = useCallback(() => {
@@ -87,12 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, user, isDark, login, logout, toggleDark }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAdmin: user?.isAdmin ?? false,
+        isDark,
+        logout,
+        toggleDark,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within AuthProvider');

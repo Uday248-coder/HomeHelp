@@ -4,18 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import LoginScreen from '@/components/LoginScreen';
 
 export default function SettingsPage() {
-  const { token, logout, isDark, toggleDark } = useAuth();
+  const { logout, isDark, toggleDark } = useAuth();
   const router = useRouter();
 
   const handleNavigate = (path: string) => {
     if (path === '/settings') return;
     router.push(path);
   };
-
-  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">

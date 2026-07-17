@@ -31,8 +31,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = await api.getMe();
         setUser(userData);
       }
-    } catch {
-      await SecureStore.deleteItemAsync('auth_token');
+    } catch (err: unknown) {
+      // Only clear the token if the server explicitly told us the session is
+      // dead (401) or the token has no associated user (404). Any other error
+      // (offline, DNS blip, timeout) should leave the stored token alone so a
+      // flaky network doesn't log the user out spuriously.
+      const status =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { status?: number } }).response?.status
+          : undefined;
+      if (status === 401 || status === 404) {
+        await SecureStore.deleteItemAsync('auth_token');
+        setToken(null);
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }

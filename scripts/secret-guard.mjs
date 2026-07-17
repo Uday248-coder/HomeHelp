@@ -13,6 +13,8 @@ const ROOT = process.cwd();
 const SOURCE_TARGETS = [
   'apps/website/src',
   'apps/admin/src',
+  'apps/customer-app/src',
+  'apps/worker-app/src',
 ];
 
 // Built browser assets: hard-secret rules only (minified vendor code legitimately
@@ -20,6 +22,13 @@ const SOURCE_TARGETS = [
 const STATIC_TARGETS = [
   'apps/website/.next/static',
   'apps/admin/.next/static',
+  // Expo web builds emit a 'web-build' / 'dist' folder; scan them if present.
+  'apps/website/dist',
+  'apps/admin/dist',
+  'apps/customer-app/dist',
+  'apps/customer-app/web-build',
+  'apps/worker-app/dist',
+  'apps/worker-app/web-build',
 ];
 
 const SCAN_EXTENSIONS = new Set([
@@ -37,8 +46,9 @@ const RULES = [
   { name: 'Server secret env name', re: /\b(?:JWT_SECRET|RAZORPAY_KEY_SECRET|RESEND_API_KEY|UPSTASH_REDIS_REST_TOKEN|FIREBASE_SERVICE_ACCOUNT_KEY|DATABASE_URL)\b/ },
 ];
 
-// process.env references that are NOT NEXT_PUBLIC_* and not the safe allowlist.
+// process.env references that are NOT NEXT_PUBLIC_* / EXPO_PUBLIC_* and not the safe allowlist.
 const SAFE_ENV = new Set(['NODE_ENV']);
+const PUBLIC_ENV_RE = /^(?:NEXT_PUBLIC_|EXPO_PUBLIC_)/;
 const NON_PUBLIC_ENV = /process\.env\.([A-Z0-9_]+)/g;
 
 /** @param {string} dir @param {string[]} out */
@@ -79,7 +89,10 @@ const findings = [];
 /** @param {string} file @param {boolean} envHeuristic */
 function scanFile(file, envHeuristic) {
   const rel = file.replace(ROOT + '\\', '').replace(ROOT + '/', '').replaceAll('\\', '/');
-  const isServerRouteHandler = /\/(route|middleware)\.[tj]sx?$/.test(rel) || /\/api\//.test(rel);
+  const isServerRouteHandler =
+    /\/(route|middleware)\.[tj]sx?$/.test(rel) ||
+    /\/api\//.test(rel) ||
+    /\/app\/api\//.test(rel);
   let content;
   try {
     content = readFileSync(file, 'utf8');
@@ -99,7 +112,7 @@ function scanFile(file, envHeuristic) {
       NON_PUBLIC_ENV.lastIndex = 0;
       while ((m = NON_PUBLIC_ENV.exec(text)) !== null) {
         const name = m[1];
-        if (name.startsWith('NEXT_PUBLIC_') || SAFE_ENV.has(name)) continue;
+        if (PUBLIC_ENV_RE.test(name) || SAFE_ENV.has(name)) continue;
         findings.push({
           file: rel,
           line: i + 1,

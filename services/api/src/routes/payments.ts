@@ -3,6 +3,7 @@ import Razorpay from 'razorpay';
 import { createHmac } from 'crypto';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { RATE_TABLE } from '../lib/constants';
 
 export const paymentsRouter = Router();
 paymentsRouter.use(authMiddleware);
@@ -44,6 +45,13 @@ function buildUpiLink(bookingId: string, amount: number): string | null {
   return `upi://pay?${params.toString()}`;
 }
 
+// Single source of truth for the worker payout math: amount minus the 15% platform fee.
+// Used both at create-order time and when recomputing stale rows in mark-paid/verify.
+function computeWorkerPayout(amount: number): number {
+  const platformFee = parseFloat((amount * 0.15).toFixed(2));
+  return parseFloat((amount - platformFee).toFixed(2));
+}
+
 paymentsRouter.post('/create-order', async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -58,16 +66,17 @@ paymentsRouter.post('/create-order', async (req, res) => {
       return res.status(403).json({ error: 'You can only create payments for your own bookings' });
     }
 
-    const rate = booking.hourlyRate ? Number(booking.hourlyRate) : 0;
+    const defaultRate = booking.mode && RATE_TABLE[booking.mode] ? RATE_TABLE[booking.mode] : 0;
+    const rate = booking.hourlyRate ? Number(booking.hourlyRate) : defaultRate;
     const hours = booking.durationHours ? Number(booking.durationHours) : 1;
     const amount = parseFloat((rate * hours).toFixed(2));
 
     if (amount <= 0) {
-      return res.status(400).json({ error: 'Cannot create payment: booking has no hourly rate or duration' });
+      return res.status(400).json({ error: 'Cannot create payment: booking has no valid rate or duration' });
     }
 
     const platformFee = parseFloat((amount * 0.15).toFixed(2));
-    const workerPayout = parseFloat((amount - platformFee).toFixed(2));
+    const workerPayout = computeWorkerPayout(amount);
 
     // Idempotent: reuse an existing payment for this booking instead of duplicating.
     let payment = await prisma.payment.findUnique({ where: { bookingId } });
@@ -106,8 +115,13 @@ paymentsRouter.post('/create-order', async (req, res) => {
           razorpayOrderId,
         },
       });
-    } else if (payment.paymentMethod === 'razorpay' && razorpay && !payment.razorpayOrderId) {
-      // Backfill a missing Razorpay order id for an existing Razorpay payment.
+    } else if (
+      payment.paymentMethod === 'razorpay' &&
+      razorpay &&
+      !payment.razorpayOrderId &&
+      payment.status === 'pending'
+    ) {
+      // Backfill a missing Razorpay order id for an existing pending Razorpay payment.
       const order = await razorpay.orders.create({
         amount: Math.round(Number(payment.amount) * 100),
         currency: 'INR',
@@ -152,9 +166,13 @@ paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
       return res.json({ payment });
     }
 
+    // Recompute workerPayout from server-side fee table so manual confirmations
+    // (UPI transfers) leave downstream payout processing with valid data.
+    const recomputed = computeWorkerPayout(Number(payment.amount));
+
     const updated = await prisma.payment.update({
       where: { id },
-      data: { status: 'paid' },
+      data: { status: 'paid', workerPayout: recomputed },
     });
 
     console.log(`[Payments] Payment ${id} marked paid by admin ${req.user!.userId}`);
@@ -195,30 +213,38 @@ paymentsRouter.post('/verify', async (req, res) => {
 
     // 3. Signature Verification
     if (!razorpay) {
-      console.warn('[Payments] Razorpay not configured - skipping signature verification');
-    } else {
-      if (!razorpayPaymentId || !razorpaySignature) {
-        return res.status(400).json({ error: 'razorpayPaymentId and razorpaySignature are required' });
-      }
-
-      if (!payment.razorpayOrderId) {
-        console.error(`[Payments] Verification failed: No razorpayOrderId for payment ${paymentId}`);
-        return res.status(400).json({ error: 'No razorpay order ID found for this payment' });
-      }
-
-      const isValid = verifySignature(payment.razorpayOrderId, razorpayPaymentId, razorpaySignature);
-      if (!isValid) {
-        console.error(`[Payments] Invalid signature for payment ${paymentId}. OrderID: ${payment.razorpayOrderId}, PaymentID: ${razorpayPaymentId}`);
-        return res.status(400).json({ error: 'Invalid payment signature' });
-      }
+      // In fee-free UPI mode, payments are confirmed manually via /:id/mark-paid.
+      // The /verify endpoint is only meaningful when Razorpay is configured; reject
+      // any attempt to verify without a gateway to prevent spoofed "captured" status.
+      console.warn(`[Payments] /verify called for ${paymentId} but Razorpay not configured; rejected`);
+      return res.status(400).json({
+        error: 'Razorpay is not configured. Use the admin mark-paid endpoint to confirm UPI payments.',
+      });
     }
 
-    // 4. Update payment
+    if (!razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({ error: 'razorpayPaymentId and razorpaySignature are required' });
+    }
+
+    if (!payment.razorpayOrderId) {
+      console.error(`[Payments] Verification failed: No razorpayOrderId for payment ${paymentId}`);
+      return res.status(400).json({ error: 'No razorpay order ID found for this payment' });
+    }
+
+    const isValid = verifySignature(payment.razorpayOrderId, razorpayPaymentId, razorpaySignature);
+    if (!isValid) {
+      console.error(`[Payments] Invalid signature for payment ${paymentId}. OrderID: ${payment.razorpayOrderId}, PaymentID: ${razorpayPaymentId}`);
+      return res.status(400).json({ error: 'Invalid payment signature' });
+    }
+
+    // 4. Update payment (recompute workerPayout so payouts reflect the latest fee math)
+    const recomputed = computeWorkerPayout(Number(payment.amount));
     const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
       data: {
         status: 'captured',
         razorpayPaymentId: razorpayPaymentId || undefined,
+        workerPayout: recomputed,
       },
     });
 

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
 const CACHE_PREFIX = '@api_cache:';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — booking/payment details move quickly
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -17,6 +18,18 @@ apiClient.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Surface expired sessions: log the user out so they re-authenticate instead
+// of receiving silent 401 loops.
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      await SecureStore.deleteItemAsync('auth_token');
+    }
+    return Promise.reject(error);
+  },
+);
 
 function isGetMethod(options: any): boolean {
   return !options?.method || options.method.toUpperCase() === 'GET';
@@ -34,7 +47,8 @@ async function request<T>(endpoint: string, options: any = {}): Promise<CachedRe
 
     if (isGetMethod(options)) {
       try {
-        await AsyncStorage.setItem(CACHE_PREFIX + endpoint, JSON.stringify(data));
+        const entry = JSON.stringify({ ts: Date.now(), data });
+        await AsyncStorage.setItem(CACHE_PREFIX + endpoint, entry);
       } catch {
         // Cache write failures are non-critical
       }
@@ -47,9 +61,21 @@ async function request<T>(endpoint: string, options: any = {}): Promise<CachedRe
         const cached = await AsyncStorage.getItem(CACHE_PREFIX + endpoint);
         if (cached) {
           const parsed = JSON.parse(cached);
-          const result = (Array.isArray(parsed) ? Object.assign([], parsed) : { ...parsed }) as CachedResponse<T>;
-          result.fromCache = true;
-          return result;
+          // Only serve from cache if the entry is fresh. Older entries are
+          // dropped (throw the original network error) so booking status and
+          // payment state don't sit indefinitely on stale data.
+          if (parsed && typeof parsed === 'object' && typeof parsed.ts === 'number') {
+            if (Date.now() - parsed.ts > CACHE_TTL_MS) {
+              await AsyncStorage.removeItem(CACHE_PREFIX + endpoint);
+            } else {
+              const fresh = Array.isArray(parsed.data)
+                ? Object.assign([], parsed.data)
+                : { ...parsed.data };
+              const result = fresh as CachedResponse<T>;
+              result.fromCache = true;
+              return result;
+            }
+          }
         }
       } catch {
         // Fall through — throw original error

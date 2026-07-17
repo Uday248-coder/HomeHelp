@@ -9,14 +9,13 @@ import Sidebar from '@/components/Sidebar';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChart } from '@/components/dashboard/BarChart';
 import { Skeleton } from '@/components/ui/Skeleton';
-import LoginScreen from '@/components/LoginScreen';
 
 function toLocalDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
 export default function AnalyticsPage() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +27,6 @@ export default function AnalyticsPage() {
   const [endDate, setEndDate] = useState(toLocalDateString(today));
 
   const fetchAnalytics = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -39,7 +37,7 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, startDate, endDate]);
+  }, [startDate, endDate]);
 
   useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
@@ -53,8 +51,6 @@ export default function AnalyticsPage() {
     const total = data.bookingFunnel.reduce((s, b) => s + b.count, 0);
     return total > 0 ? Math.round((count / total) * 100) : 0;
   };
-
-  if (!token) return <LoginScreen />;
 
   const Layout = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-background flex">

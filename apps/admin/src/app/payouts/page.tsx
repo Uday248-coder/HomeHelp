@@ -8,7 +8,6 @@ import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import LoginScreen from '@/components/LoginScreen';
 import { api } from '@/lib/api';
 
 interface Payout {
@@ -25,7 +24,7 @@ interface Payout {
 }
 
 export default function PayoutsPage() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +41,6 @@ export default function PayoutsPage() {
   const [razorpayId, setRazorpayId] = useState('');
 
   const fetchPayouts = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -55,7 +53,7 @@ export default function PayoutsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, statusFilter]);
+  }, [page, statusFilter]);
 
   useEffect(() => { fetchPayouts(); }, [fetchPayouts]);
 
@@ -101,8 +99,6 @@ export default function PayoutsPage() {
     };
     return map[status] || 'neutral';
   };
-
-  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">

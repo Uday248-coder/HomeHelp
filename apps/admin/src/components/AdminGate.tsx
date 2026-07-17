@@ -4,11 +4,17 @@ import { useAuth } from '@/lib/auth-context';
 import LoginScreen from '@/components/LoginScreen';
 
 export default function AdminGate({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
 
-  if (!token) return <LoginScreen />;
+  // While /api/auth/me is in flight, show a neutral skeleton so we never
+  // briefly flash the login form for a valid (and admin) session.
+  if (user === undefined) {
+    return <div className="min-h-screen bg-background" aria-hidden="true" />;
+  }
 
-  if (!user?.isAdmin) {
+  if (!user) return <LoginScreen />;
+
+  if (!user.isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="card-dashboard p-8 text-center max-w-sm">

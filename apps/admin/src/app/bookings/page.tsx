@@ -9,10 +9,9 @@ import Sidebar from '@/components/Sidebar';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import LoginScreen from '@/components/LoginScreen';
 
 export default function BookingsPage() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +25,6 @@ export default function BookingsPage() {
   const [assigningWorkers, setAssigningWorkers] = useState(false);
 
   const fetchBookings = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -38,7 +36,7 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, statusFilter, search]);
+  }, [page, statusFilter, search]);
 
   useEffect(() => {
     fetchBookings();
@@ -108,8 +106,6 @@ export default function BookingsPage() {
       setError(e instanceof Error ? e.message : 'Failed to mark payment paid');
     }
   };
-
-  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -182,7 +178,8 @@ export default function BookingsPage() {
               </div>
             ) : (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="overflow-x-auto scrollbar-thin">
+                {/* Desktop table (>=768px) — unchanged */}
+                <div className="hidden md:block overflow-x-auto scrollbar-thin">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground border-b border-border bg-muted/50">
@@ -277,6 +274,102 @@ export default function BookingsPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile cards (<768px) */}
+                <div className="block md:hidden divide-y divide-border">
+                  {bookings.map((b) => (
+                    <div key={b.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-mono text-xs text-muted-foreground">{b.id.slice(0, 8)}</p>
+                          <p className="text-foreground font-medium mt-0.5">{b.user?.name || b.user?.phoneNumber || 'N/A'}</p>
+                        </div>
+                        <span className={`status-badge status-${b.status}`}>
+                          {b.status.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Worker</p>
+                          <p className="text-foreground">
+                            {b.worker?.name || <span className="text-muted-foreground italic">Unassigned</span>}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Mode</p>
+                          <p className="text-foreground capitalize">{b.mode.replace('_', ' ')}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Amount</p>
+                          {b.payment ? (
+                            <p className="text-foreground font-medium tabular-nums">
+                              ₹{Number(b.payment.amount).toLocaleString()}{' '}
+                              <span className={`text-[10px] font-medium uppercase tracking-wider ${
+                                b.payment.status === 'paid' || b.payment.status === 'captured'
+                                  ? 'text-emerald-600'
+                                  : 'text-amber-600'
+                              }`}>
+                                {b.payment.status === 'paid' || b.payment.status === 'captured' ? 'Paid' : 'Pending'}
+                              </span>
+                            </p>
+                          ) : (
+                            <p className="text-foreground">—</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Created</p>
+                          <p className="text-foreground whitespace-nowrap">
+                            {new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {b.status === 'pending' && (
+                          <button
+                            onClick={() => openAssignModal(b)}
+                            className="px-3 py-1.5 text-xs font-bold text-accent bg-accent/10 hover:bg-accent/20 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Assign
+                          </button>
+                        )}
+                        {b.status === 'assigned' && (
+                          <button
+                            onClick={() => handleAction('start', b)}
+                            className="px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Start
+                          </button>
+                        )}
+                        {b.status === 'in_progress' && (
+                          <button
+                            onClick={() => handleAction('complete', b)}
+                            className="px-3 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Complete
+                          </button>
+                        )}
+                        {(b.status === 'pending' || b.status === 'assigned') && (
+                          <button
+                            onClick={() => handleAction('cancel', b)}
+                            className="px-3 py-1.5 text-xs font-bold text-danger bg-danger/10 hover:bg-danger/20 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        {b.payment && b.payment.status === 'pending' && (
+                          <button
+                            onClick={() => handleMarkPaid(b.payment!.id)}
+                            className="px-3 py-1.5 text-xs font-bold text-[#1A3C34] bg-[#1A3C34]/10 hover:bg-[#1A3C34]/20 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">

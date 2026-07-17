@@ -129,11 +129,28 @@ export default function WorkerPortalPage() {
     const t = getToken();
     if (!t) { setTokenState(null); setLoading(false); return; }
     setTokenState(t); setLoading(true); setError('');
+    // Helper: fetch JSON or return a safe default on non-2xx so a single
+    // endpoint failure (e.g. 401, 404) doesn't white-screen the portal.
+    const safeJson = async (path: string, init?: RequestInit) => {
+      const res = await fetch(`${API}${path}`, {
+        ...init,
+        headers: { Authorization: `Bearer ${t}`, ...(init?.headers || {}) },
+      });
+      if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+      return res.json();
+    };
     try {
       const [av, my, me] = await Promise.all([
-        fetch(`${API}/api/bookings/available?mode=${mode}`, { headers: { Authorization: `Bearer ${t}` } }).then((r) => r.json()),
-        fetch(`${API}/api/bookings/worker`, { headers: { Authorization: `Bearer ${t}` } }).then((r) => r.json()),
-        fetch(`${API}/api/workers/me`, { headers: { Authorization: `Bearer ${t}` } }).then((r) => (r.ok ? r.json() : null)),
+        safeJson(`/api/bookings/available?mode=${mode}`).catch(() => ({ bookings: [] })),
+        safeJson(`/api/bookings/worker`).catch(() => ({ bookings: [] })),
+        safeJson(`/api/workers/me`).catch((e) => {
+          // 401 → token is no longer valid; bounce to login.
+          if (e instanceof Error && e.message.includes('-> 401')) {
+            clearToken();
+            setTokenState(null);
+          }
+          return { worker: null };
+        }),
       ]);
       setAvailable(av.bookings || []);
       setMine(my.bookings || []);

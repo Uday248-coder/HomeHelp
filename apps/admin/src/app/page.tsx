@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import LoginScreen from '@/components/LoginScreen';
 import Sidebar from '@/components/Sidebar';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChart } from '@/components/dashboard/BarChart';
@@ -29,16 +28,21 @@ interface RevenueData {
 }
 
 export default function Dashboard() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       setError(null);
@@ -46,16 +50,16 @@ export default function Dashboard() {
         api.getDashboard(),
         api.getWeeklyRevenue(),
       ]);
+      if (signal?.aborted) return;
       setStats(statsData);
       setRevenueData(Array.isArray(revenues) ? revenues : revenues.revenue || []);
     } catch {
+      if (signal?.aborted) return;
       setError('Failed to load dashboard data');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
-
-  if (!token) return <LoginScreen />;
 
   const Layout = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-background flex">
@@ -113,7 +117,7 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-2">
              <button 
-               onClick={fetchStats}
+               onClick={() => fetchStats()}
                className="btn-base btn-secondary text-xs px-3 py-1.5 h-8"
              >
                Refresh Data

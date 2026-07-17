@@ -1,11 +1,20 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { validateEmail } from '../middleware/validation';
 
 export const waitlistRouter = Router();
 
-waitlistRouter.post('/', async (req, res) => {
+const waitlistLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many waitlist requests, please try again later' },
+});
+
+waitlistRouter.post('/', waitlistLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {

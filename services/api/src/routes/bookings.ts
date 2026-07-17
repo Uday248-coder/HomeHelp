@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { RATE_TABLE } from '../lib/constants';
@@ -341,7 +342,7 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
 
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
-      data: { status: 'in_progress', startedAt: new Date() },
+      data: { status: 'in_progress', startedAt: new Date(), startOtp: null },
       select: BOOKING_SAFE_FIELDS,
     });
     return res.json({ booking: updated });
@@ -374,6 +375,7 @@ bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
         completedAt: new Date(),
         ratingByUser: rating ? Math.min(Math.max(Math.round(rating), 1), 5) : null,
         reviewText: reviewText || null,
+        endOtp: null,
       },
       select: BOOKING_SAFE_FIELDS,
     });
@@ -413,7 +415,7 @@ bookingsRouter.patch('/:id/generate-otp', generateOtpLimiter, async (req: Reques
     });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp = crypto.randomInt(1000, 10000).toString();
     const field = type === 'start' ? 'startOtp' : 'endOtp';
 
     await prisma.booking.update({
@@ -424,8 +426,9 @@ bookingsRouter.patch('/:id/generate-otp', generateOtpLimiter, async (req: Reques
     if (booking.user?.email) {
       await sendOtpEmail(booking.user.email, getId(req), type, otp);
     } else {
-      // Never log the full OTP — mask all but the first digit.
-      console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP generated: ${otp[0]}***`);
+      // Never log the OTP — even masked. Confirm only that it was generated;
+      // operator can request re-issue if the email pipeline is broken.
+      console.log(`[Booking OTP] Booking ${getId(req)} ${type} OTP generated (no email on file)`);
     }
 
     return res.json({ message: `${type} OTP generated` });

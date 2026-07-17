@@ -16,6 +16,7 @@ import { payoutsRouter } from './routes/payouts';
 import { usersRouter } from './routes/users';
 import { requestLogger } from './middleware/validation';
 import { setupSocket } from './socket';
+import { getAllowedOrigins } from './lib/origins';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,12 +49,7 @@ if (process.env.SENTRY_DSN) {
 app.use(helmet());
 app.use(generalLimiter);
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://homehelp-admin.vercel.app',
-    'https://homehelp-website.vercel.app',
-  ],
+  origin: getAllowedOrigins(),
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));

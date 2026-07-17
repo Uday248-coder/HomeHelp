@@ -13,8 +13,12 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2
     'Content-Type': 'application/json',
   };
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  // The admin app authenticates via the httpOnly cookie issued by /api/auth/login.
+  // Sending the Bearer token alongside the cookie created dual auth channels:
+  // - the cookie path was CSRF-vulnerable on cross-site top-level GETs,
+  // - the localStorage token was a pure XSS-siphon surface.
+  // We now rely solely on credentials: 'include'; Bearer support is retained
+  // only as an opt-in escape hatch for non-browser clients.
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController();

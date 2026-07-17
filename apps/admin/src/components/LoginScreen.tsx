@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -19,8 +19,12 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const data = await api.login(email, password);
-      login(data.token);
+      await api.login(email, password);
+      // The cookie is set by the API response; trigger a hard refresh so
+      // AuthProvider's useEffect re-validates the session and the AdminGate
+      // re-evaluates with the new user payload.
+      router.replace('/');
+      router.refresh();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to login';
       setLoginError(msg);

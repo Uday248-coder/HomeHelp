@@ -9,10 +9,9 @@ import Sidebar from '@/components/Sidebar';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import LoginScreen from '@/components/LoginScreen';
 
 export default function WorkersPage() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const router = useRouter();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +21,6 @@ export default function WorkersPage() {
   const [statusFilter, setStatusFilter] = useState('');
 
   const fetchWorkers = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -33,7 +31,7 @@ export default function WorkersPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, typeFilter]);
+  }, [typeFilter]);
 
   useEffect(() => {
     fetchWorkers();
@@ -106,8 +104,6 @@ export default function WorkersPage() {
     if (statusFilter === 'pending' && !awaitingVerification(w)) return false;
     return true;
   });
-
-  if (!token) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -188,7 +184,8 @@ export default function WorkersPage() {
               </div>
             ) : (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="overflow-x-auto scrollbar-thin">
+                {/* Desktop table (>=768px) — unchanged */}
+                <div className="hidden md:block overflow-x-auto scrollbar-thin">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground border-b border-border bg-muted/50">
@@ -312,6 +309,122 @@ export default function WorkersPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile cards (<768px) */}
+                <div className="block md:hidden divide-y divide-border">
+                  {filteredWorkers.map((w) => {
+                    const e = workerEligibility(w);
+                    const eligibilityCls = e.tone === 'ok'
+                      ? 'text-success'
+                      : e.tone === 'warn'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-muted-foreground';
+                    return (
+                      <div key={w.id} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium text-foreground">{w.name}</p>
+                            <p className="font-mono text-xs text-muted-foreground mt-0.5">{w.phoneNumber || '—'}</p>
+                          </div>
+                          {w.isActive ? (
+                            <span className="status-badge status-active">Active</span>
+                          ) : (
+                            <span className="status-badge status-pending" title={w.deactivationReason || undefined}>
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Service Type</p>
+                            <Badge variant="neutral" size="sm">{w.workerType.replace('_', ' ')}</Badge>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Availability</p>
+                            <span className={`status-badge ${w.isAvailable ? 'status-active' : 'status-pending'}`}>
+                              {w.isAvailable ? 'Available' : 'Busy'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Aadhaar</p>
+                            {w.aadhaarVerified ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Verified
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleVerifyAadhaar(w)}
+                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                              >
+                                Verify
+                              </button>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">License</p>
+                            {w.licenseVerified ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Verified
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleVerifyLicense(w)}
+                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                              >
+                                Verify
+                              </button>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Eligibility</p>
+                            <span className={`text-xs font-medium ${eligibilityCls}`}>{e.label}</span>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground uppercase tracking-wider text-[10px] mb-0.5">Rating / Jobs</p>
+                            <p className="inline-flex items-center gap-1 text-foreground font-medium">
+                              <svg className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                              {Number(w.averageRating).toFixed(1)}
+                              <span className="text-muted-foreground font-normal">&middot; {w.totalJobs} jobs</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleToggleActive(w)}
+                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                              w.isActive
+                                ? 'text-danger bg-danger/10 hover:bg-danger/20'
+                                : 'text-success bg-success/10 hover:bg-success/20'
+                            }`}
+                          >
+                            {w.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            onClick={() => handleToggleAvailability(w)}
+                            aria-label={w.isAvailable ? 'Mark as Busy' : 'Mark as Available'}
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            title={w.isAvailable ? 'Mark as Busy' : 'Mark as Available'}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
                 <div className="px-4 py-3 border-t border-border bg-muted/30">
                   <p className="text-xs text-muted-foreground">
                     Showing {filteredWorkers.length} of {workers.length} worker{workers.length !== 1 ? 's' : ''}
