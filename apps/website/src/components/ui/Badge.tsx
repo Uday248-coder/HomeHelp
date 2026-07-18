@@ -1,45 +1,57 @@
-import { type HTMLAttributes } from 'react';
+import { type HTMLAttributes, type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
-  size?: 'sm' | 'md';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline' | 'neutral' | 'dark';
+  size?: 'sm' | 'md' | 'lg';
   dot?: boolean;
+  children: ReactNode;
 }
 
-const variants = {
+const variants: Record<NonNullable<BadgeProps['variant']>, string> = {
   default: 'bg-surface-secondary text-foreground-secondary',
-  success: 'bg-accent-subtle text-accent-active',
-  warning: 'bg-amber-50 text-amber-700',
-  danger: 'bg-red-50 text-red-700',
-  info: 'bg-blue-50 text-blue-700',
-  outline: 'bg-transparent border border-border text-foreground',
+  neutral: 'bg-surface-tertiary text-foreground-secondary',
+  success: 'bg-accent-subtle text-accent-active dark:text-accent',
+  warning: 'bg-warm-subtle text-warm',
+  danger: 'bg-warm/15 text-warm dark:text-warm',
+  info: 'bg-surface-tertiary text-foreground-secondary',
+  outline: 'bg-transparent border border-border text-foreground-secondary',
+  dark: 'bg-surface-inverse text-surface',
 };
 
-const sizes = {
+const sizes: Record<NonNullable<BadgeProps['size']>, string> = {
   sm: 'px-2 py-0.5 text-[11px] gap-1',
   md: 'px-2.5 py-1 text-xs gap-1.5',
+  lg: 'px-3 py-1.5 text-sm gap-2',
 };
 
-const dotColors: Record<string, string> = {
+const dotColors: Record<NonNullable<BadgeProps['variant']>, string> = {
   default: 'bg-foreground-tertiary',
+  neutral: 'bg-foreground-tertiary',
   success: 'bg-accent',
-  warning: 'bg-amber-500',
-  danger: 'bg-red-500',
-  info: 'bg-blue-500',
+  warning: 'bg-warm',
+  danger: 'bg-warm',
+  info: 'bg-foreground-tertiary',
   outline: 'bg-foreground-tertiary',
+  dark: 'bg-surface',
 };
 
 export function Badge({
-  className = '', variant = 'default', size = 'md', dot, children, ...props
+  className, variant = 'default', size = 'md', dot, children, ...props
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full ${variants[variant]} ${sizes[size]} ${className}`}
+      className={cn(
+        'inline-flex items-center font-medium rounded-pill tracking-wide',
+        variants[variant],
+        sizes[size],
+        className
+      )}
       {...props}
     >
       {dot && (
         <span
-          className={`w-1.5 h-1.5 rounded-full ${dotColors[variant] || dotColors.default}`}
+          className={cn('h-1.5 w-1.5 rounded-pill', dotColors[variant] || dotColors.default)}
           aria-hidden="true"
         />
       )}

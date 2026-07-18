@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
+  Alert,
+  View,
 } from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
+import {
+  ScreenScroll,
+  ScreenHeader,
+  Card,
+  Button,
+  TextField,
+  SegmentedControl,
+} from 'homehelp-mobile-ui';
+import { lightColors } from 'homehelp-mobile-ui';
 
 export default function AuthScreen() {
   const { login, register } = useAuth();
@@ -56,221 +58,85 @@ export default function AuthScreen() {
     }
   }
 
+  const colors = lightColors;
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.headerSection}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoIcon}>🏠</Text>
-          </View>
-          <Text style={styles.title}>HomeHelp</Text>
-          <Text style={styles.subtitle}>Your home services, on demand</Text>
-        </View>
+      <ScreenScroll keyboardAware contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScreenHeader title="HomeHelp" subtitle="Your home services, on demand" />
 
-        <View style={styles.card}>
-          <View style={styles.segment}>
-            <TouchableOpacity
-              style={[styles.segmentBtn, mode === 'login' && styles.segmentBtnActive]}
-              onPress={() => setMode('login')}
-            >
-              <Text style={[styles.segmentText, mode === 'login' && styles.segmentTextActive]}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.segmentBtn, mode === 'register' && styles.segmentBtnActive]}
-              onPress={() => setMode('register')}
-            >
-              <Text style={[styles.segmentText, mode === 'register' && styles.segmentTextActive]}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+        <Card style={{ marginHorizontal: 20, marginTop: 20 }}>
+          <SegmentedControl
+            options={[
+              { value: 'login', label: 'Login' },
+              { value: 'register', label: 'Sign Up' },
+            ]}
+            value={mode}
+            onChange={setMode}
+            fullWidth
+          />
 
           {mode === 'register' && (
             <>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
+              <TextField
+                label="Full Name"
                 placeholder="Your name"
-                placeholderTextColor={colors.textMuted}
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
+                required
               />
-              <Text style={styles.label}>Phone (optional)</Text>
-              <TextInput
-                style={styles.input}
+              <TextField
+                label="Phone (optional)"
                 placeholder="+91 9876543210"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="phone-pad"
                 value={phone}
                 onChangeText={setPhone}
+                keyboardType="phone-pad"
               />
             </>
           )}
 
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Email"
             placeholder="you@example.com"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            required
           />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Password"
             placeholder="At least 6 characters"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
+            required
           />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Button
+            title={mode === 'login' ? 'Login' : 'Create Account'}
             onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Text style={styles.buttonText}>{mode === 'login' ? 'Login' : 'Create Account'}</Text>
-            )}
-          </TouchableOpacity>
+            loading={loading}
+            fullWidth
+            size="lg"
+            variant="primary"
+          />
+        </Card>
 
-          <TouchableOpacity
-            style={styles.switchButton}
+        <View style={{ alignItems: 'center', marginTop: 16 }}>
+          <Button
+            title={mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
             onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
-          >
-            <Text style={styles.switchText}>
-              {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
-            </Text>
-          </TouchableOpacity>
+            variant="ghost"
+            size="sm"
+          />
         </View>
-      </ScrollView>
+      </ScreenScroll>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-    ...shadows.button,
-  },
-  logoIcon: {
-    fontSize: 36,
-  },
-  title: {
-    fontSize: fonts.sizeTitle,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    ...shadows.card,
-  },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    padding: 4,
-    marginBottom: spacing.lg,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderRadius: borderRadius.sm,
-  },
-  segmentBtnActive: {
-    backgroundColor: colors.card,
-    ...shadows.card,
-  },
-  segmentText: {
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.textMuted,
-  },
-  segmentTextActive: {
-    color: colors.primary,
-  },
-  label: {
-    fontSize: fonts.sizeSm,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  input: {
-    height: 52,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    fontSize: fonts.sizeLg,
-    color: colors.text,
-  },
-  button: {
-    height: 52,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.lg,
-    ...shadows.button,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.white,
-  },
-  switchButton: {
-    alignSelf: 'center',
-    marginTop: spacing.lg,
-    padding: spacing.sm,
-  },
-  switchText: {
-    fontSize: fonts.sizeMd,
-    color: colors.primary,
-    fontWeight: fonts.weightMedium,
-  },
-});
