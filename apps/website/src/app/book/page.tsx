@@ -38,8 +38,8 @@ function ProgressSteps({ current, total }: { current: number; total: number }) {
           <div key={i} className="flex flex-col items-center gap-1.5">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
               state === 'done' || state === 'active'
-                ? 'bg-[#1A3C34] text-white'
-                : 'bg-[#E4DFD6] text-[#8C847C]'
+                ? 'bg-accent text-foreground-on-accent'
+                : 'bg-border text-foreground-tertiary'
             }`}>
               {state === 'done' ? (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
@@ -48,7 +48,7 @@ function ProgressSteps({ current, total }: { current: number; total: number }) {
               ) : i + 1}
             </div>
             <span className={`text-xs font-medium ${
-              state === 'active' || state === 'done' ? 'text-[#1A3C34]' : 'text-[#8C847C]'
+              state === 'active' || state === 'done' ? 'text-accent' : 'text-foreground-tertiary'
             }`}>{label}</span>
           </div>
         );
@@ -126,30 +126,32 @@ export default function BookPage() {
 
   const fullPrice = selectedMode ? selectedMode.price * duration : 0;
 
+  const inputClass = "w-full h-10 px-3 rounded-xl input-base text-sm";
+
   return (
-    <div className="min-h-screen bg-[#F6F4EF]">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#E4DFD6] sticky top-0 z-50">
+    <div className="min-h-screen bg-surface-secondary">
+      <header className="glass-strong sticky top-0 z-50 border-b border-border">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <a href="/" className="font-display text-lg font-medium text-[#1A3C34]">HomeHelp</a>
-          <a href="/" className="text-sm text-[#8C847C] hover:text-[#1A3C34] transition-colors">&larr; Back to home</a>
+          <a href="/" className="font-display text-lg font-medium text-foreground">HomeHelp</a>
+          <a href="/" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">&larr; Back to home</a>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl border border-[#E4DFD6] p-6 sm:p-8 shadow-sm">
+        <div className="card-base p-6 sm:p-8">
           <ProgressSteps current={step} total={4} />
 
           {error && (
-            <div className="mb-6 px-4 py-3 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-sm flex items-center gap-2 animate-slide-in" role="alert">
-              <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-xs font-bold shrink-0">!</span>
+            <div className="mb-6 px-4 py-3 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-center gap-2 animate-slide-in" role="alert">
+              <span className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-xs font-bold shrink-0">!</span>
               {error}
             </div>
           )}
 
           {step === 0 && (
             <div className="animate-fade-in">
-              <h2 className="font-display text-2xl font-medium text-[#1C1C1C] mb-1">What do you need?</h2>
-              <p className="text-[#8C847C] text-sm mb-6">Choose the service you want to book.</p>
+              <h2 className="font-display text-2xl font-medium text-foreground mb-1">What do you need?</h2>
+              <p className="text-foreground-tertiary text-sm mb-6">Choose the service you want to book.</p>
               <div className="grid gap-3">
                 {MODES.map((m) => (
                   <button
@@ -157,23 +159,23 @@ export default function BookPage() {
                     onClick={() => { setMode(m.id); setServiceType(''); }}
                     className={`text-left p-5 rounded-xl border-2 transition-all ${
                       mode === m.id
-                        ? 'border-[#1A3C34] bg-[#F6F4EF]'
-                        : 'border-[#E4DFD6] hover:border-[#C4774B]/50 hover:bg-[#F6F4EF]/50'
+                        ? 'border-accent bg-accent-subtle'
+                        : 'border-border hover:border-warm/50 hover:bg-surface-secondary/50'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <span className="text-2xl">{m.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-display text-lg font-medium text-[#1C1C1C]">{m.title}</h3>
-                          <span className="text-[#1A3C34] font-semibold tabular-nums shrink-0">₹{m.price}/hr</span>
+                          <h3 className="font-display text-lg font-medium text-foreground">{m.title}</h3>
+                          <span className="text-accent font-semibold tabular-nums shrink-0">₹{m.price}/hr</span>
                         </div>
-                        <p className="text-[#8C847C] text-sm mt-0.5">{m.desc}</p>
+                        <p className="text-foreground-tertiary text-sm mt-0.5">{m.desc}</p>
                       </div>
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                        mode === m.id ? 'border-[#1A3C34] bg-[#1A3C34]' : 'border-[#E4DFD6]'
+                        mode === m.id ? 'border-accent bg-accent' : 'border-border'
                       }`}>
-                        {mode === m.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        {mode === m.id && <div className="w-1.5 h-1.5 rounded-full bg-foreground-on-accent" />}
                       </div>
                     </div>
                   </button>
@@ -189,21 +191,21 @@ export default function BookPage() {
 
           {step === 1 && mode && (
             <div className="animate-fade-in">
-              <div className="flex items-center gap-3 mb-6 pb-5 border-b border-[#E4DFD6]">
+              <div className="flex items-center gap-3 mb-6 pb-5 border-b border-border">
                 <span className="text-2xl">{selectedMode?.icon}</span>
                 <div>
-                  <h2 className="font-display text-xl font-medium text-[#1C1C1C]">{selectedMode?.title}</h2>
-                  <p className="text-sm text-[#8C847C]">₹{selectedMode?.price}/hour</p>
+                  <h2 className="font-display text-xl font-medium text-foreground">{selectedMode?.title}</h2>
+                  <p className="text-sm text-foreground-tertiary">₹{selectedMode?.price}/hour</p>
                 </div>
               </div>
 
               <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Service Type *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Service Type *</label>
                   <select
                     value={serviceType}
                     onChange={e => setServiceType(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className={inputClass}
                   >
                     <option value="">Select a service...</option>
                     {selectedMode?.services.map(s => (
@@ -213,25 +215,25 @@ export default function BookPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Your Address *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Your Address *</label>
                   <textarea
                     placeholder="Enter your full address"
                     value={address}
                     onChange={e => setAddress(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors resize-none"
+                    className="w-full px-3 py-2.5 rounded-xl input-base text-sm resize-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">When do you need it?</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">When do you need it?</label>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setScheduleType('now')}
                       className={`flex-1 py-3 rounded-xl font-medium text-sm border-2 transition-all ${
                         scheduleType === 'now'
-                          ? 'border-[#1A3C34] bg-[#F6F4EF] text-[#1A3C34]'
-                          : 'border-[#E4DFD6] text-[#8C847C] hover:border-[#C4774B]/50'
+                          ? 'border-accent bg-accent-subtle text-accent'
+                          : 'border-border text-foreground-tertiary hover:border-warm/50'
                       }`}
                     >
                       <span className="block text-lg mb-0.5">⚡</span>
@@ -241,8 +243,8 @@ export default function BookPage() {
                       onClick={() => setScheduleType('later')}
                       className={`flex-1 py-3 rounded-xl font-medium text-sm border-2 transition-all ${
                         scheduleType === 'later'
-                          ? 'border-[#1A3C34] bg-[#F6F4EF] text-[#1A3C34]'
-                          : 'border-[#E4DFD6] text-[#8C847C] hover:border-[#C4774B]/50'
+                          ? 'border-accent bg-accent-subtle text-accent'
+                          : 'border-border text-foreground-tertiary hover:border-warm/50'
                       }`}
                     >
                       <span className="block text-lg mb-0.5">📅</span>
@@ -254,29 +256,29 @@ export default function BookPage() {
                 {scheduleType === 'later' && (
                   <div className="grid grid-cols-2 gap-4 animate-fade-in">
                     <div>
-                      <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Date</label>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Date</label>
                       <input
                         type="date"
                         value={scheduledDate}
                         onChange={e => setScheduledDate(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                        className={inputClass}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Time</label>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Time</label>
                       <input
                         type="time"
                         value={scheduledTime}
                         onChange={e => setScheduledTime(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                        className={inputClass}
                       />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Duration: {duration} hour{duration > 1 ? 's' : ''}</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Duration: {duration} hour{duration > 1 ? 's' : ''}</label>
                   <input
                     type="range"
                     min={1}
@@ -284,18 +286,18 @@ export default function BookPage() {
                     step={1}
                     value={duration}
                     onChange={e => setDuration(parseInt(e.target.value))}
-                    className="w-full h-2 bg-[#E4DFD6] rounded-full appearance-none cursor-pointer accent-[#C4774B]"
+                    className="w-full h-2 bg-border rounded-full appearance-none cursor-pointer accent-warm"
                   />
-                  <div className="flex justify-between text-xs text-[#8C847C] mt-1">
+                  <div className="flex justify-between text-xs text-foreground-tertiary mt-1">
                     <span>1 hr</span>
                     <span>4 hrs</span>
                     <span>8 hrs</span>
                   </div>
                 </div>
 
-                <div className="bg-[#F6F4EF] rounded-xl p-4 flex items-center justify-between">
-                  <span className="text-sm font-medium text-[#1C1C1C]">Estimated Total</span>
-                  <span className="text-xl font-bold text-[#1A3C34]">₹{fullPrice}</span>
+                <div className="bg-surface-secondary rounded-xl p-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Estimated Total</span>
+                  <span className="text-xl font-bold text-accent">₹{fullPrice}</span>
                 </div>
               </div>
 
@@ -310,36 +312,36 @@ export default function BookPage() {
 
           {step === 2 && (
             <div className="animate-fade-in">
-              <h2 className="font-display text-2xl font-medium text-[#1C1C1C] mb-1">{isLogin ? 'Sign in' : 'Create account'}</h2>
-              <p className="text-[#8C847C] text-sm mb-6">{isLogin ? 'Sign in to confirm your booking.' : 'Create an account to confirm your booking.'}</p>
+              <h2 className="font-display text-2xl font-medium text-foreground mb-1">{isLogin ? 'Sign in' : 'Create account'}</h2>
+              <p className="text-foreground-tertiary text-sm mb-6">{isLogin ? 'Sign in to confirm your booking.' : 'Create an account to confirm your booking.'}</p>
 
               {authError && (
-                <div className="mb-5 px-4 py-3 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-sm flex items-center gap-2 animate-slide-in" role="alert">
-                  <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-xs font-bold shrink-0">!</span>
+                <div className="mb-5 px-4 py-3 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-center gap-2 animate-slide-in" role="alert">
+                  <span className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-xs font-bold shrink-0">!</span>
                   {authError}
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Email</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Password</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
                   <input
                     type="password"
                     placeholder={isLogin ? 'Your password' : 'At least 6 characters'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAuth()}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className={inputClass}
                   />
                 </div>
                 <Button className="w-full" size="lg" onClick={handleAuth} loading={loading}>
@@ -347,14 +349,14 @@ export default function BookPage() {
                 </Button>
                 <button
                   onClick={() => { setIsLogin(!isLogin); setAuthError(''); }}
-                  className="w-full text-sm text-[#8C847C] hover:text-[#1A3C34] transition-colors"
+                  className="w-full text-sm text-foreground-tertiary hover:text-foreground transition-colors"
                 >
                   {isLogin ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
                 </button>
                 {isLogin && (
                   <a
                     href="/forgot-password"
-                    className="block w-full text-center text-sm text-[#C4774B] hover:text-[#A85F38] transition-colors"
+                    className="block w-full text-center text-sm text-warm hover:text-warm/80 transition-colors"
                   >
                     Forgot your password?
                   </a>
@@ -365,13 +367,13 @@ export default function BookPage() {
 
           {step === 3 && mode && (
             <div className="animate-fade-in">
-              <div className="flex items-center gap-3 mb-6 pb-5 border-b border-[#E4DFD6]">
-                <div className="w-10 h-10 rounded-xl bg-[#F6F4EF] flex items-center justify-center text-xl">
+              <div className="flex items-center gap-3 mb-6 pb-5 border-b border-border">
+                <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-xl">
                   {selectedMode?.icon}
                 </div>
                 <div>
-                  <h2 className="font-display text-xl font-medium text-[#1C1C1C]">Confirm Your Booking</h2>
-                  <p className="text-sm text-[#8C847C]">Please review before confirming</p>
+                  <h2 className="font-display text-xl font-medium text-foreground">Confirm Your Booking</h2>
+                  <p className="text-sm text-foreground-tertiary">Please review before confirming</p>
                 </div>
               </div>
 
@@ -385,13 +387,13 @@ export default function BookPage() {
                   { label: 'Rate', value: `₹${selectedMode?.price}/hr` },
                 ].map((row, i) => (
                   <div key={i} className="flex justify-between py-2 text-sm">
-                    <span className="text-[#8C847C]">{row.label}</span>
-                    <span className="font-medium text-[#1C1C1C] text-right max-w-[60%]">{row.value}</span>
+                    <span className="text-foreground-tertiary">{row.label}</span>
+                    <span className="font-medium text-foreground text-right max-w-[60%]">{row.value}</span>
                   </div>
                 ))}
-                <div className="flex justify-between py-3 border-t border-[#E4DFD6] mt-3 pt-4">
-                  <span className="font-semibold text-[#1C1C1C]">Total</span>
-                  <span className="font-bold text-lg text-[#1A3C34]">₹{fullPrice}</span>
+                <div className="flex justify-between py-3 border-t border-border mt-3 pt-4">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="font-bold text-lg text-accent">₹{fullPrice}</span>
                 </div>
               </div>
 
@@ -406,29 +408,29 @@ export default function BookPage() {
 
           {step === 4 && (
             <div className="text-center py-6 animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-[#1A3C34]/10 flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-[#1A3C34]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="font-display text-2xl font-medium text-[#1C1C1C] mb-2">Booking Confirmed!</h2>
-              <p className="text-[#8C847C] text-sm mb-2">Your booking has been created successfully.</p>
+              <h2 className="font-display text-2xl font-medium text-foreground mb-2">Booking Confirmed!</h2>
+              <p className="text-foreground-tertiary text-sm mb-2">Your booking has been created successfully.</p>
               {bookingId && (
-                <div className="inline-block bg-[#F6F4EF] rounded-xl px-5 py-3 mt-4 mb-6">
-                  <p className="text-[10px] text-[#8C847C] uppercase tracking-wider mb-0.5 font-medium">Booking ID</p>
-                  <p className="text-sm font-mono font-medium text-[#1C1C1C]">{bookingId}</p>
+                <div className="inline-block bg-surface-secondary rounded-xl px-5 py-3 mt-4 mb-6">
+                  <p className="text-[10px] text-foreground-tertiary uppercase tracking-wider mb-0.5 font-medium">Booking ID</p>
+                  <p className="text-sm font-mono font-medium text-foreground">{bookingId}</p>
                 </div>
               )}
-              <div className="bg-[#F6F4EF] rounded-xl p-5 mb-8 text-left">
+              <div className="bg-surface-secondary rounded-xl p-5 mb-8 text-left">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-xl">{selectedMode?.icon}</span>
                   <div>
-                    <p className="font-medium text-[#1C1C1C]">{serviceType}</p>
-                    <p className="text-xs text-[#8C847C]">{selectedMode?.title} &middot; {duration} hr{duration > 1 ? 's' : ''}</p>
+                    <p className="font-medium text-foreground">{serviceType}</p>
+                    <p className="text-xs text-foreground-tertiary">{selectedMode?.title} &middot; {duration} hr{duration > 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <p className="text-sm text-[#8C847C]">{address}</p>
-                <p className="text-sm text-[#8C847C] mt-0.5">
+                <p className="text-sm text-foreground-tertiary">{address}</p>
+                <p className="text-sm text-foreground-tertiary mt-0.5">
                   {scheduleType === 'now' ? 'Starting now' : `${scheduledDate} at ${scheduledTime}`}
                 </p>
               </div>

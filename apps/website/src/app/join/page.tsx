@@ -20,7 +20,7 @@ function ProgressIndicator({ step }: { step: number }) {
             <div className="flex flex-col items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-                  isDone || isActive ? 'bg-[#1A3C34] text-white' : 'bg-[#E4DFD6] text-[#8C847C]'
+                  isDone || isActive ? 'bg-accent text-foreground-on-accent' : 'bg-border text-foreground-tertiary'
                 }`}
               >
                 {isDone ? (
@@ -29,12 +29,12 @@ function ProgressIndicator({ step }: { step: number }) {
                   </svg>
                 ) : s.num}
               </div>
-              <span className={`text-xs mt-1.5 font-medium ${isActive || isDone ? 'text-[#1A3C34]' : 'text-[#8C847C]'}`}>
+              <span className={`text-xs mt-1.5 font-medium ${isActive || isDone ? 'text-accent' : 'text-foreground-tertiary'}`}>
                 {s.label}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`w-12 h-0.5 mx-2 mb-5 transition-colors ${s.num <= step ? 'bg-[#1A3C34]' : 'bg-[#E4DFD6]'}`} />
+              <div className={`w-12 h-0.5 mx-2 mb-5 transition-colors ${s.num <= step ? 'bg-accent' : 'bg-border'}`} />
             )}
           </div>
         );
@@ -133,22 +133,24 @@ export default function JoinPage() {
     }
   };
 
+  const btnCls = "w-full h-10 bg-warm hover:bg-warm-hover active:bg-warm-hover/80 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2";
+
   if (form.submitted) {
     return (
-      <div className="min-h-screen bg-[#F6F4EF] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-10 border border-[#E4DFD6] max-w-md text-center shadow-sm animate-fade-in">
-          <div className="w-16 h-16 rounded-full bg-[#1A3C34]/10 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-[#1A3C34]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+      <div className="min-h-screen bg-surface-secondary flex items-center justify-center p-4">
+        <div className="card-base p-10 max-w-md text-center animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="font-display text-2xl font-medium text-[#1C1C1C] mb-2">Application Submitted!</h1>
-          <p className="text-[#8C847C] text-sm mb-6">We&apos;ll review your application and get back to you soon. Once approved, you can sign in to the Worker Portal to accept jobs.</p>
+          <h1 className="font-display text-2xl font-medium text-foreground mb-2">Application Submitted!</h1>
+          <p className="text-foreground-tertiary text-sm mb-6">We&apos;ll review your application and get back to you soon. Once approved, you can sign in to the Worker Portal to accept jobs.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="/worker" className="inline-flex items-center justify-center h-10 px-6 bg-[#C4774B] text-white rounded-full text-sm font-medium hover:bg-[#B06840] transition-colors">
+            <a href="/worker" className="btn-base btn-warm">
               Go to Worker Portal
             </a>
-            <a href="/" className="inline-flex items-center justify-center h-10 px-6 border border-[#E4DFD6] text-[#1C1C1C] rounded-full text-sm font-medium hover:bg-[#F6F4EF] transition-colors">
+            <a href="/" className="btn-base btn-secondary">
               Back to Home
             </a>
           </div>
@@ -158,77 +160,73 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F4EF]">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#E4DFD6] sticky top-0 z-50">
+    <div className="min-h-screen bg-surface-secondary">
+      <header className="glass-strong sticky top-0 z-50 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <a href="/" className="font-display text-lg font-medium text-[#1A3C34]">HomeHelp</a>
-          <a href="/" className="text-sm text-[#8C847C] hover:text-[#1A3C34] transition-colors">&larr; Back to home</a>
+          <a href="/" className="font-display text-lg font-medium text-foreground">HomeHelp</a>
+          <a href="/" className="text-sm text-foreground-tertiary hover:text-foreground transition-colors">&larr; Back to home</a>
         </div>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-12">
         <ProgressIndicator step={step} />
 
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E4DFD6] shadow-sm animate-fade-in">
-          <h2 className="font-display text-xl font-medium text-[#1C1C1C] mb-1">Join as a Worker</h2>
-          <p className="text-[#8C847C] text-sm mb-6">Fill in your details to start the onboarding process.</p>
+        <div className="card-base p-6 sm:p-8 animate-fade-in">
+          <h2 className="font-display text-xl font-medium text-foreground mb-1">Join as a Worker</h2>
+          <p className="text-foreground-tertiary text-sm mb-6">Fill in your details to start the onboarding process.</p>
 
           {error && (
-            <div className="bg-red-50/80 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl mb-6 text-sm animate-slide-in">{error}</div>
+            <div className="bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-2.5 rounded-xl mb-6 text-sm animate-slide-in">{error}</div>
           )}
 
           <div className="space-y-4">
             {step === 1 && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Full Name *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Full Name *</label>
                   <input
                     type="text"
                     placeholder="Your full name"
                     value={form.name}
                     onChange={(e) => updateField('name', e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className="input-base text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Email Address *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Email Address *</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
                     value={form.email}
                     onChange={(e) => updateField('email', e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className="input-base text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Password *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Password *</label>
                   <input
                     type="password"
                     placeholder="Minimum 6 characters"
                     value={form.password}
                     onChange={(e) => updateField('password', e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className="input-base text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Phone Number (optional)</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Phone Number (optional)</label>
                   <input
                     type="tel"
                     placeholder="+919876543210"
                     value={form.phoneNumber}
                     onChange={(e) => updateField('phoneNumber', e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className="input-base text-sm"
                   />
                 </div>
 
-                <button
-                  onClick={handleNext}
-                  disabled={loading}
-                  className="w-full h-10 bg-[#C4774B] hover:bg-[#B06840] active:bg-[#9C5A36] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
+                <button onClick={handleNext} disabled={loading} className={btnCls}>
                   Continue →
                 </button>
               </>
@@ -237,11 +235,11 @@ export default function JoinPage() {
             {step === 2 && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">I want to work as</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">I want to work as</label>
                   <select
                     value={form.workerType}
                     onChange={(e) => updateField('workerType', e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className="input-base text-sm"
                   >
                     <option value="home_help">Home Help (Cleaning, Cooking)</option>
                     <option value="driver">Driver</option>
@@ -250,11 +248,11 @@ export default function JoinPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#1C1C1C] mb-1.5">Years of Experience</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Years of Experience</label>
                   <select
                     value={form.experience}
                     onChange={(e) => updateField('experience', e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent hover:border-[#8C847C]/50 transition-colors"
+                    className="input-base text-sm"
                   >
                     <option value="0-1">0–1 years</option>
                     <option value="1-3">1–3 years</option>
@@ -268,25 +266,25 @@ export default function JoinPage() {
                     type="checkbox"
                     checked={form.termsAccepted}
                     onChange={(e) => updateField('termsAccepted', e.target.checked)}
-                    className="mt-0.5 h-4 w-4 accent-[#C4774B] rounded border-[#E4DFD6]"
+                    className="mt-0.5 h-4 w-4 accent-warm rounded border-border"
                   />
-                  <span className="text-sm text-[#8C847C]">
+                  <span className="text-sm text-foreground-tertiary">
                     I confirm that the information provided is accurate and I agree to the{' '}
-                    <a href="#" className="text-[#C4774B] underline">terms and conditions</a>.
+                    <a href="#" className="text-warm underline">terms and conditions</a>.
                   </span>
                 </label>
 
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setStep(1)}
-                    className="flex-1 h-10 border border-[#E4DFD6] text-[#1C1C1C] rounded-xl font-medium text-sm hover:bg-[#F6F4EF] transition-colors"
+                    className="flex-1 btn-base btn-secondary rounded-xl"
                   >
                     ← Back
                   </button>
                   <button
                     onClick={handleSubmit}
                     disabled={loading}
-                    className="flex-[2] h-10 bg-[#C4774B] hover:bg-[#B06840] active:bg-[#9C5A36] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                    className="flex-[2] btn-base btn-warm rounded-xl"
                   >
                     {loading ? (
                       <>

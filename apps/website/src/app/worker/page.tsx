@@ -26,18 +26,18 @@ function LoginView({ onOk }: { onOk: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F4EF] flex items-center justify-center px-4 py-12">
-      <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl border border-[#E4DFD6] shadow-sm p-8">
-        <h1 className="font-display text-2xl font-medium text-[#1C1C1C] mb-1">Worker Portal</h1>
-        <p className="text-[#8C847C] text-sm mb-6">Sign in to accept and manage jobs.</p>
-        {err && <div className="px-4 py-3 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-sm mb-4">{err}</div>}
+    <div className="min-h-screen bg-surface-secondary flex items-center justify-center px-4 py-12">
+      <form onSubmit={submit} className="w-full max-w-sm card-base p-8 animate-fade-in">
+        <h1 className="font-display text-2xl font-medium text-foreground mb-1">Worker Portal</h1>
+        <p className="text-foreground-tertiary text-sm mb-6">Sign in to accept and manage jobs.</p>
+        {err && <div className="px-4 py-3 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm mb-4">{err}</div>}
         <div className="space-y-4">
           <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent" />
+            className="input-base" />
           <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] placeholder:text-[#8C847C]/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent" />
+            className="input-base" />
           <Button type="submit" className="w-full" size="lg" loading={loading}>Sign In</Button>
-          <a href="/join" className="block text-center text-sm text-[#C4774B] hover:text-[#A85F38]">Become a worker</a>
+          <a href="/join" className="block text-center text-sm text-warm hover:text-warm/80">Become a worker</a>
         </div>
       </form>
     </div>
@@ -54,18 +54,18 @@ function JobCard({ b, mode, onAccept, onStart, onComplete, busy }: {
   const [review, setReview] = useState('');
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E4DFD6] shadow-sm p-5">
+    <div className="card-base p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-md font-medium text-[#1C1C1C]">{b.serviceType}</h3>
-          <p className="text-xs text-[#8C847C] capitalize">{b.mode.replace('_', ' ')} &middot; {b.durationHours ? `${b.durationHours} hr` : ''}</p>
+          <h3 className="font-display text-md font-medium text-foreground">{b.serviceType}</h3>
+          <p className="text-xs text-foreground-tertiary capitalize">{b.mode.replace('_', ' ')} &middot; {b.durationHours ? `${b.durationHours} hr` : ''}</p>
         </div>
-        <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[#F6F4EF] text-[#8C847C] font-medium">
+        <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-surface-secondary text-foreground-tertiary font-medium">
           {STATUS_LABEL[b.status]}
         </span>
       </div>
 
-      <p className="text-sm text-[#1C1C1C] mt-3">{b.customerAddress || '—'}</p>
+      <p className="text-sm text-foreground mt-3">{b.customerAddress || '—'}</p>
 
       {mode === 'available' && (
         <div className="mt-4 flex justify-end">
@@ -77,7 +77,7 @@ function JobCard({ b, mode, onAccept, onStart, onComplete, busy }: {
         <div className="mt-4 flex flex-col gap-2">
           <input type="text" inputMode="numeric" placeholder="Start OTP from customer" value={otp}
             onChange={(e) => setOtp(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent" />
+            className="input-base text-sm" />
           <Button size="sm" onClick={() => onStart(b.id, otp)} loading={busy} disabled={!otp}>Start Job</Button>
         </div>
       )}
@@ -86,22 +86,22 @@ function JobCard({ b, mode, onAccept, onStart, onComplete, busy }: {
         <div className="mt-4 flex flex-col gap-2">
           <input type="text" inputMode="numeric" placeholder="End OTP from customer" value={otp}
             onChange={(e) => setOtp(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent" />
+            className="input-base text-sm" />
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
               <button key={n} type="button" onClick={() => setRating(n)}
-                className={`text-xl ${n <= rating ? 'text-amber-500' : 'text-[#E4DFD6]'}`}>★</button>
+                className={`text-xl transition-colors ${n <= rating ? 'text-amber-500 dark:text-amber-400' : 'text-border'}`}>★</button>
             ))}
           </div>
           <input type="text" placeholder="Optional review" value={review}
             onChange={(e) => setReview(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-[#E4DFD6] bg-white text-[#1C1C1C] text-sm focus:outline-none focus:ring-2 focus:ring-[#C4774B] focus:border-transparent" />
+            className="input-base text-sm" />
           <Button size="sm" onClick={() => onComplete(b.id, otp, rating, review)} loading={busy} disabled={!otp}>Complete Job</Button>
         </div>
       )}
 
       {mode === 'mine' && b.status === 'completed' && (
-        <p className="mt-3 text-sm text-[#1A3C34] font-medium">✓ Completed {b.ratingByUser ? `· ★ ${b.ratingByUser}/5` : ''}</p>
+        <p className="mt-3 text-sm text-accent font-medium">✓ Completed {b.ratingByUser ? `· ★ ${b.ratingByUser}/5` : ''}</p>
       )}
     </div>
   );
@@ -129,8 +129,6 @@ export default function WorkerPortalPage() {
     const t = getToken();
     if (!t) { setTokenState(null); setLoading(false); return; }
     setTokenState(t); setLoading(true); setError('');
-    // Helper: fetch JSON or return a safe default on non-2xx so a single
-    // endpoint failure (e.g. 401, 404) doesn't white-screen the portal.
     const safeJson = async (path: string, init?: RequestInit) => {
       const res = await fetch(`${API}${path}`, {
         ...init,
@@ -144,7 +142,6 @@ export default function WorkerPortalPage() {
         safeJson(`/api/bookings/available?mode=${mode}`).catch(() => ({ bookings: [] })),
         safeJson(`/api/bookings/worker`).catch(() => ({ bookings: [] })),
         safeJson(`/api/workers/me`).catch((e) => {
-          // 401 → token is no longer valid; bounce to login.
           if (e instanceof Error && e.message.includes('-> 401')) {
             clearToken();
             setTokenState(null);
@@ -183,16 +180,16 @@ export default function WorkerPortalPage() {
   if (!token) return <LoginView onOk={load} />;
 
   return (
-    <div className="min-h-screen bg-[#F6F4EF]">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#E4DFD6] sticky top-0 z-50">
+    <div className="min-h-screen bg-surface-secondary">
+      <header className="glass-strong sticky top-0 z-50 border-b border-border">
         <div className="container-page max-w-3xl mx-auto flex items-center justify-between h-16 px-4">
-          <a href="/" className="font-display text-xl font-medium text-[#1C1C1C]">HomeHelp · Worker</a>
-          <button onClick={logout} className="text-sm text-[#C4774B] hover:text-[#A85F38] transition-colors">Sign out</button>
+          <a href="/" className="font-display text-xl font-medium text-foreground">HomeHelp · Worker</a>
+          <button onClick={logout} className="text-sm text-warm hover:text-warm/80 transition-colors">Sign out</button>
         </div>
       </header>
 
       <main className="container-page max-w-3xl mx-auto px-4 py-8">
-        {error && <div className="px-4 py-3 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-sm mb-4">{error}</div>}
+        {error && <div className="px-4 py-3 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm mb-4">{error}</div>}
         {profile && (() => {
           const needsAadhaar = !profile.aadhaarVerified;
           const needsLicense = (profile.workerType === 'driver' || profile.workerType === 'both') && !profile.licenseVerified;
@@ -203,12 +200,12 @@ export default function WorkerPortalPage() {
             needsLicense && 'Driving license verification',
           ].filter(Boolean) as string[];
           return (
-            <div className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm mb-4">
+            <div className="px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-400 text-sm mb-4">
               <p className="font-medium">
                 {notActive ? 'Your worker account is pending approval.' : 'Verification pending.'}
               </p>
               {items.length > 0 && (
-                <p className="mt-1">Awaiting: {items.join(' and ')}. You can’t take {profile.workerType === 'driver' ? 'driver' : 'these'} jobs until an admin completes this.</p>
+                <p className="mt-1">Awaiting: {items.join(' and ')}. You can't take {profile.workerType === 'driver' ? 'driver' : 'these'} jobs until an admin completes this.</p>
               )}
               {profile.deactivationReason && <p className="mt-1">Note: {profile.deactivationReason}</p>}
             </div>
@@ -217,13 +214,13 @@ export default function WorkerPortalPage() {
 
         <section className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-lg font-medium text-[#1C1C1C]">My Jobs</h2>
-            <button onClick={load} className="text-sm text-[#8C847C] hover:text-[#1A3C34]">{loading ? 'Refreshing…' : 'Refresh'}</button>
+            <h2 className="font-display text-lg font-medium text-foreground">My Jobs</h2>
+            <button onClick={load} className="text-sm text-foreground-tertiary hover:text-foreground">{loading ? 'Refreshing…' : 'Refresh'}</button>
           </div>
           {loading ? (
-            <div className="h-32 bg-white rounded-2xl border border-[#E4DFD6] animate-pulse" />
+            <div className="h-32 card-base skeleton" />
           ) : mine.length === 0 ? (
-            <p className="text-sm text-[#8C847C]">No jobs assigned to you yet.</p>
+            <p className="text-sm text-foreground-tertiary">No jobs assigned to you yet.</p>
           ) : (
             <div className="space-y-3">
               {mine.map((b) => <JobCard key={b.id} b={b} mode="mine" onAccept={() => {}} onStart={(id, o) => act(id, '/start', { otp: o })} onComplete={(id, o, r, rev) => act(id, '/complete', { otp: o, rating: r, reviewText: rev })} busy={busy} />)}
@@ -233,12 +230,12 @@ export default function WorkerPortalPage() {
 
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-lg font-medium text-[#1C1C1C]">Available Jobs</h2>
+            <h2 className="font-display text-lg font-medium text-foreground">Available Jobs</h2>
             <div className="flex gap-2">
               {(['home_help', 'driver'] as const).map((m) => (
                 <button key={m} onClick={() => setMode(m)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    mode === m ? 'bg-[#1A3C34] text-white' : 'bg-white border border-[#E4DFD6] text-[#8C847C]'
+                    mode === m ? 'bg-accent text-foreground-on-accent' : 'card-base text-foreground-tertiary'
                   }`}>
                   {m === 'home_help' ? 'Home Help' : 'Driver'}
                 </button>
@@ -246,7 +243,7 @@ export default function WorkerPortalPage() {
             </div>
           </div>
           {available.length === 0 ? (
-            <p className="text-sm text-[#8C847C]">No open {mode.replace('_', ' ')} jobs right now.</p>
+            <p className="text-sm text-foreground-tertiary">No open {mode.replace('_', ' ')} jobs right now.</p>
           ) : (
             <div className="space-y-3">
               {available.map((b) => <JobCard key={b.id} b={b} mode="available" onAccept={(id) => act(id, '/assign')} onStart={() => {}} onComplete={() => {}} busy={busy} />)}
