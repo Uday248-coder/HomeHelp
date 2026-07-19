@@ -1,4 +1,4 @@
-import { Button, LinkButton } from "@/components/ui/Button";
+import { LinkButton } from "@/components/ui/Button";
 import { Compass } from "lucide-react";
 
 export default function NotFound() {
@@ -9,9 +9,9 @@ export default function NotFound() {
           <Compass className="h-7 w-7" aria-hidden />
         </div>
         <p className="eyebrow mb-3 text-accent">404</p>
-        <h1 className="heading-lg mb-3">We couldn't find that page</h1>
+        <h1 className="heading-lg mb-3">We couldn&apos;t find that page</h1>
         <p className="text-pretty text-foreground-secondary mb-8">
-          The page you were looking for moved, expired, or never existed. Let's get you back on track.
+          The page you were looking for moved, expired, or never existed. Let&apos;s get you back on track.
         </p>
         <div className="flex items-center justify-center gap-3">
           <LinkButton href="/" variant="primary">Back home</LinkButton>

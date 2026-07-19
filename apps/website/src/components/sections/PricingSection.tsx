@@ -48,7 +48,7 @@ const plans = [
   },
 ];
 
-function PricingCard({ plan, index }: { plan: typeof plans[number]; index: number }) {
+function PricingCard({ plan }: { plan: typeof plans[number] }) {
   return (
     <article
       className={`relative glass-card p-8 rounded-3xl transition-all duration-300 hover:shadow-xl ${
@@ -101,8 +101,8 @@ export function PricingSection() {
         </header>
 
         <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, i) => (
-            <PricingCard key={plan.title} plan={plan} index={i} />
+          {plans.map((plan) => (
+            <PricingCard key={plan.title} plan={plan} />
           ))}
         </div>
       </div>

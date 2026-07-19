@@ -16,7 +16,7 @@ export function TestimonialsSection() {
         </header>
 
         <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {testimonials.map((t, i) => (
+          {testimonials.map((t) => (
             <article key={t.name} className="glass-card p-8 rounded-3xl transition-all duration-300 hover:shadow-lg">
               <div className="flex items-center gap-0.5 mb-4">
                 {Array.from({ length: 5 }).map((_, j) => (

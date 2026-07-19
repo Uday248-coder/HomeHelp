@@ -13,10 +13,6 @@ const STEPS: { key: BookingStatus; label: string }[] = [
   { key: 'completed', label: 'Completed' },
 ];
 
-const STATUS_RANK: Record<BookingStatus, number> = {
-  pending: 0, assigned: 1, in_progress: 2, completed: 3, cancelled: -1,
-};
-
 function statusIndex(status: BookingStatus): number {
   return STEPS.findIndex((s) => s.key === status);
 }

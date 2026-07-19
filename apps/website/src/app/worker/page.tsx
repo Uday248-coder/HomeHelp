@@ -205,7 +205,7 @@ export default function WorkerPortalPage() {
                 {notActive ? 'Your worker account is pending approval.' : 'Verification pending.'}
               </p>
               {items.length > 0 && (
-                <p className="mt-1">Awaiting: {items.join(' and ')}. You can't take {profile.workerType === 'driver' ? 'driver' : 'these'} jobs until an admin completes this.</p>
+                <p className="mt-1">Awaiting: {items.join(' and ')}. You can&apos;t take {profile.workerType === 'driver' ? 'driver' : 'these'} jobs until an admin completes this.</p>
               )}
               {profile.deactivationReason && <p className="mt-1">Note: {profile.deactivationReason}</p>}
             </div>
