@@ -2,7 +2,7 @@
   "name": "homehelp",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "workspaces": [
     "apps/*",
