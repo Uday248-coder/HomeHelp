@@ -54,6 +54,14 @@ const generateOtpLimiter = rateLimit({
   message: { error: 'Too many OTP requests, please try again later' },
 });
 
+const otpVerifyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OTP attempts, please try again later' },
+});
+
 bookingsRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { mode, serviceType, scheduledAt, customerAddress, customerLat, customerLng, durationHours } = req.body;
@@ -324,7 +332,7 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
   }
 });
 
-bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
+bookingsRouter.patch('/:id/start', otpVerifyLimiter, async (req: Request, res: Response) => {
   try {
     const { otp } = req.body;
     if (!otp) return res.status(400).json({ error: 'OTP is required' });
@@ -352,7 +360,7 @@ bookingsRouter.patch('/:id/start', async (req: Request, res: Response) => {
   }
 });
 
-bookingsRouter.patch('/:id/complete', async (req: Request, res: Response) => {
+bookingsRouter.patch('/:id/complete', otpVerifyLimiter, async (req: Request, res: Response) => {
   try {
     const { otp, rating, reviewText } = req.body;
     if (!otp) return res.status(400).json({ error: 'OTP is required' });

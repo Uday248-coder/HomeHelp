@@ -103,7 +103,7 @@ payoutsRouter.post('/process', adminMiddleware, async (req, res) => {
         status: 'completed',
         completedAt: { gte: start, lte: end },
         workerId: { not: null },
-        payment: { status: 'captured' },
+        payment: { status: { in: ['captured', 'paid'] } },
       },
       select: {
         workerId: true,

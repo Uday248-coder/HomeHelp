@@ -49,7 +49,7 @@ usersRouter.get('/', adminMiddleware, async (req, res) => {
     const capturedPayments = userIds.length
       ? await prisma.payment.findMany({
           where: {
-            status: 'captured',
+            status: { in: ['captured', 'paid'] },
             booking: { userId: { in: userIds } },
           },
           select: { amount: true, booking: { select: { userId: true } } },
@@ -99,7 +99,7 @@ usersRouter.get('/:id', adminMiddleware, async (req, res) => {
 
     const spent = await prisma.payment.aggregate({
       _sum: { amount: true },
-      where: { booking: { userId: user.id }, status: 'captured' },
+      where: { booking: { userId: user.id }, status: { in: ['captured', 'paid'] } },
     });
 
     return res.json({

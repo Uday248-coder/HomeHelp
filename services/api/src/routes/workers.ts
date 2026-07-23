@@ -35,7 +35,6 @@ workersRouter.get('/', authMiddleware, async (_req, res) => {
         id: true,
         name: true,
         workerType: true,
-        phoneNumber: true,
         averageRating: true,
         photoUrl: true,
         isAvailable: true,
@@ -110,7 +109,7 @@ workersRouter.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     }
 
     const worker = await prisma.worker.create({
-      data: { workerType, name, phoneNumber, photoUrl },
+      data: { workerType, name, phoneNumber, photoUrl, isActive: false },
       select: {
         id: true, name: true, workerType: true,
         phoneNumber: true, photoUrl: true, isAvailable: true,
@@ -252,8 +251,8 @@ workersRouter.patch('/:id', authMiddleware, async (req, res) => {
         ...(isActive === true
           ? { deactivationReason: null }
           : deactivationReason !== undefined && { deactivationReason }),
-        ...(currentLat !== undefined && { currentLat: parseFloat(currentLat) }),
-        ...(currentLng !== undefined && { currentLng: parseFloat(currentLng) }),
+        ...(currentLat !== undefined && { currentLat: currentLat === null ? null : parseFloat(currentLat) }),
+        ...(currentLng !== undefined && { currentLng: currentLng === null ? null : parseFloat(currentLng) }),
       },
     });
     return res.json({ worker });

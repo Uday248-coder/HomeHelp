@@ -81,6 +81,10 @@ paymentsRouter.post('/create-order', async (req, res) => {
     // Idempotent: reuse an existing payment for this booking instead of duplicating.
     let payment = await prisma.payment.findUnique({ where: { bookingId } });
 
+    if (payment && (payment.status === 'paid' || payment.status === 'captured')) {
+      return res.status(409).json({ error: 'Payment already completed for this booking', payment });
+    }
+
     let razorpayOrderId: string | null = null;
     let method = 'upi';
 

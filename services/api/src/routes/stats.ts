@@ -25,7 +25,7 @@ statsRouter.get('/dashboard', async (req, res) => {
       prisma.booking.count({ where: { status: 'completed' } }),
       prisma.booking.count({ where: { status: 'cancelled' } }),
       prisma.worker.count({ where: { isActive: true } }),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'captured' } }),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: { in: ['captured', 'paid'] } } }),
       prisma.booking.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -66,7 +66,7 @@ statsRouter.get('/revenue/weekly', async (req, res) => {
 
     const payments = await prisma.payment.findMany({
       where: {
-        status: 'captured',
+        status: { in: ['captured', 'paid'] },
         createdAt: { gte: sevenDaysAgo },
       },
       select: { amount: true, createdAt: true },
@@ -115,7 +115,7 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
     ] = await Promise.all([
       prisma.payment.findMany({
         where: {
-          status: 'captured',
+          status: { in: ['captured', 'paid'] },
           createdAt: { gte: startDate, lte: endDate },
         },
         select: { amount: true, createdAt: true, booking: { select: { mode: true } } },
@@ -124,6 +124,7 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       prisma.booking.groupBy({
         by: ['status'],
         _count: { id: true },
+        where: { createdAt: { gte: startDate, lte: endDate } },
       }),
       prisma.worker.findMany({
         orderBy: { totalJobs: 'desc' },
@@ -137,7 +138,7 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       prisma.payment.groupBy({
         by: ['status'],
         where: {
-          status: 'captured',
+          status: { in: ['captured', 'paid'] },
           createdAt: { gte: startDate, lte: endDate },
         },
         _sum: { amount: true },
@@ -149,7 +150,7 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       prisma.payment.aggregate({
         _sum: { amount: true },
         where: {
-          status: 'captured',
+          status: { in: ['captured', 'paid'] },
           createdAt: { gte: startDate, lte: endDate },
           booking: { mode: 'home_help' },
         },
@@ -157,7 +158,7 @@ statsRouter.get('/analytics', adminMiddleware, async (req, res) => {
       prisma.payment.aggregate({
         _sum: { amount: true },
         where: {
-          status: 'captured',
+          status: { in: ['captured', 'paid'] },
           createdAt: { gte: startDate, lte: endDate },
           booking: { mode: 'driver' },
         },
