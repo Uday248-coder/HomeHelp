@@ -18,3 +18,10 @@ services/api/firebase-service-account.json
 
 # litellm fusion config (contains API key references)
 fusion_config.yaml
+
+# Expo prebuild artifacts (regenerate via `expo prebuild`)
+android/
+ios/
+*.tgz
+.expo/
+.expo-shared/

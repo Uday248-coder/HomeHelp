@@ -8,16 +8,15 @@ export function middleware(request: NextRequest) {
 
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https:`,
-    `style-src 'self' 'unsafe-inline'`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https:`,
+    `style-src 'self' 'unsafe-inline' https:`,
     `img-src 'self' data: blob: https:`,
-    `font-src 'self'`,
-    `connect-src 'self' ${API_URL} ${API_WS}`,
+    `font-src 'self' data: https:`,
+    `connect-src 'self' ${API_URL} ${API_WS} https:`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
     `object-src 'none'`,
-    `upgrade-insecure-requests`,
   ].join('; ');
 
   const requestHeaders = new Headers(request.headers);
