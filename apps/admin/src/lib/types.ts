@@ -43,6 +43,7 @@ export interface Worker {
   isAvailable: boolean;
   isActive: boolean;
   deactivationReason?: string | null;
+  distanceKm?: number | null;
 }
 
 export interface WeeklyRevenue {

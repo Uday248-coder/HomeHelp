@@ -14,9 +14,11 @@ import { statsRouter } from './routes/stats';
 import { waitlistRouter } from './routes/waitlist';
 import { payoutsRouter } from './routes/payouts';
 import { usersRouter } from './routes/users';
+import { pushRouter } from './routes/push';
 import { requestLogger } from './middleware/validation';
 import { setupSocket } from './socket';
 import { getAllowedOrigins } from './lib/origins';
+import { configureWebPush } from './lib/push';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,6 +67,7 @@ app.use('/api/stats', statsRouter);
 app.use('/api/waitlist', waitlistRouter);
 app.use('/api/payouts', payoutsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/push', pushRouter);
 
 Sentry.setupExpressErrorHandler(app);
 
@@ -72,6 +75,13 @@ app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 
 const httpServer = createServer(app);
 setupSocket(httpServer);
+
+configureWebPush();
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  console.log('[push] VAPID configured');
+} else {
+  console.log('[push] VAPID keys missing — push notifications disabled');
+}
 
 httpServer.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);

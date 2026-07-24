@@ -130,8 +130,10 @@ export const api = {
   updateWorker: (id: string, data: Record<string, unknown>) =>
     fetchAPI(`/api/workers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
-  getAvailableWorkers: (mode?: string) =>
-    fetchAPI('/api/workers/available' + (mode ? `/${mode}` : '')),
+  getAvailableWorkers: (mode?: string, origin?: { lat: number; lng: number }) => {
+    const path = mode ? `/api/workers/available/${mode}` : '/api/workers/available';
+    return fetchAPI(path + buildQuery(origin as Record<string, string | number>));
+  },
 
   login: (email: string, password: string) =>
     fetchAPI('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<{ token: string }>,

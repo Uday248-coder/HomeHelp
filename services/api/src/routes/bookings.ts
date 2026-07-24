@@ -7,6 +7,7 @@ import { RATE_TABLE } from '../lib/constants';
 import { sendOtpEmail } from '../lib/mailer';
 import { Prisma } from '@prisma/client';
 import { isWorkerEligible, eligibleModes, type BookingMode } from '../lib/eligibility';
+import { sendPushToUser } from '../lib/push';
 
 export const bookingsRouter = Router();
 
@@ -275,6 +276,22 @@ bookingsRouter.patch('/:id/cancel', async (req: Request, res: Response) => {
       data: { status: 'cancelled' },
       select: BOOKING_SAFE_FIELDS,
     });
+
+    if (booking.workerId) {
+      const assignedWorker = await prisma.worker.findUnique({
+        where: { id: booking.workerId },
+        select: { userId: true },
+      });
+      if (assignedWorker?.userId) {
+        await sendPushToUser(prisma as any, assignedWorker.userId, {
+          title: 'Booking cancelled',
+          body: 'A booking assigned to you has been cancelled.',
+          url: `/worker`,
+          tag: `booking-${updated.id}-cancelled`,
+        });
+      }
+    }
+
     return res.json({ booking: updated });
   } catch (err) {
     console.error('[bookings] cancel booking error:', err);
@@ -316,6 +333,25 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
       });
     }
 
+    // Overlap guard: prevent double-booking if the job has a scheduled time slot.
+    if (booking.scheduledAt && booking.durationHours) {
+      const jobEnd = new Date(booking.scheduledAt.getTime() + Number(booking.durationHours) * 3600000);
+      const overlapping = await prisma.booking.findFirst({
+        where: {
+          workerId,
+          status: { in: ['assigned', 'in_progress'] },
+          id: { not: booking.id },
+          scheduledAt: {
+            lt: jobEnd,
+            gte: booking.scheduledAt,
+          },
+        },
+      });
+      if (overlapping) {
+        return res.status(409).json({ error: 'Worker already has an overlapping scheduled job in this time slot' });
+      }
+    }
+
     const updated = await prisma.booking.update({
       where: { id: getId(req) },
       data: { workerId, status: 'assigned' },
@@ -325,6 +361,15 @@ bookingsRouter.patch('/:id/assign', async (req: Request, res: Response) => {
         payment: { select: { id: true, amount: true, status: true, createdAt: true } },
       },
     });
+
+    // Customer notification: a worker has accepted their booking.
+    await sendPushToUser(prisma as any, booking.userId, {
+      title: 'Worker confirmed',
+      body: `${updated.worker?.name || 'A worker'} is on the way for your ${booking.mode === 'driver' ? 'driver' : 'home help'} booking.`,
+      url: `/my-bookings`,
+      tag: `booking-${updated.id}-assigned`,
+    });
+
     return res.json({ booking: updated });
   } catch (err) {
     console.error('[bookings] assign error:', err);
@@ -353,6 +398,14 @@ bookingsRouter.patch('/:id/start', otpVerifyLimiter, async (req: Request, res: R
       data: { status: 'in_progress', startedAt: new Date(), startOtp: null },
       select: BOOKING_SAFE_FIELDS,
     });
+
+    await sendPushToUser(prisma as any, booking.userId, {
+      title: 'Job started',
+      body: 'Your worker has started the job. We\xe2\x80\x99ll notify you when it completes.',
+      url: `/my-bookings`,
+      tag: `booking-${updated.id}-started`,
+    });
+
     return res.json({ booking: updated });
   } catch (err) {
     console.error('[bookings] start booking error:', err);
@@ -397,6 +450,13 @@ bookingsRouter.patch('/:id/complete', otpVerifyLimiter, async (req: Request, res
         data: { totalJobs: allCompleted },
       });
     }
+
+    await sendPushToUser(prisma as any, booking.userId, {
+      title: 'Job complete',
+      body: 'Your job is done. Thanks for using HomeHelp!',
+      url: `/my-bookings`,
+      tag: `booking-${updated.id}-completed`,
+    });
 
     return res.json({ booking: updated });
   } catch (err) {

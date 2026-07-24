@@ -61,7 +61,13 @@ export default function BookingsPage() {
     setAssignModal(booking);
     setAssigningWorkers(true);
     try {
-      const data = await api.getAvailableWorkers(booking.mode) as { workers: Worker[] };
+      // Pull fresh coords from the booking detail endpoint so the worker list
+      // can be sorted by proximity to the customer's address.
+      const detail = await api.getBooking(booking.id) as { booking: Booking & { customerLat?: number | null; customerLng?: number | null } };
+      const lat = detail.booking?.customerLat;
+      const lng = detail.booking?.customerLng;
+      const origin = typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : undefined;
+      const data = await api.getAvailableWorkers(booking.mode, origin) as { workers: Worker[] };
       setAvailableWorkers(data.workers || []);
     } catch {
       setAvailableWorkers([]);
@@ -423,7 +429,14 @@ export default function BookingsPage() {
                 onClick={() => handleAssignWorker(w.id)}
                 className="w-full text-left p-3 rounded-lg border border-border hover:border-accent/50 hover:bg-accent/5 transition-all"
               >
-                <p className="font-medium text-foreground text-sm">{w.name}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium text-foreground text-sm">{w.name}</p>
+                  {typeof w.distanceKm === 'number' && (
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium shrink-0">
+                      {w.distanceKm.toFixed(1)} km
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {w.phoneNumber} &middot; {w.workerType.replace('_', ' ')} &middot; {Number(w.averageRating).toFixed(1)} rating
                 </p>

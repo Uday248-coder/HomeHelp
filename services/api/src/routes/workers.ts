@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { canActivate } from '../lib/eligibility';
+import { haversineKm } from '../lib/distance';
 
 export const workersRouter = Router();
 
@@ -282,9 +283,45 @@ workersRouter.get('/available/:mode', authMiddleware, async (req, res) => {
         averageRating: true,
         photoUrl: true,
         isAvailable: true,
+        currentLat: true,
+        currentLng: true,
       },
     });
-    return res.json({ workers });
+
+    // Optional `lat` and `lng` query params sort by proximity to the
+    // job site. Workers without a location bubble to the end so the admin
+    // sees the candidate pool in a usable order without filtering anyone out.
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+    const haveOrigin = !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+
+    let decorated = workers.map((w) => {
+      let distanceKm: number | null = null;
+      if (
+        haveOrigin &&
+        w.currentLat !== null &&
+        w.currentLng !== null
+      ) {
+        distanceKm = parseFloat(
+          haversineKm(
+            { lat, lng },
+            { lat: Number(w.currentLat), lng: Number(w.currentLng) },
+          ).toFixed(2),
+        );
+      }
+      return { ...w, distanceKm };
+    });
+
+    if (haveOrigin) {
+      decorated.sort((a, b) => {
+        if (a.distanceKm === null && b.distanceKm === null) return 0;
+        if (a.distanceKm === null) return 1;
+        if (b.distanceKm === null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+    }
+
+    return res.json({ workers: decorated });
   } catch (err) {
     console.error('[workers] available workers error:', err);
     return res.status(500).json({ error: 'Failed to fetch available workers' });

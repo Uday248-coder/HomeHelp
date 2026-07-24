@@ -113,6 +113,86 @@ interface WorkerProfile {
   aadhaarVerified: boolean;
   licenseVerified: boolean;
   deactivationReason?: string | null;
+  totalJobs?: number;
+  averageRating?: number | string | null;
+  payouts?: Payout[];
+}
+
+interface Payout {
+  id: string;
+  amount: number | string;
+  status: 'pending' | 'processed' | 'failed' | string;
+  weekStartDate: string;
+  weekEndDate: string;
+  processedAt: string | null;
+}
+
+function fmtCurrency(n: number | string): string {
+  const v = typeof n === 'string' ? parseFloat(n) : n;
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(isFinite(v) ? v : 0);
+}
+
+function formatWeekLabel(start: string, end: string): string {
+  const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return `${fmt(start)} — ${fmt(end)}`;
+}
+
+function EarningsSection({ profile, onRefresh }: { profile: WorkerProfile; onRefresh: () => void }) {
+  const payouts = profile.payouts || [];
+  const totalEarned = payouts.reduce((s, p) => s + (parseFloat(String(p.amount)) || 0), 0);
+  const pending = payouts.filter((p) => p.status === 'pending');
+  const processed = payouts.filter((p) => p.status === 'processed');
+  const pendingTotal = pending.reduce((s, p) => s + (parseFloat(String(p.amount)) || 0), 0);
+  const processedTotal = processed.reduce((s, p) => s + (parseFloat(String(p.amount)) || 0), 0);
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display text-lg font-medium text-foreground">Earnings</h2>
+        <button onClick={onRefresh} className="text-sm text-foreground-tertiary hover:text-foreground">Refresh</button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="card-base p-4">
+          <p className="text-[10px] uppercase tracking-wider text-foreground-tertiary">Lifetime</p>
+          <p className="font-display text-xl font-semibold text-foreground mt-1">{fmtCurrency(totalEarned)}</p>
+        </div>
+        <div className="card-base p-4">
+          <p className="text-[10px] uppercase tracking-wider text-foreground-tertiary">Processed</p>
+          <p className="font-display text-xl font-semibold text-accent mt-1">{fmtCurrency(processedTotal)}</p>
+        </div>
+        <div className="card-base p-4">
+          <p className="text-[10px] uppercase tracking-wider text-foreground-tertiary">Pending</p>
+          <p className="font-display text-xl font-semibold text-warm mt-1">{fmtCurrency(pendingTotal)}</p>
+        </div>
+      </div>
+
+      {profile.totalJobs !== undefined && (
+        <p className="text-xs text-foreground-tertiary mb-4">
+          {profile.totalJobs} completed job{profile.totalJobs === 1 ? '' : 's'}
+          {profile.averageRating !== undefined && profile.averageRating !== null
+            ? ` · ★ ${Number(profile.averageRating).toFixed(1)} avg rating`
+            : ''}
+        </p>
+      )}
+
+      {payouts.length === 0 ? (
+        <p className="text-sm text-foreground-tertiary">No payouts yet — your weekly earnings will appear here after the admin processes them.</p>
+      ) : (
+        <div className="space-y-2">
+          {payouts.map((p) => (
+            <div key={p.id} className="card-base p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">{formatWeekLabel(p.weekStartDate, p.weekEndDate)}</p>
+                <p className="text-xs text-foreground-tertiary capitalize">{p.status}{p.processedAt ? ` · ${new Date(p.processedAt).toLocaleDateString('en-IN')}` : ''}</p>
+              </div>
+              <p className="font-display text-md font-semibold text-foreground tabular-nums">{fmtCurrency(p.amount)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default function WorkerPortalPage() {
@@ -227,6 +307,8 @@ export default function WorkerPortalPage() {
             </div>
           )}
         </section>
+
+        {profile && <EarningsSection profile={profile} onRefresh={load} />}
 
         <section>
           <div className="flex items-center justify-between mb-3">
