@@ -1,53 +1,158 @@
 import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { Linking } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert, Linking, StyleSheet, TouchableOpacity } from 'react-native';
 import QRCodeSvg from 'react-native-qrcode-svg';
-import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
-import { api } from '../../src/api/client';
-import { Booking } from '../../src/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBadge } from '../../src/components/ui';
+import { api } from '../src/api/client';
+import { Screen, Card, Button, StatusBadge, LoadingView, TextField } from 'homehelp-mobile-ui';
+import MapView, { Marker } from 'react-native-maps';
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function formatCurrency(val?: number) {
+function fmtCurrency(val?: number) {
   if (val == null) return '—';
   return `₹${val}`;
 }
 
-function RatingStars({ rating, editable, onRate }: { rating?: number; editable?: boolean; onRate?: (n: number) => void }) {
+export default function BookingDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const [booking, setBooking] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
+  useEffect(() => { fetchBooking(); }, [id]);
+
+  async function fetchBooking() {
+    setLoading(true);
+    try {
+      const data = await api.getBooking(id);
+      setBooking(data);
+    } catch {
+      Alert.alert('Error', 'Failed to load booking details');
+      router.back();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCancel() {
+    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes, Cancel', style: 'destructive', onPress: async () => { setActionLoading(true); try { await api.cancelBooking(id); fetchBooking(); } catch (err: any) { Alert.alert('Error', err.message); } finally { setActionLoading(false); } } },
+    ]);
+  }
+
+  async function handlePayment() {
+    setActionLoading(true);
+    try {
+      const res: any = await api.createPaymentOrder(id);
+      const upiInfo = res?.upi;
+      if (!upiInfo?.link) {
+        Alert.alert('Payment Unavailable', 'UPI payment is not set up yet. Please contact support.');
+        setActionLoading(false);
+        return;
+      }
+      try { await Linking.openURL(upiInfo.link); } catch { Alert.alert('Could not open UPI app', 'Please scan the QR code instead.'); }
+    } catch (err: any) {
+      Alert.alert('Payment Error', err?.message || 'Failed to initiate payment');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Screen>
+        <LoadingView message="Loading booking…" />
+      </Screen>
+    );
+  }
+  if (!booking) return null;
+
+  const workerLat = booking?.worker?.currentLat;
+  const workerLng = booking?.worker?.currentLng;
+  const showWorkerLocation = typeof workerLat === 'number' && typeof workerLng === 'number';
+
   return (
-    <View style={styles.starsRow}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <TouchableOpacity
-          key={n}
-          onPress={() => editable && onRate?.(n)}
-          disabled={!editable}
-        >
-          <Text style={[styles.star, n <= (rating || 0) && styles.starFilled]}>
-            ★
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+    <Screen>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.statusSection}>
+          <StatusBadge status={booking.status} />
+        </View>
+
+        <Card>
+          <Text style={styles.cardTitle}>{booking.serviceType}</Text>
+          <DetailRow label="Booking ID" value={booking.id.slice(0, 8)} />
+          <DetailRow label="Address" value={booking.customerAddress || '—'} />
+          <DetailRow label="Scheduled" value={formatDate(booking.scheduledAt)} />
+          <DetailRow label="Started" value={formatDate(booking.startedAt)} />
+          <DetailRow label="Completed" value={formatDate(booking.completedAt)} />
+          <DetailRow label="Duration" value={booking.durationHours ? `${booking.durationHours}h` : '—'} />
+          <DetailRow label="Total Amount" value={fmtCurrency(booking.totalAmount)} />
+          <DetailRow label="Booked On" value={formatDate(booking.createdAt)} />
+        </Card>
+
+        {booking.worker && (
+          <Card>
+            <Text style={styles.cardTitle}>Worker</Text>
+            <DetailRow label="Name" value={booking.worker.name} />
+            {showWorkerLocation ? (
+              <TouchableOpacity onPress={() => setShowMap(true)}>
+                <DetailRow label="Location" value="📍 Live — tap to view" />
+              </TouchableOpacity>
+            ) : null}
+          </Card>
+        )}
+
+        {showMap && (showWorkerLocation) && (
+          <Card>
+            <Text style={styles.cardTitle}>Worker Location</Text>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: Number(workerLat),
+                longitude: Number(workerLng),
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              }}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              pitchEnabled={false}
+            >
+              <Marker coordinate={{ latitude: Number(workerLat), longitude: Number(workerLng) }} title="Worker" />
+            </MapView>
+          </Card>
+        )}
+
+        {booking.status === 'assigned' && !showWorkerLocation && (
+          <Card>
+            <Text style={styles.cardTitle}>Share OTP with Worker</Text>
+            <Text style={styles.otpHint}>Start OTP generated — share this code with your worker to begin the job.</Text>
+          </Card>
+        )}
+
+        {booking.status === 'pending' && !booking.payment && (
+          <Card>
+            <Button title="Confirm Booking" onPress={handlePayment} loading={actionLoading} />
+          </Card>
+        )}
+
+        {booking.status === 'pending' && (
+          <View style={styles.actionRow}>
+            <Button title="Cancel Booking" onPress={handleCancel} loading={actionLoading} variant="secondary" style={styles.cancelBtn} />
+          </View>
+        )}
+
+        {booking.status === 'completed' && (
+          <Button title="Book Again" onPress={() => router.replace('/(tabs)')} />
+        )}
+      </ScrollView>
+    </Screen>
   );
 }
 
@@ -60,342 +165,15 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function BookingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [localRating, setLocalRating] = useState(0);
-  const [upi, setUpi] = useState<{
-    link: string;
-    pa: string;
-    pn: string;
-    am: number;
-    cu: string;
-    tn: string;
-  } | null>(null);
-
-  useEffect(() => {
-    fetchBooking();
-  }, [id]);
-
-  async function fetchBooking() {
-    setLoading(true);
-    try {
-      const data = await api.getBooking(id);
-      setBooking(data);
-      setLocalRating(data.ratingByUser || 0);
-    } catch {
-      Alert.alert('Error', 'Failed to load booking details');
-      router.back();
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCancel() {
-    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Yes, Cancel',
-        style: 'destructive',
-        onPress: async () => {
-          setActionLoading(true);
-          try {
-            await api.cancelBooking(id);
-            await fetchBooking();
-          } catch (err: any) {
-            Alert.alert('Error', err.message);
-          } finally {
-            setActionLoading(false);
-          }
-        },
-      },
-    ]);
-  }
-
-  async function handlePayment() {
-    setActionLoading(true);
-    try {
-      const res: any = await api.createPaymentOrder(id);
-      const upiInfo = res?.upi;
-      if (!upiInfo?.link) {
-        Alert.alert(
-          'Payment Unavailable',
-          'UPI payment is not set up yet. Please contact support to complete this booking.',
-        );
-        setActionLoading(false);
-        return;
-      }
-      setUpi({
-        link: upiInfo.link,
-        pa: upiInfo.pa,
-        pn: upiInfo.pn,
-        am: Number(upiInfo.am) || 0,
-        cu: upiInfo.cu,
-        tn: upiInfo.tn,
-      });
-      setActionLoading(false);
-    } catch (err: any) {
-      Alert.alert('Payment Error', err?.message || 'Failed to initiate payment');
-      setActionLoading(false);
-    }
-  }
-
-  async function openUpi() {
-    if (!upi?.link) return;
-    try {
-      await Linking.openURL(upi.link);
-    } catch (e: any) {
-      Alert.alert('Could not open UPI app', e?.message || 'Please scan the QR code instead.');
-    }
-  }
-
-  async function handleRate(n: number) {
-    setLocalRating(n);
-    // Future: implement rating on API
-  }
-
-  function handleBookAgain() {
-    router.replace('/');
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  if (!booking) return null;
-
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.statusSection}>
-        <StatusBadge status={booking.status} />
-        <Text style={styles.modeLabel}>
-          {booking.mode === 'home_help' ? '🧹 Home Help' : '🚗 Driver'}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{booking.serviceType}</Text>
-
-        <DetailRow label="Booking ID" value={booking.id.slice(0, 8)} />
-        <DetailRow label="Address" value={booking.customerAddress || '—'} />
-        <DetailRow label="Scheduled" value={formatDate(booking.scheduledAt)} />
-        <DetailRow label="Started" value={formatDate(booking.startedAt)} />
-        <DetailRow label="Completed" value={formatDate(booking.completedAt)} />
-        <DetailRow label="Duration" value={booking.durationHours ? `${booking.durationHours}h` : '—'} />
-        <DetailRow label="Hourly Rate" value={formatCurrency(booking.hourlyRate)} />
-        <DetailRow label="Total Amount" value={formatCurrency(booking.totalAmount)} />
-        <DetailRow label="Booked On" value={formatDate(booking.createdAt)} />
-      </View>
-
-      {booking.worker && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Worker</Text>
-          <DetailRow label="Name" value={booking.worker.name} />
-          <DetailRow label="Phone" value={booking.worker.phoneNumber || '—'} />
-        </View>
-      )}
-
-      {booking.status === 'completed' && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Rate Your Experience</Text>
-          <RatingStars rating={localRating} editable onRate={handleRate} />
-        </View>
-      )}
-
-      {booking.status === 'pending' && upi && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pay {formatCurrency(upi.am)} via UPI</Text>
-          <View style={styles.upiRow}>
-            <View style={styles.qrBox}>
-              <QRCodeSvg value={upi.link} size={140} />
-            </View>
-            <View style={styles.upiInfo}>
-              <Text style={styles.upiHint}>
-                Scan with any UPI app (GPay, PhonePe, Paytm). The amount is pre-filled.
-              </Text>
-              <TouchableOpacity style={styles.primaryButton} onPress={openUpi}>
-                <Text style={styles.primaryButtonText}>Pay ₹{upi.am} in UPI app</Text>
-              </TouchableOpacity>
-              <Text style={styles.upiNote}>
-                After paying, an admin confirms the transfer and your booking is activated. No gateway fees — paid directly to HomeHelp.
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-       <View style={styles.actionSection}>
-         {booking.status === 'pending' && (
-           <>
-             <TouchableOpacity
-               style={[styles.primaryButton, actionLoading && styles.buttonDisabled]}
-               onPress={handlePayment}
-               disabled={actionLoading}
-             >
-               {actionLoading ? (
-                 <ActivityIndicator color={colors.white} size="small" />
-               ) : (
-                 <Text style={styles.primaryButtonText}>Pay Now to Confirm</Text>
-               )}
-             </TouchableOpacity>
-             <TouchableOpacity
-               style={[styles.cancelButton, actionLoading && styles.buttonDisabled]}
-               onPress={handleCancel}
-               disabled={actionLoading}
-             >
-               <Text style={styles.cancelButtonText}>Cancel Booking</Text>
-             </TouchableOpacity>
-           </>
-         )}
-         {booking.status === 'completed' && (
-           <TouchableOpacity style={styles.primaryButton} onPress={handleBookAgain}>
-             <Text style={styles.primaryButtonText}>Book Again</Text>
-           </TouchableOpacity>
-         )}
-       </View>
-    </ScrollView>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  statusSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  statusText: {
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightSemiBold,
-  },
-  modeLabel: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadows.card,
-  },
-  cardTitle: {
-    fontSize: fonts.sizeXl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  detailLabel: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-  },
-  detailValue: {
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightMedium,
-    color: colors.text,
-    maxWidth: '60%',
-    textAlign: 'right',
-  },
-  starsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  star: {
-    fontSize: 32,
-    color: colors.border,
-  },
-  starFilled: {
-    color: '#f59e0b',
-  },
-  actionSection: {
-    marginTop: spacing.md,
-  },
-   cancelButton: {
-     height: 52,
-     backgroundColor: colors.error,
-     borderRadius: borderRadius.md,
-     alignItems: 'center',
-     justifyContent: 'center',
-     marginTop: spacing.md,
-   },
-  cancelButtonText: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.white,
-  },
-  primaryButton: {
-    height: 52,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.button,
-  },
-  primaryButtonText: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.white,
-  },
-   buttonDisabled: {
-     opacity: 0.7,
-   },
-   upiRow: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: spacing.md,
-   },
-   qrBox: {
-     backgroundColor: colors.white,
-     borderRadius: borderRadius.md,
-     padding: spacing.sm,
-     borderWidth: 1,
-     borderColor: colors.border,
-   },
-   upiInfo: {
-     flex: 1,
-     gap: spacing.sm,
-   },
-   upiHint: {
-     fontSize: fonts.sizeSm,
-     color: colors.textMuted,
-   },
-   upiNote: {
-     fontSize: fonts.sizeSm,
-     color: colors.textMuted,
-     lineHeight: 18,
-   },
+  content: { padding: 16, paddingBottom: 48 },
+  statusSection: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, alignItems: 'center' },
+  cardTitle: { fontSize: 17, fontWeight: '600', color: '#1A2C2B', marginBottom: 12 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#CDD3CE' },
+  detailLabel: { fontSize: 13, color: '#6B7280' },
+  detailValue: { fontSize: 13, fontWeight: '500', color: '#1A2C2B', maxWidth: '60%', textAlign: 'right' },
+  map: { width: '100%', height: 180, borderRadius: 12 },
+  otpHint: { fontSize: 13, color: '#6B7280' },
+  actionRow: { marginTop: 12 },
+  cancelBtn: { marginTop: 12 },
 });

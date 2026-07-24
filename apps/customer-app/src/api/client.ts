@@ -1,111 +1,73 @@
-import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
-const CACHE_PREFIX = '@api_cache:';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — booking/payment details move quickly
 
-const apiClient = axios.create({
-  baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
+let tokenCache: string | null = null;
 
-apiClient.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync('auth_token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Surface expired sessions: log the user out so they re-authenticate instead
-// of receiving silent 401 loops.
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('auth_token');
-    }
-    return Promise.reject(error);
-  },
-);
-
-function isGetMethod(options: any): boolean {
-  return !options?.method || options.method.toUpperCase() === 'GET';
+async function getToken(): Promise<string | null> {
+  if (tokenCache) return tokenCache;
+  tokenCache = await SecureStore.getItemAsync('auth_token');
+  return tokenCache;
 }
 
-export type CachedResponse<T> = T & { fromCache?: boolean };
+export async function clearToken() {
+  tokenCache = null;
+  await SecureStore.deleteItemAsync('auth_token');
+}
 
-async function request<T>(endpoint: string, options: any = {}): Promise<CachedResponse<T>> {
-  try {
-    const response = await apiClient.request({
-      url: endpoint,
-      ...options,
-    });
-    const data = response.data as T;
-
-    if (isGetMethod(options)) {
-      try {
-        const entry = JSON.stringify({ ts: Date.now(), data });
-        await AsyncStorage.setItem(CACHE_PREFIX + endpoint, entry);
-      } catch {
-        // Cache write failures are non-critical
-      }
-    }
-
-    return data as CachedResponse<T>;
-  } catch (error) {
-    if (isGetMethod(options) && axios.isAxiosError(error) && !error.response) {
-      try {
-        const cached = await AsyncStorage.getItem(CACHE_PREFIX + endpoint);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          // Only serve from cache if the entry is fresh. Older entries are
-          // dropped (throw the original network error) so booking status and
-          // payment state don't sit indefinitely on stale data.
-          if (parsed && typeof parsed === 'object' && typeof parsed.ts === 'number') {
-            if (Date.now() - parsed.ts > CACHE_TTL_MS) {
-              await AsyncStorage.removeItem(CACHE_PREFIX + endpoint);
-            } else {
-              const fresh = Array.isArray(parsed.data)
-                ? Object.assign([], parsed.data)
-                : { ...parsed.data };
-              const result = fresh as CachedResponse<T>;
-              result.fromCache = true;
-              return result;
-            }
-          }
-        }
-      } catch {
-        // Fall through — throw original error
-      }
-    }
-    throw error;
+async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
+  const t = await getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers ? (init.headers as Record<string, string>) : {}),
+  };
+  if (t) headers['Authorization'] = `Bearer ${t}`;
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers,
+    credentials: 'include',
+  });
+  if (res.status === 401) {
+    await clearToken();
   }
+  return res;
+}
+
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await authedFetch(path, init);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed (${res.status})`);
+  }
+  return res.json() as Promise<T>;
 }
 
 export const api = {
   login: (email: string, password: string) =>
-    request<any>('/api/auth/login', { method: 'POST', data: { email, password } }),
+    apiRequest<{ token: string; user: { id: string; name?: string; phoneNumber?: string } }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
   register: (data: { email: string; password: string; name?: string; phoneNumber?: string }) =>
-    request<any>('/api/auth/register', { method: 'POST', data }),
-  getMe: async () => {
-    const res = await request<any>('/api/auth/me');
-    return res.user;
-  },
-  createBooking: (data: any) =>
-    request<any>('/api/bookings', { method: 'POST', data }),
-  getBookings: async () => {
-    const res = await request<any>('/api/bookings');
-    return res.bookings;
-  },
-  getBooking: async (id: string) => {
-    const res = await request<any>(`/api/bookings/${id}`);
-    return res.booking;
-  },
+    apiRequest<{ token: string; user: { id: string; name?: string; phoneNumber?: string } }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getMe: () => apiRequest<{ user: { id: string; name?: string; phoneNumber?: string } }>('/api/auth/me'),
+  createBooking: (data: Record<string, unknown>) =>
+    apiRequest<{ booking: any }>('/api/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  getBookings: () =>
+    apiRequest<{ bookings: any[] }>('/api/bookings'),
+  getBooking: (id: string) =>
+    apiRequest<{ booking: any }>(`/api/bookings/${id}`),
   cancelBooking: (id: string) =>
-    request<any>(`/api/bookings/${id}/cancel`, { method: 'PATCH' }),
+    apiRequest<any>(`/api/bookings/${id}/cancel`, { method: 'PATCH' }),
   createPaymentOrder: (bookingId: string) =>
-    request<any>('/api/payments/create-order', { method: 'POST', data: { bookingId } }),
+    apiRequest<any>('/api/payments/create-order', { method: 'POST', body: JSON.stringify({ bookingId }) }),
+  markPaymentPaid: (paymentId: string) =>
+    apiRequest<any>(`/api/payments/${paymentId}/mark-paid`, { method: 'POST' }),
+  subscribePush: (subscription: object) =>
+    apiRequest<any>('/api/push/subscribe', { method: 'POST', body: subscription }),
+  unsubscribePush: () =>
+    apiRequest<any>('/api/push/unsubscribe', { method: 'POST' }),
 };

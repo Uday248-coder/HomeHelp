@@ -1,190 +1,79 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { colors, spacing, fonts, borderRadius } from '../../src/constants/theme';
-import { api } from '../../src/api/client';
-import { Booking } from '../../src/types';
-import { Screen, ScreenHeader, Card, Button, LoadingView, EmptyState } from '../../src/components/ui';
+import { useState, useEffect, useCallback } from 'react';
+import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext';
+import { api } from '../src/api/client';
+import { Screen, ScreenHeader, Card, Button, StatusBadge, LoadingView, EmptyState, OTPInput } from 'homehelp-mobile-ui';
 
 export default function JobsScreen() {
-  const [jobs, setJobs] = useState<Booking[]>([]);
+  const router = useRouter();
+  const { worker } = useAuth();
+  const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [otp, setOtp] = useState('');
 
-  useEffect(() => {
-    loadJobs();
+  const fetchJobs = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await api.getMyJobs();
+      const active = (Array.isArray(data) ? data : data.bookings || []).filter(
+        (b: any) => b.status === 'assigned' || b.status === 'in_progress'
+      );
+      setJobs(active);
+    } catch {} finally { setRefreshing(false); setLoading(false); }
   }, []);
 
-  async function loadJobs() {
-    try {
-      const data = await api.getAvailableJobs();
-      setJobs(Array.isArray(data) ? data : data.bookings || []);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
+  function onRefresh() { setRefreshing(true); fetchJobs(); }
+
+  function handleStart(job: any) {
+    setSelectedJob(job);
+    setOtp('');
   }
 
-  async function handleAccept(bookingId: string) {
-    setAcceptingId(bookingId);
-    try {
-      await api.acceptJob(bookingId);
-      Alert.alert('Accepted', 'You have accepted this job!');
-      setJobs((prev) => prev.filter((j) => j.id !== bookingId));
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to accept job');
-    } finally {
-      setAcceptingId(null);
-    }
+  async function confirmStart() {
+    if (!otp.trim()) return;
+    try { await api.startJob(selectedJob.id, otp); setSelectedJob(null); setOtp(''); fetchJobs(); } catch (err: any) { Alert.alert('Error', err.message); }
   }
 
-  function onRefresh() {
-    setRefreshing(true);
-    loadJobs();
-  }
-
-  function getModeIcon(mode: string) {
-    return mode === 'driver' ? '🚗' : '🧹';
-  }
-
-  function renderJob({ item }: { item: Booking }) {
-    return (
-      <Card style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.modeIcon}>{getModeIcon(item.mode)}</Text>
-          <View style={styles.cardHeaderText}>
-            <Text style={styles.serviceType}>{item.serviceType}</Text>
-            <Text style={styles.modeLabel}>{item.mode === 'driver' ? 'Driver' : 'Home Help'}</Text>
-          </View>
-        </View>
-
-        {item.customerAddress ? (
-          <Text style={styles.address} numberOfLines={2}>
-            📍 {item.customerAddress}
-          </Text>
-        ) : null}
-
-        <View style={styles.detailsRow}>
-          {item.durationHours ? (
-            <Text style={styles.detail}>⏱ {item.durationHours}h</Text>
-          ) : null}
-          {item.hourlyRate ? (
-            <Text style={styles.detail}>💰 ₹{item.hourlyRate}/hr</Text>
-          ) : null}
-          {item.scheduledAt ? (
-            <Text style={styles.detail}>
-              📅 {new Date(item.scheduledAt).toLocaleDateString()}
-            </Text>
-          ) : null}
-        </View>
-
-        <Button
-          title={acceptingId === item.id ? 'Accepting...' : 'Accept Job'}
-          onPress={() => handleAccept(item.id)}
-          loading={acceptingId === item.id}
-          disabled={acceptingId === item.id}
-        />
-      </Card>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Screen>
-        <LoadingView message="Finding jobs near you..." />
-      </Screen>
-    );
-  }
+  if (loading) return <Screen><LoadingView message="Loading jobs…" /></Screen>;
 
   return (
     <Screen>
-      <ScreenHeader title="Available Jobs" subtitle="Pick up a shift near you" />
+      <ScreenHeader title="Jobs" subtitle="Accept and manage your jobs" />
       <FlatList
         data={jobs}
         keyExtractor={(item) => item.id}
-        renderItem={renderJob}
-        contentContainerStyle={jobs.length === 0 ? styles.emptyContainer : styles.list}
-        ListEmptyComponent={
-          <EmptyState
-            icon="📭"
-            title="No jobs available"
-            message="Check back later for new opportunities"
-          />
-        }
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-        }
+        renderItem={({ item }) => (
+          <Card style={styles.card}>
+            <View style={styles.cardTop}>
+              <Text style={styles.serviceType}>{item.serviceType}</Text>
+              <StatusBadge status={item.status} />
+            </View>
+            <Text style={styles.address}>📍 {item.customerAddress || '—'}</Text>
+            <Text style={styles.detail}>{item.mode === 'driver' ? '🚗 Driver' : '🏠 Home Help'} · {item.durationHours ? `${item.durationHours}h` : ''} · ₹{item.totalAmount ?? '0'}</Text>
+            {item.status === 'assigned' ? (
+              <Button title="Start Job" onPress={() => handleStart(item)} />
+            ) : null}
+          </Card>
+        )}
+        contentContainerStyle={jobs.length === 0 ? styles.emptyContainer : styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0EAA6F" />}
+        ListEmptyComponent={<EmptyState icon="🔍" title="No jobs" message="Accept a job to get started" />}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  list: {
-    padding: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
-  emptyContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  card: {
-    marginBottom: spacing.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  modeIcon: {
-    fontSize: 28,
-    marginRight: spacing.sm,
-  },
-  cardHeaderText: {
-    flex: 1,
-  },
-  serviceType: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-  },
-  modeLabel: {
-    fontSize: fonts.sizeXs,
-    color: colors.primary,
-    fontWeight: fonts.weightSemiBold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginTop: 2,
-  },
-  address: {
-    fontSize: fonts.sizeSm,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-    lineHeight: 20,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  detail: {
-    fontSize: fonts.sizeSm,
-    color: colors.text,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
+  content: { padding: 16, paddingBottom: 48 },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', padding: 16 },
+  card: { marginBottom: 12 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  serviceType: { fontSize: 16, fontWeight: '600', color: '#1A2C2B', flex: 1 },
+  address: { fontSize: 13, color: '#6B7280', marginBottom: 4 },
+  detail: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
 });

@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
-import { useAuth } from '../../src/context/AuthContext';
-import { api } from '../../src/api/client';
-import { ScreenScroll, ScreenHeader, Card, Button, Chip } from '../../src/components/ui';
+import { useAuth } from '../src/context/AuthContext';
+import { ScreenScroll, ScreenHeader, Card, Button, TextField, SegmentedControl, Chip } from 'homehelp-mobile-ui';
+import { api } from '../src/api/client';
 
 const SERVICE_OPTIONS: Record<string, { label: string; description: string; options: string[] }> = {
   home_help: {
@@ -18,8 +17,6 @@ const SERVICE_OPTIONS: Record<string, { label: string; description: string; opti
     options: ['Local Trip', 'Airport Transfer', 'Shopping Run', 'Outstation Trip'],
   },
 };
-
-const DURATION_OPTIONS = [1, 2, 3, 4, 6, 8];
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -45,10 +42,7 @@ export default function HomeScreen() {
         durationHours: duration,
         scheduledAt: scheduleNow ? undefined : new Date(Date.now() + 86400000).toISOString(),
       });
-      Alert.alert('Success', 'Your booking has been created!', [
-        { text: 'View Details', onPress: () => router.push(`/booking/${booking.booking.id}`) },
-      ]);
-      setAddress('');
+      router.push(`/booking/${booking.booking.id}`);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to create booking');
     } finally {
@@ -58,203 +52,60 @@ export default function HomeScreen() {
 
   return (
     <ScreenScroll>
-      <ScreenHeader
-        title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`}
-        subtitle="What do you need help with today?"
-      />
+      <ScreenHeader title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`} subtitle="What do you need help with today?" />
 
-      <Text style={styles.sectionTitle}>Choose a Service</Text>
-      <View style={styles.modeGrid}>
-        {(['home_help', 'driver'] as const).map((m) => {
-          const active = mode === m;
-          return (
-            <TouchableOpacity
-              key={m}
-              style={[styles.modeCard, active && styles.modeCardActive]}
-              onPress={() => {
-                setMode(m);
-                setServiceType(SERVICE_OPTIONS[m].options[0]);
-              }}
-            >
-              <View style={[styles.iconContainer, active && styles.iconContainerActive]}>
+      <Card>
+        <View style={styles.sectionTitle}>Choose a Service</View>
+        <View style={styles.modeGrid}>
+          {(['home_help', 'driver'] as const).map((m) => {
+            const active = mode === m;
+            return (
+              <TouchableOpacity key={m} style={[styles.modeCard, active && styles.modeCardActive]} onPress={() => { setMode(m); setServiceType(SERVICE_OPTIONS[m].options[0]); }}>
                 <Text style={styles.modeIcon}>{m === 'home_help' ? '🏠' : '🚗'}</Text>
-              </View>
-              <Text style={[styles.modeLabel, active && styles.modeLabelActive]}>
-                {SERVICE_OPTIONS[m].label}
-              </Text>
-              <Text style={styles.modeDesc}>{SERVICE_OPTIONS[m].description}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{SERVICE_OPTIONS[m].label}</Text>
+                <Text style={styles.modeDesc}>{SERVICE_OPTIONS[m].description}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      <Card style={styles.bookingCard}>
-        <Text style={styles.cardTitle}>Booking Details</Text>
-
-        <Text style={styles.label}>Service Type</Text>
+        <View style={styles.sectionTitle}>Service Type</View>
         <View style={styles.optionsGrid}>
           {SERVICE_OPTIONS[mode].options.map((opt) => (
             <Chip key={opt} label={opt} active={serviceType === opt} onPress={() => setServiceType(opt)} />
           ))}
         </View>
 
-        <Text style={styles.label}>Service Address</Text>
-        <TextInput
-          style={styles.textArea}
-          placeholder="Enter full address, including landmark"
-          placeholderTextColor={colors.textSecondary}
-          value={address}
-          onChangeText={setAddress}
-          multiline
-          textAlignVertical="top"
-        />
+        <TextField label="Service Address" placeholder="Enter full address, including landmark" value={address} onChangeText={setAddress} multiline />
 
-        <Text style={styles.label}>Duration (hours)</Text>
-        <View style={styles.durationRow}>
-          {DURATION_OPTIONS.map((h) => (
+        <View style={styles.sectionTitle}>Duration (hours)</View>
+        <View style={styles.optionsGrid}>
+          {[1, 2, 3, 4, 6, 8].map((h) => (
             <Chip key={h} label={`${h}h`} active={duration === h} onPress={() => setDuration(h)} />
           ))}
         </View>
 
-        <Text style={styles.label}>Schedule</Text>
+        <View style={styles.sectionTitle}>Schedule</View>
         <View style={styles.scheduleRow}>
-          <ScheduleBtn label="Immediate" active={scheduleNow} onPress={() => setScheduleNow(true)} />
-          <ScheduleBtn label="Scheduled" active={!scheduleNow} onPress={() => setScheduleNow(false)} />
+          <Chip label="Immediate" active={scheduleNow} onPress={() => setScheduleNow(true)} />
+          <Chip label="Scheduled" active={!scheduleNow} onPress={() => setScheduleNow(false)} />
         </View>
 
-        <Button title="Confirm Booking" onPress={handleBook} loading={loading} style={styles.cta} />
+        <Button title="Confirm Booking" onPress={handleBook} loading={loading} />
       </Card>
     </ScreenScroll>
   );
 }
 
-function ScheduleBtn({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity style={[styles.scheduleBtn, active && styles.scheduleBtnActive]} onPress={onPress}>
-      <Text style={[styles.scheduleBtnText, active && styles.scheduleBtnTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.text,
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-  },
-  modeGrid: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  modeCard: {
-    flex: 1,
-    backgroundColor: colors.card,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    ...shadows.card,
-  },
-  modeCardActive: { borderColor: colors.primary },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  iconContainerActive: { backgroundColor: '#E6EFEE' },
-  modeIcon: { fontSize: 26 },
-  modeLabel: {
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightBold,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  modeLabelActive: { color: colors.primary },
-  modeDesc: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 14,
-  },
-  bookingCard: { marginTop: spacing.sm },
-  cardTitle: {
-    fontSize: fonts.sizeXl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  label: {
-    fontSize: fonts.sizeXs,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  textArea: {
-    minHeight: 88,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    padding: spacing.md,
-    fontSize: fonts.sizeMd,
-    color: colors.text,
-    textAlignVertical: 'top',
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  durationRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  scheduleBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  scheduleBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  scheduleBtnText: {
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightMedium,
-    color: colors.text,
-  },
-  scheduleBtnTextActive: { color: colors.white },
-  cta: { marginTop: spacing.md },
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#1A2C2B', marginBottom: 12, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  modeGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  modeCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 14, alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
+  modeCardActive: { borderColor: '#0EAA6F' },
+  modeIcon: { fontSize: 26, marginBottom: 8 },
+  modeLabel: { fontSize: 14, fontWeight: '600', color: '#6B7280', textAlign: 'center' },
+  modeLabelActive: { color: '#0EAA6F' },
+  modeDesc: { fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 4, lineHeight: 14 },
+  optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  scheduleRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
 });

@@ -1,33 +1,22 @@
-import { ActivityIndicator, StyleSheet, View, ViewStyle, Text } from 'react-native';
-import { lightColors, darkColors, fonts, spacing } from '../theme/tokens';
+import React from 'react';
+import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/theme';
 
-export interface LoadingViewProps {
+interface Props {
   message?: string;
-  isDark?: boolean;
-  style?: ViewStyle;
 }
 
-export function LoadingView({ message, isDark = false, style }: LoadingViewProps) {
-  const colors = isDark ? darkColors : lightColors;
+export function LoadingView({ message }: Props) {
+  const { colors } = useTheme();
   return (
-    <View style={[styles.base, { backgroundColor: colors.background }, style]}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      {message ? (
-        <Text style={[styles.message, { color: colors.textMuted }]}>{message}</Text>
-      ) : null}
+    <View style={[styles.loading, { backgroundColor: colors.surface.background }]}>
+      <ActivityIndicator color={colors.brand.primary.base} size="large" />
+      {message ? <Text style={[styles.text, { color: colors.text.secondary }]}>{message}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  } as ViewStyle,
-  message: {
-    marginTop: spacing.md,
-    fontSize: fonts.sizeSm,
-  } as any,
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  text: { marginTop: 12, fontSize: 14 },
 });

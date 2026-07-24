@@ -1,11 +1,8 @@
-// Single export surface for the shared mobile UI package.
-// Both the customer app and worker app will `import { Button, Card, ... } from 'homehelp-mobile-ui'`.
-
 export * from './theme/tokens';
 export * from './theme/theme';
-
 export * from './components/Button';
 export * from './components/Screen';
+export * from './components/ScreenScroll';
 export * from './components/ScreenHeader';
 export * from './components/Card';
 export * from './components/TextField';
@@ -22,7 +19,6 @@ export * from './components/BottomSheet';
 export * from './components/Toast';
 export * from './components/MetricCard';
 export * from './components/FloatingTabBar';
-
 export * from './hooks/useHaptics';
 export * from './hooks/useReducedMotion';
 export * from './hooks/usePressScale';

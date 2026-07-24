@@ -1,82 +1,30 @@
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { lightColors, darkColors, fonts, radius, spacing } from '../theme/tokens';
-import Ionic from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/theme';
 
-export interface EmptyStateProps {
+interface Props {
+  icon?: string;
   title: string;
   message?: string;
-  /** lucide-style icon name from @expo/vector-icons/Ionicons */
-  icon?: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  isDark?: boolean;
 }
 
-export function EmptyState(props: EmptyStateProps) {
-  const colors = props.isDark ? darkColors : lightColors;
+export function EmptyState({ icon = '📋', title, message }: Props) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.base}>
-      <View style={[styles.iconWrap, { backgroundColor: colors.surfaceSecondary }]}>
-        {props.icon ? (
-          <Ionic name={props.icon as any} size={28} color={colors.textMuted} />
-        ) : (
-          <Ionic name="chatbubble-ellipses-outline" size={28} color={colors.textMuted} />
-        )}
+    <View style={styles.empty}>
+      <View style={[styles.icon, { backgroundColor: colors.surface.primary }]}>
+        <Text style={styles.emoji}>{icon}</Text>
       </View>
-      <Text style={[styles.title, { color: colors.text }]}>{props.title}</Text>
-      {props.message ? (
-        <Text style={[styles.message, { color: colors.textMuted }]}>{props.message}</Text>
-      ) : null}
-      {props.actionLabel && props.onAction ? (
-        <Pressable
-          style={({ pressed }) => [styles.action, { backgroundColor: colors.primary }, pressed && { opacity: 0.9 }]}
-          onPress={props.onAction}
-          accessibilityRole="button"
-          accessibilityLabel={props.actionLabel}
-        >
-          <Text style={styles.actionText}>{props.actionLabel}</Text>
-        </Pressable>
-      ) : null}
+      <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>
+      {message ? <Text style={[styles.message, { color: colors.text.secondary }]}>{message}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-  } as ViewStyle,
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  } as ViewStyle,
-  title: {
-    fontFamily: fonts.body,
-    fontSize: fonts.sizeLg,
-    fontWeight: '600' as any,
-    textAlign: 'center',
-  } as any,
-  message: {
-    marginTop: 6,
-    fontSize: fonts.sizeSm,
-    textAlign: 'center',
-    lineHeight: 20,
-  } as any,
-  action: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-  } as ViewStyle,
-  actionText: {
-    color: lightColors.textOnAccent,
-    fontSize: fonts.sizeSm,
-    fontWeight: '600' as any,
-  } as any,
+  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, paddingHorizontal: 24 },
+  icon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#1A2C2B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  emoji: { fontSize: 32 },
+  title: { fontSize: 16, fontWeight: '600', color: '#1A2C2B' },
+  message: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 6, lineHeight: 20 },
 });

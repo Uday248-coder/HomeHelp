@@ -15,7 +15,7 @@
     "expo-router": "^56.2.11",
     "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
-    "homehelp-mobile-ui": "file:../mobile-ui/homehelp-mobile-ui-0.1.0.tgz",
+    "homehelp-mobile-ui": "file:../mobile-ui",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-reanimated": "^3.16.0",
@@ -36,3 +36,4 @@
   },
   "private": true
 }
+

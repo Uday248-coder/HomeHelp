@@ -1,20 +1,7 @@
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Alert, View } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
-import {
-  ScreenScroll,
-  ScreenHeader,
-  Card,
-  Button,
-  TextField,
-  SegmentedControl,
-} from 'homehelp-mobile-ui';
-import { lightColors } from 'homehelp-mobile-ui';
+import { ScreenScroll, ScreenHeader, Card, Button, TextField, SegmentedControl } from 'homehelp-mobile-ui';
 
 export default function AuthScreen() {
   const { login, register } = useAuth();
@@ -58,22 +45,17 @@ export default function AuthScreen() {
     }
   }
 
-  const colors = lightColors;
-
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScreenScroll keyboardAware contentContainerStyle={{ paddingBottom: 40 }}>
         <ScreenHeader title="HomeHelp" subtitle="Your home services, on demand" />
 
-        <Card style={{ marginHorizontal: 20, marginTop: 20 }}>
+        <Card>
           <SegmentedControl
-            options={[
-              { value: 'login', label: 'Login' },
-              { value: 'register', label: 'Sign Up' },
-            ]}
+            options={[{ value: 'login', label: 'Login' }, { value: 'register', label: 'Sign Up' }]}
             value={mode}
             onChange={setMode}
             fullWidth
@@ -81,60 +63,20 @@ export default function AuthScreen() {
 
           {mode === 'register' && (
             <>
-              <TextField
-                label="Full Name"
-                placeholder="Your name"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                required
-              />
-              <TextField
-                label="Phone (optional)"
-                placeholder="+91 9876543210"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
+              <TextField label="Full Name" placeholder="Your name" value={name} onChangeText={setName} autoCapitalize="words" />
+              <TextField label="Phone (optional)" placeholder="+91 9876543210" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             </>
           )}
 
-          <TextField
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            required
-          />
+          <TextField label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
 
-          <TextField
-            label="Password"
-            placeholder="At least 6 characters"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            required
-          />
+          <TextField label="Password" placeholder="At least 6 characters" value={password} onChangeText={setPassword} secureTextEntry />
 
-          <Button
-            title={mode === 'login' ? 'Login' : 'Create Account'}
-            onPress={handleSubmit}
-            loading={loading}
-            fullWidth
-            size="lg"
-            variant="primary"
-          />
+          <Button title={mode === 'login' ? 'Login' : 'Create Account'} onPress={handleSubmit} loading={loading} fullWidth />
         </Card>
 
         <View style={{ alignItems: 'center', marginTop: 16 }}>
-          <Button
-            title={mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'}
-            onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
-            variant="ghost"
-            size="sm"
-          />
+          <Button title={mode === 'login' ? 'New here? Create an account' : 'Already have an account? Login'} onPress={() => setMode(mode === 'login' ? 'register' : 'login')} variant="ghost" />
         </View>
       </ScreenScroll>
     </KeyboardAvoidingView>

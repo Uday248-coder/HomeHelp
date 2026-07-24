@@ -1,53 +1,30 @@
-import { Image, ImageStyle, StyleSheet, View, ViewStyle, Text } from 'react-native';
-import { lightColors } from '../theme/tokens';
+import React from 'react';
+import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { useTheme } from '../theme/theme';
 
-export interface AvatarProps {
+interface Props {
   name?: string;
-  uri?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  colors?: typeof lightColors;
+  photoUrl?: string;
+  size?: number;
   style?: ViewStyle;
 }
 
-const dims = { sm: 32, md: 44, lg: 64, xl: 80 };
-const fontSize = { sm: 13, md: 17, lg: 22, xl: 30 };
+export function Avatar({ name, photoUrl, size = 44, style }: Props) {
+  const { colors } = useTheme();
+  const initials = (name ?? '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
-export function Avatar({ name, uri, size = 'md', colors = lightColors, style }: AvatarProps) {
-  const dim = dims[size];
-  const initial = (name || '').trim().charAt(0).toUpperCase() || '?';
+  if (photoUrl) {
+    return <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }, style]} />;
+  }
+
   return (
-    <View
-      style={[
-        styles.base,
-        {
-          width: dim,
-          height: dim,
-          borderRadius: dim / 2,
-          backgroundColor: colors.primary,
-        },
-        style,
-      ]}
-      accessibilityLabel={uri ? undefined : `Avatar for ${name || 'user'}`}
-    >
-      {uri ? (
-        <Image source={{ uri }} alt={name} style={styles.image} resizeMode="cover" accessible accessibilityLabel={name ? `Avatar for ${name}` : undefined} />
-      ) : (
-        <Text style={[styles.initial, { fontSize: fontSize[size], color: colors.textOnAccent }]}>
-          {initial}
-        </Text>
-      )}
+    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.brand.primary.base }, style]}>
+      <Text style={[styles.avatarText, { color: colors.text.onAccent, fontSize: size * 0.4 }]}>{initials}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  } as ViewStyle,
-  image: { width: '100%', height: '100%' } as ImageStyle,
-  initial: {
-    fontWeight: '600',
-  } as any,
+  avatar: { alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontWeight: '700' },
 });

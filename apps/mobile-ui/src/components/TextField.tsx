@@ -1,162 +1,44 @@
 import React from 'react';
-import {
-  StyleProp,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  ViewStyle,
-} from 'react-native';
-import { lightColors, fonts, radius, spacing } from '../theme/tokens';
+import { View, TextInput, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { useTheme } from '../theme/theme';
 
-export interface TextFieldProps {
+interface Props {
   label?: string;
   value: string;
   onChangeText: (t: string) => void;
   placeholder?: string;
   multiline?: boolean;
-  numberOfLines?: number;
   secureTextEntry?: boolean;
   error?: string;
-  helperText?: string;
-  disabled?: boolean;
-  autoFocus?: boolean;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
-  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
-  onSubmit?: () => void;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  testID?: string;
-  textContentType?: any;
-  autoComplete?: any;
-  style?: StyleProp<ViewStyle>;
-  colors?: typeof lightColors;
-  required?: boolean;
+  style?: ViewStyle;
 }
 
-export function TextField(props: TextFieldProps) {
-  const {
-    label, value, onChangeText, placeholder, multiline, numberOfLines,
-    secureTextEntry, error, helperText, disabled, autoFocus, keyboardType = 'default',
-    returnKeyType, onSubmit, leftIcon, rightIcon, testID, textContentType, autoComplete, style,
-    colors = lightColors,
-    autoCapitalize,
-  } = props;
+export function TextField({ label, value, onChangeText, placeholder, multiline, secureTextEntry, error, style }: Props) {
+  const { colors } = useTheme();
 
   return (
     <View style={[styles.field, style]}>
-      {label ? (
-        <Text
-          style={[styles.label, { color: colors.textMuted }]}
-          accessibilityRole="text"
-        >
-          {label}
-        </Text>
-      ) : null}
-      <View
-        style={[
-          styles.inputWrap,
-          { backgroundColor: colors.surface, borderColor: error ? colors.error : colors.border },
-          error && styles.inputWrapError,
-        ]}
-      >
-        {leftIcon ? (
-          <View style={styles.iconLeft} pointerEvents="none">
-            {leftIcon}
-          </View>
-        ) : null}
-        <TextInput
-          testID={testID}
-          style={[
-            styles.input,
-            { color: colors.text },
-            multiline && styles.inputMultiline,
-            leftIcon && { paddingLeft: 0 },
-            rightIcon && { paddingRight: 0 },
-          ]}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textSecondary}
-          value={value}
-          onChangeText={onChangeText}
-          multiline={multiline}
-          numberOfLines={numberOfLines}
-          secureTextEntry={secureTextEntry}
-          editable={!disabled}
-          autoFocus={autoFocus}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          returnKeyType={returnKeyType}
-          onSubmitEditing={onSubmit}
-          textContentType={textContentType}
-          autoComplete={autoComplete}
-          textAlignVertical={multiline ? 'top' : 'center'}
-          accessibilityLabel={label}
-        />
-        {rightIcon ? (
-          <View style={styles.iconRight}>{rightIcon}</View>
-        ) : null}
-      </View>
-      {error ? (
-        <Text style={[styles.fieldError, { color: colors.error }]} role="alert">
-          {error}
-        </Text>
-      ) : helperText ? (
-        <Text style={[styles.fieldHelper, { color: colors.textMuted }]}>
-          {helperText}
-        </Text>
-      ) : null}
+      {label ? <Text style={[styles.label, { color: colors.text.secondary }]}>{label}</Text> : null}
+      <TextInput
+        style={[styles.input, multiline && styles.inputMultiline, error && styles.inputError]}
+        placeholder={placeholder}
+        placeholderTextColor={colors.text.tertiary}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+        secureTextEntry={secureTextEntry}
+        textAlignVertical={multiline ? 'top' : 'center'}
+      />
+      {error ? <Text style={[styles.fieldError, { color: colors.status.error }]}>{error}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  field: { marginBottom: spacing.md } as ViewStyle,
-  label: {
-    fontSize: fonts.sizeXs,
-    fontWeight: '500',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-  } as any,
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 52,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth * 1.5,
-    paddingHorizontal: spacing.md,
-  } as ViewStyle,
-  inputWrapError: { borderWidth: 2 } as ViewStyle,
-  input: {
-    flex: 1,
-    fontSize: fonts.sizeBase,
-    fontFamily: fonts.body,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-    minHeight: 44,
-  } as any,
-  inputMultiline: {
-    minHeight: 96,
-    paddingVertical: spacing.md,
-  } as any,
-  iconLeft: {
-    marginRight: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  } as ViewStyle,
-  iconRight: {
-    marginLeft: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  } as ViewStyle,
-  fieldError: {
-    fontSize: fonts.sizeXs,
-    marginTop: spacing.xs,
-    fontWeight: '500',
-  } as any,
-  fieldHelper: {
-    fontSize: fonts.sizeXs,
-    marginTop: spacing.xs,
-  } as any,
+  field: { marginBottom: 16 },
+  label: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
+  input: { minHeight: 52, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#CDD3CE', paddingHorizontal: 16, fontSize: 15, color: '#1A2C2B', textAlignVertical: 'center' },
+  inputMultiline: { minHeight: 88, paddingTop: 12, paddingBottom: 12, textAlignVertical: 'top' },
+  inputError: { borderColor: '#DC2626' },
+  fieldError: { fontSize: 11, marginTop: 6 },
 });
