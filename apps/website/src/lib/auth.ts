@@ -1,5 +1,6 @@
+import { API_URL } from '@/lib/config';
 const KEY = 'homehelp_token';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 
 export const getToken = (): string | null =>
   typeof window !== 'undefined' ? localStorage.getItem(KEY) : null;

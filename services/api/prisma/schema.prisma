@@ -16,6 +16,7 @@ enum WorkerType {
 enum BookingMode {
   home_help
   driver
+  driver_outstation
 }
 
 enum BookingStatus {
@@ -67,6 +68,16 @@ model WaitlistEntry {
   @@map("waitlist_entries")
 }
 
+enum VerificationStatus {
+  not_started
+  pending
+  in_progress
+  verified
+  failed
+  manual_review
+  expired
+}
+
 model Worker {
   id               String       @id @default(uuid()) @db.Uuid
   workerType       WorkerType   @map("worker_type")
@@ -89,8 +100,48 @@ model Worker {
   updatedAt        DateTime     @updatedAt @map("updated_at")
   bookings         Booking[]
   payouts          WorkerPayout[]
+  kycVerifications KycVerification[]
+  kycAuditLogs     KycAuditLog[]
 
   @@map("workers")
+}
+
+model KycVerification {
+  id                String              @id @default(uuid()) @db.Uuid
+  workerId          String              @map("worker_id") @db.Uuid
+  verificationType  String              @map("verification_type")
+  status            VerificationStatus  @default(not_started)
+  provider          String?
+  providerRefId     String?             @map("provider_ref_id")
+  maskedIdentifier  String?             @map("masked_identifier")
+  nameOnDocument    String?             @map("name_on_document")
+  dobOnDocument     DateTime?           @map("dob_on_document")
+  documentExpiry    DateTime?           @map("document_expiry")
+  vehicleClasses    String?             @map("vehicle_classes")
+  failureReason     String?             @map("failure_reason")
+  reviewedByAdminId String?             @map("reviewed_by_admin_id") @db.Uuid
+  reviewNotes       String?             @map("review_notes")
+  consentTimestamp  DateTime?           @map("consent_timestamp")
+  verifiedAt        DateTime?           @map("verified_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  worker            Worker              @relation(fields: [workerId], references: [id])
+
+  @@unique([workerId, verificationType])
+  @@map("kyc_verifications")
+}
+
+model KycAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  workerId    String   @map("worker_id") @db.Uuid
+  event       String
+  provider    String?
+  performedBy String?  @map("performed_by") @db.Uuid
+  metadata    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  worker      Worker   @relation(fields: [workerId], references: [id])
+
+  @@map("kyc_audit_logs")
 }
 
 model Booking {
@@ -104,6 +155,9 @@ model Booking {
   startedAt       DateTime?     @map("started_at")
   completedAt     DateTime?     @map("completed_at")
   durationHours   Decimal?      @map("duration_hours")
+  distanceKm      Decimal?      @map("distance_km")
+  baseAmount      Decimal?      @map("base_amount")
+  surgeMultiplier Decimal?      @default(1.0) @map("surge_multiplier")
   hourlyRate      Decimal?      @map("hourly_rate")
   totalAmount     Decimal?      @map("total_amount")
   startOtp        String?       @map("start_otp")
@@ -123,34 +177,41 @@ model Booking {
 }
 
 model Payment {
-  id               String        @id @default(uuid()) @db.Uuid
-  bookingId        String        @unique @map("booking_id") @db.Uuid
-  amount           Decimal
-  platformFee      Decimal       @default(0) @map("platform_fee")
-  workerPayout     Decimal       @default(0) @map("worker_payout")
-  paymentMethod    String?       @map("payment_method")
+  id                String        @id @default(uuid()) @db.Uuid
+  bookingId         String        @unique @map("booking_id") @db.Uuid
+  amount            Decimal
+  platformFee       Decimal       @default(0) @map("platform_fee")
+  workerPayout      Decimal       @default(0) @map("worker_payout")
+  paymentMethod     String?       @map("payment_method")
   razorpayOrderId   String?       @map("razorpay_order_id")
   razorpayPaymentId String?       @map("razorpay_payment_id")
-  status           PaymentStatus @default(pending)
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
-  booking          Booking       @relation(fields: [bookingId], references: [id])
+  cashfreeOrderId   String?       @map("cashfree_order_id")
+  cashfreeSessionId String?       @map("cashfree_session_id")
+  youpiPaymentId    String?       @map("youpi_payment_id")
+  youpiOrderId      String?       @map("youpi_order_id")
+  utr               String?       @map("utr")
+  status            PaymentStatus @default(pending)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  booking           Booking       @relation(fields: [bookingId], references: [id])
 
   @@map("payments")
 }
 
 model WorkerPayout {
-  id               String       @id @default(uuid()) @db.Uuid
-  workerId         String       @map("worker_id") @db.Uuid
-  amount           Decimal
-  weekStartDate    DateTime     @map("week_start_date")
-  weekEndDate      DateTime     @map("week_end_date")
-  status           PayoutStatus @default(pending)
-  processedAt      DateTime?    @map("processed_at")
-  razorpayPayoutId String?      @map("razorpay_payout_id")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
-  worker           Worker       @relation(fields: [workerId], references: [id])
+  id                 String       @id @default(uuid()) @db.Uuid
+  workerId           String       @map("worker_id") @db.Uuid
+  amount             Decimal
+  weekStartDate      DateTime     @map("week_start_date")
+  weekEndDate        DateTime     @map("week_end_date")
+  status             PayoutStatus @default(pending)
+  processedAt        DateTime?    @map("processed_at")
+  razorpayPayoutId   String?      @map("razorpay_payout_id")
+  cashfreeTransferId String?      @map("cashfree_transfer_id")
+  youpiPayoutId      String?      @map("youpi_payout_id")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  worker             Worker       @relation(fields: [workerId], references: [id])
 
   @@map("worker_payouts")
 }

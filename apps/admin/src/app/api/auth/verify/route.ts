@@ -1,3 +1,4 @@
+import { API_URL } from '@/lib/config';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -9,8 +10,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify the token by calling the backend API
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
-    const res = await fetch(`${apiUrl}/api/auth/me`, {
+    
+    const res = await fetch(`${API_URL}/api/auth/me`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },

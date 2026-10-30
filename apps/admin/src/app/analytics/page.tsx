@@ -9,6 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChart } from '@/components/dashboard/BarChart';
 import { Skeleton } from '@/components/ui/Skeleton';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 function toLocalDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -95,8 +96,9 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <Layout>
-      <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
+    <ErrorBoundary>
+      <Layout>
+        <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-foreground tracking-tight">Analytics</h1>
@@ -256,5 +258,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </Layout>
+    </ErrorBoundary>
   );
 }

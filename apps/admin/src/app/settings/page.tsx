@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/lib/config';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import Sidebar from '@/components/Sidebar';
@@ -73,7 +74,7 @@ export default function SettingsPage() {
                 <div>
                   <label className="text-xs text-muted-foreground mb-1.5 block font-medium">API URL</label>
                   <div className="w-full h-9 px-3 bg-muted border border-border rounded-lg text-xs text-muted-foreground font-mono flex items-center truncate">
-                    {process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com'}
+                    {API_URL}
                   </div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+import { API_URL } from '@/lib/config';
+
 
 function buildQuery(params?: Record<string, string | number | undefined>): string {
   if (!params) return '';
@@ -25,7 +26,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, retries = 2
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const res = await fetch(`${BASE_URL}${endpoint}`, {
+      const res = await fetch(`${API_URL}${endpoint}`, {
         ...options,
         headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
         credentials: 'include',
@@ -157,4 +158,13 @@ export const api = {
   getCustomer: (id: string) => fetchAPI(`/api/users/${id}`),
 
   getCustomerBookings: (id: string) => fetchAPI(`/api/users/${id}/bookings`),
+
+  getKycWorkers: () => fetchAPI('/api/kyc/admin/workers'),
+
+  getKycWorkerDetails: (id: string) => fetchAPI(`/api/kyc/admin/workers/${id}`),
+
+  reviewKyc: (id: string, verificationType: string, action: 'approve' | 'reject' | 'request_reverification', notes?: string) =>
+    fetchAPI(`/api/kyc/admin/workers/${id}/review`, { method: 'POST', body: JSON.stringify({ verificationType, action, notes }) }),
+
+  getKycAudit: (workerId: string) => fetchAPI(`/api/kyc/admin/audit/${workerId}`),
 };

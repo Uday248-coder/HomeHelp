@@ -1,6 +1,7 @@
+import { API_URL } from '@/lib/config';
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 const API_WS = API_URL.replace(/^http/, 'ws');
 
 export function middleware(request: NextRequest) {
@@ -10,9 +11,10 @@ export function middleware(request: NextRequest) {
     `default-src 'self'`,
     `script-src 'self' 'unsafe-inline' 'unsafe-eval' https:`,
     `style-src 'self' 'unsafe-inline' https:`,
-    `img-src 'self' data: blob: https:`,
+    `img-src 'self' data: blob: https: https://api.maptiler.com`,
     `font-src 'self' data: https:`,
-    `connect-src 'self' ${API_URL} ${API_WS} https:`,
+    `connect-src 'self' ${API_URL} ${API_WS} https: https://api.maptiler.com`,
+    `worker-src 'self' blob:`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

@@ -1,32 +1,51 @@
 'use client';
 
+import { API_URL } from '@/lib/config';
+
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/Button';
 import { UpiPayment } from '@/components/UpiPayment';
 import { getToken, setToken } from '@/lib/auth';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import type { LatLng } from '@/lib/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+const LiveMap = dynamic(() => import('@/components/map/LiveMap'), {
+  ssr: false,
+  loading: () => <div className="h-[200px] w-full rounded-2xl skeleton" />,
+});
+
+
 
 const MODES = [
   {
-    id: 'home_help' as const,
+    id: 'home_help',
     title: 'Home Help',
     desc: 'Cleaning, cooking, laundry & more',
-    icon: '🏠',
+    icon: '🧹',
     price: 199,
     color: 'from-emerald-600/20 to-emerald-600/5',
     services: ['Full Home Cleaning', 'Kitchen Cleaning', 'Cooking & Meal Prep', 'Laundry & Ironing', 'Bathroom Cleaning', 'Deep Cleaning'],
   },
   {
-    id: 'driver' as const,
-    title: 'Driver Mode',
-    desc: 'A verified driver for your car',
+    id: 'driver',
+    title: 'Local Driver',
+    desc: 'A verified driver for your car (within city)',
     icon: '🚗',
     price: 149,
     color: 'from-blue-600/20 to-blue-600/5',
-    services: ['Daily Commute', 'Airport Transfer', 'Outstation Trip', 'Late Night Ride', 'Senior Errands', 'Shopping Trip'],
+    services: ['Daily Commute', 'Airport Transfer', 'Late Night Ride', 'Senior Errands', 'Shopping Trip'],
   },
-];
+  {
+    id: 'driver_outstation',
+    title: 'Outstation Driver',
+    desc: 'Intercity travel (4hr min + distance pricing)',
+    icon: '🛣️',
+    price: 129,
+    color: 'from-amber-600/20 to-amber-600/5',
+    services: ['Weekend Getaway', 'Intercity Business Trip', 'Long Distance Drop', 'Multi-day Vacation'],
+  },
+] as const;
 
 function ProgressSteps({ current, total }: { current: number; total: number }) {
   const labels = ['Choose Service', 'Details', 'Account', 'Confirm'];
@@ -59,12 +78,14 @@ function ProgressSteps({ current, total }: { current: number; total: number }) {
 
 export default function BookPage() {
   const [step, setStep] = useState(0);
-  const [mode, setMode] = useState<'home_help' | 'driver' | null>(null);
+  const [mode, setMode] = useState<'home_help' | 'driver' | 'driver_outstation' | null>(null);
+  const [customerCoords, setCustomerCoords] = useState<LatLng | null>(null);
+  const geo = useGeolocation();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const modeParam = params.get('mode');
-    if (modeParam === 'home_help' || modeParam === 'driver') setMode(modeParam);
+    if (modeParam === 'home_help' || modeParam === 'driver' || modeParam === 'driver_outstation') setMode(modeParam as any);
   }, []);
 
   const [serviceType, setServiceType] = useState('');
@@ -105,7 +126,14 @@ export default function BookPage() {
     if (!mode || !serviceType || !address) { setError('Fill all required fields'); return; }
     setError(''); setLoading(true);
     try {
-      const body: Record<string, unknown> = { mode, serviceType, customerAddress: address, durationHours: duration };
+      const body: Record<string, unknown> = { 
+        mode, 
+        serviceType, 
+        customerAddress: address, 
+        durationHours: duration,
+        customerLat: customerCoords?.lat ?? undefined,
+        customerLng: customerCoords?.lng ?? undefined,
+      };
       if (scheduleType === 'later' && scheduledDate && scheduledTime) {
         body.scheduledAt = `${scheduledDate}T${scheduledTime}:00.000Z`;
       }
@@ -223,6 +251,40 @@ export default function BookPage() {
                     rows={3}
                     className="w-full px-3 py-2.5 rounded-xl input-base text-sm resize-none"
                   />
+                  {/* Location picker */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (geo.position) {
+                          setCustomerCoords(geo.position);
+                        }
+                      }}
+                      disabled={!geo.position && !geo.loading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {geo.loading ? 'Getting location…' : geo.position ? 'Use my location' : 'Location unavailable'}
+                    </button>
+                    {customerCoords && (
+                      <span className="text-xs text-foreground-tertiary">
+                        📍 {customerCoords.lat.toFixed(4)}, {customerCoords.lng.toFixed(4)}
+                      </span>
+                    )}
+                  </div>
+                  {customerCoords && (
+                    <div className="mt-3">
+                      <LiveMap
+                        userLocation={customerCoords}
+                        showRecenterButton={false}
+                        userLabel="Service location"
+                        className="h-[200px]"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>

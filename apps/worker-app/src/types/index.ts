@@ -14,7 +14,7 @@ export interface Worker {
 
 export interface Booking {
   id: string;
-  mode: 'home_help' | 'driver';
+  mode: 'home_help' | 'driver' | 'driver_outstation';
   serviceType: string;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   scheduledAt?: string;
@@ -22,6 +22,9 @@ export interface Booking {
   customerLat?: number;
   customerLng?: number;
   durationHours?: number;
+  distanceKm?: number;
+  baseAmount?: number;
+  surgeMultiplier?: number;
   hourlyRate?: number;
   totalAmount?: number;
   user?: { id: string; name?: string; phoneNumber?: string };
@@ -34,8 +37,11 @@ export interface Payout {
   id: string;
   amount: number;
   status: 'pending' | 'processed' | 'failed';
-  weekStart: string;
-  weekEnd: string;
-  paidAt?: string;
+  weekStartDate: string;
+  weekEndDate: string;
+  processedAt?: string;
+  razorpayPayoutId?: string;
+  cashfreeTransferId?: string;
+  youpiPayoutId?: string;
   createdAt: string;
 }

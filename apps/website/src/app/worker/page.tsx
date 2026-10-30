@@ -1,11 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { API_URL } from '@/lib/config';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { getToken, clearToken, login } from '@/lib/auth';
 import type { Booking, BookingStatus } from '@/lib/types';
+import dynamic from 'next/dynamic';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useRoute } from '@/hooks/useRoute';
+import type { LatLng } from '@/lib/types';
+import { io, Socket } from 'socket.io-client';
+import { KycDashboard } from './KycDashboard';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+const LiveMap = dynamic(() => import('@/components/map/LiveMap'), {
+  ssr: false,
+  loading: () => <div className="h-[250px] w-full rounded-2xl skeleton" />,
+});
+
+
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   pending: 'Pending', assigned: 'Assigned', in_progress: 'In Progress',
@@ -195,6 +208,94 @@ function EarningsSection({ profile, onRefresh }: { profile: WorkerProfile; onRef
   );
 }
 
+function WorkerMapPanel({ activeJob, token }: { activeJob: Booking | null; token: string }) {
+  const geo = useGeolocation();
+  const socketRef = useRef<Socket | null>(null);
+
+  // The destination is the customer's booking address coordinates
+  const destLoc: LatLng | null = activeJob?.customerLat != null && activeJob?.customerLng != null
+    ? { lat: Number(activeJob.customerLat), lng: Number(activeJob.customerLng) }
+    : null;
+
+  const { route, distance, duration } = useRoute(geo.position, destLoc);
+
+  // Emit worker location to backend via Socket.io when we have an active job
+  useEffect(() => {
+    if (!activeJob || !token || !geo.position) return;
+    if (activeJob.status !== 'assigned' && activeJob.status !== 'in_progress') return;
+
+    
+    if (!socketRef.current) {
+      socketRef.current = io(API_URL, {
+        auth: { token },
+        transports: ['websocket', 'polling'],
+      });
+      socketRef.current.on('connect', () => {
+        socketRef.current?.emit('join_booking', activeJob.id);
+      });
+    }
+
+    // Emit current position
+    socketRef.current.emit('update_booking_location', {
+      bookingId: activeJob.id,
+      location: { lat: geo.position.lat, lng: geo.position.lng },
+      ts: Date.now(),
+    });
+
+    return () => {
+      // Don't disconnect on every position change, only on unmount/job change
+    };
+  }, [activeJob, token, geo.position]);
+
+  // Cleanup socket on unmount or job change
+  useEffect(() => {
+    return () => {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+    };
+  }, [activeJob?.id]);
+
+  if (!activeJob || (activeJob.status !== 'assigned' && activeJob.status !== 'in_progress')) {
+    return null;
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <h3 className="font-display text-md font-medium text-foreground">Navigation</h3>
+        {geo.position && (
+          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
+            Live
+          </span>
+        )}
+      </div>
+      <LiveMap
+        userLocation={geo.position}
+        otherLocation={destLoc}
+        route={route}
+        routeDistance={distance}
+        routeDuration={duration}
+        showRecenterButton
+        userLabel="You"
+        otherLabel="Customer"
+        className="h-[250px]"
+      />
+      {geo.error && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+          Location: {geo.error.message}. Enable GPS to share your location with the customer.
+        </p>
+      )}
+      {!geo.position && !geo.error && geo.loading && (
+        <p className="text-xs text-foreground-tertiary mt-2">Getting your location…</p>
+      )}
+    </div>
+  );
+}
+
 export default function WorkerPortalPage() {
   const [token, setTokenState] = useState<string | null>(null);
   const [mode, setMode] = useState<'home_help' | 'driver'>('home_help');
@@ -210,7 +311,7 @@ export default function WorkerPortalPage() {
     if (!t) { setTokenState(null); setLoading(false); return; }
     setTokenState(t); setLoading(true); setError('');
     const safeJson = async (path: string, init?: RequestInit) => {
-      const res = await fetch(`${API}${path}`, {
+      const res = await fetch(`${API_URL}${path}`, {
         ...init,
         headers: { Authorization: `Bearer ${t}`, ...(init?.headers || {}) },
       });
@@ -219,8 +320,8 @@ export default function WorkerPortalPage() {
     };
     try {
       const [av, my, me] = await Promise.all([
-        safeJson(`/api/bookings/available?mode=${mode}`).catch(() => ({ bookings: [] })),
-        safeJson(`/api/bookings/worker`).catch(() => ({ bookings: [] })),
+        safeJson(`/api/bookings/available?mode=${mode}`),
+        safeJson(`/api/bookings/worker`),
         safeJson(`/api/workers/me`).catch((e) => {
           if (e instanceof Error && e.message.includes('-> 401')) {
             clearToken();
@@ -242,7 +343,7 @@ export default function WorkerPortalPage() {
   const act = async (id: string, path: string, body?: unknown) => {
     setBusy(true); setError('');
     try {
-      const res = await fetch(`${API}/api/bookings/${id}${path}`, {
+      const res = await fetch(`${API_URL}/api/bookings/${id}${path}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: body ? JSON.stringify(body) : undefined,
@@ -271,26 +372,32 @@ export default function WorkerPortalPage() {
       <main className="container-page max-w-3xl mx-auto px-4 py-8">
         {error && <div className="px-4 py-3 rounded-xl bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm mb-4">{error}</div>}
         {profile && (() => {
+          const notActive = !profile.isActive;
           const needsAadhaar = !profile.aadhaarVerified;
           const needsLicense = (profile.workerType === 'driver' || profile.workerType === 'both') && !profile.licenseVerified;
-          const notActive = !profile.isActive;
-          if (!needsAadhaar && !needsLicense && !notActive) return null;
-          const items = [
-            needsAadhaar && 'Aadhaar verification',
-            needsLicense && 'Driving license verification',
-          ].filter(Boolean) as string[];
+          const needsVerification = needsAadhaar || needsLicense;
+
           return (
-            <div className="px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-400 text-sm mb-4">
-              <p className="font-medium">
-                {notActive ? 'Your worker account is pending approval.' : 'Verification pending.'}
-              </p>
-              {items.length > 0 && (
-                <p className="mt-1">Awaiting: {items.join(' and ')}. You can&apos;t take {profile.workerType === 'driver' ? 'driver' : 'these'} jobs until an admin completes this.</p>
+            <>
+              {notActive && (
+                <div className="px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-400 text-sm mb-4">
+                  <p className="font-medium">Your worker account is pending approval.</p>
+                  {profile.deactivationReason && <p className="mt-1">Note: {profile.deactivationReason}</p>}
+                </div>
               )}
-              {profile.deactivationReason && <p className="mt-1">Note: {profile.deactivationReason}</p>}
-            </div>
+              {needsVerification && token && (
+                <KycDashboard workerType={profile.workerType} token={token} onVerified={load} />
+              )}
+            </>
           );
         })()}
+
+        {token && (
+          <WorkerMapPanel
+            activeJob={mine.find(b => b.status === 'assigned' || b.status === 'in_progress') || null}
+            token={token}
+          />
+        )}
 
         <section className="mb-8">
           <div className="flex items-center justify-between mb-3">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Worker } from '@/lib/types';
 import { api } from '@/lib/api';
@@ -9,6 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { KycReviewPanel } from './KycReviewPanel';
 
 export default function WorkersPage() {
   const { logout } = useAuth();
@@ -19,13 +20,14 @@ export default function WorkersPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [expandedWorkerId, setExpandedWorkerId] = useState<string | null>(null);
 
   const fetchWorkers = useCallback(async () => {
-    setLoading(true);
-    setError('');
     try {
-      const data = await api.getWorkers({ mode: typeFilter || undefined }) as { workers: Worker[] };
+      setLoading(true);
+      const data = await api.getKycWorkers();
       setWorkers(data.workers || []);
+      setError('');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load workers');
     } finally {
@@ -48,24 +50,6 @@ export default function WorkersPage() {
       fetchWorkers();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update worker');
-    }
-  };
-
-  const handleVerifyAadhaar = async (worker: Worker) => {
-    try {
-      await api.updateWorker(worker.id, { aadhaarVerified: true });
-      fetchWorkers();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to verify Aadhaar');
-    }
-  };
-
-  const handleVerifyLicense = async (worker: Worker) => {
-    try {
-      await api.updateWorker(worker.id, { licenseVerified: true });
-      fetchWorkers();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to verify License');
     }
   };
 
@@ -204,107 +188,116 @@ export default function WorkersPage() {
                     </thead>
                     <tbody>
                       {filteredWorkers.map((w) => (
-                        <tr key={w.id} className="ops-table-row border-b border-border">
-                          <td className="px-4 py-3 font-medium text-foreground">{w.name}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{w.phoneNumber || '—'}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="neutral" size="sm">
-                              {w.workerType.replace('_', ' ')}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`status-badge ${w.isAvailable ? 'status-active' : 'status-pending'}`}>
-                              {w.isAvailable ? 'Available' : 'Busy'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {w.aadhaarVerified ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Verified
+                        <React.Fragment key={w.id}>
+                          <tr className="ops-table-row border-b border-border">
+                            <td className="px-4 py-3 font-medium text-foreground">{w.name}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{w.phoneNumber || '—'}</td>
+                            <td className="px-4 py-3">
+                              <Badge variant="neutral" size="sm">
+                                {w.workerType.replace('_', ' ')}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`status-badge ${w.isAvailable ? 'status-active' : 'status-pending'}`}>
+                                {w.isAvailable ? 'Available' : 'Busy'}
                               </span>
-                            ) : (
-                              <button
-                                onClick={() => handleVerifyAadhaar(w)}
-                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
-                              >
-                                Verify
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {w.licenseVerified ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </td>
+                            <td className="px-4 py-3">
+                              {w.aadhaarVerified ? (
+                                <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Verified
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setExpandedWorkerId(expandedWorkerId === w.id ? null : w.id)}
+                                  className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
+                                >
+                                  Review KYC
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {w.licenseVerified ? (
+                                <span className="inline-flex items-center gap-1 text-xs text-success font-medium">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Verified
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setExpandedWorkerId(expandedWorkerId === w.id ? null : w.id)}
+                                  className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
+                                >
+                                  Review KYC
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {w.isActive ? (
+                                <span className="status-badge status-active">Active</span>
+                              ) : (
+                                <span className="status-badge status-pending" title={w.deactivationReason || undefined}>
+                                  Inactive
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {(() => {
+                                const e = workerEligibility(w);
+                                const cls = e.tone === 'ok'
+                                  ? 'text-success'
+                                  : e.tone === 'warn'
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-muted-foreground';
+                                return <span className={`text-xs font-medium ${cls}`}>{e.label}</span>;
+                              })()}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 text-foreground font-medium">
+                                <svg className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                Verified
+                                {Number(w.averageRating).toFixed(1)}
                               </span>
-                            ) : (
-                              <button
-                                onClick={() => handleVerifyLicense(w)}
-                                className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold"
-                              >
-                                Verify
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {w.isActive ? (
-                              <span className="status-badge status-active">Active</span>
-                            ) : (
-                              <span className="status-badge status-pending" title={w.deactivationReason || undefined}>
-                                Inactive
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {(() => {
-                              const e = workerEligibility(w);
-                              const cls = e.tone === 'ok'
-                                ? 'text-success'
-                                : e.tone === 'warn'
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-muted-foreground';
-                              return <span className={`text-xs font-medium ${cls}`}>{e.label}</span>;
-                            })()}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1 text-foreground font-medium">
-                              <svg className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                              {Number(w.averageRating).toFixed(1)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-foreground text-sm tabular-nums">{w.totalJobs}</td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => handleToggleActive(w)}
-                                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                                  w.isActive
-                                    ? 'text-danger bg-danger/10 hover:bg-danger/20'
-                                    : 'text-success bg-success/10 hover:bg-success/20'
-                                }`}
-                                title={w.isActive ? 'Deactivate worker' : 'Activate worker'}
-                              >
-                                {w.isActive ? 'Deactivate' : 'Activate'}
-                              </button>
-                              <button
-                                onClick={() => handleToggleAvailability(w)}
-                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                                title={w.isAvailable ? 'Mark as Busy' : 'Mark as Available'}
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                            <td className="px-4 py-3 text-foreground text-sm tabular-nums">{w.totalJobs}</td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleToggleActive(w)}
+                                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                                    w.isActive
+                                      ? 'text-danger bg-danger/10 hover:bg-danger/20'
+                                      : 'text-success bg-success/10 hover:bg-success/20'
+                                  }`}
+                                  title={w.isActive ? 'Deactivate worker' : 'Activate worker'}
+                                >
+                                  {w.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button
+                                  onClick={() => handleToggleAvailability(w)}
+                                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                  title={w.isAvailable ? 'Mark as Busy' : 'Mark as Available'}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedWorkerId === w.id && (
+                            <tr className="bg-muted/30">
+                              <td colSpan={11} className="px-6 py-4">
+                                <KycReviewPanel worker={w} onUpdate={fetchWorkers} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -357,10 +350,10 @@ export default function WorkersPage() {
                               </span>
                             ) : (
                               <button
-                                onClick={() => handleVerifyAadhaar(w)}
+                                onClick={() => setExpandedWorkerId(expandedWorkerId === w.id ? null : w.id)}
                                 className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                               >
-                                Verify
+                                Review KYC
                               </button>
                             )}
                           </div>
@@ -375,10 +368,10 @@ export default function WorkersPage() {
                               </span>
                             ) : (
                               <button
-                                onClick={() => handleVerifyLicense(w)}
+                                onClick={() => setExpandedWorkerId(expandedWorkerId === w.id ? null : w.id)}
                                 className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                               >
-                                Verify
+                                Review KYC
                               </button>
                             )}
                           </div>
@@ -397,6 +390,12 @@ export default function WorkersPage() {
                             </p>
                           </div>
                         </div>
+
+                        {expandedWorkerId === w.id && (
+                          <div className="pt-2">
+                            <KycReviewPanel worker={w} onUpdate={fetchWorkers} />
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-2 pt-1">
                           <button

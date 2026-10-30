@@ -69,8 +69,9 @@ export default function BookingsPage() {
       const origin = typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : undefined;
       const data = await api.getAvailableWorkers(booking.mode, origin) as { workers: Worker[] };
       setAvailableWorkers(data.workers || []);
-    } catch {
+    } catch (e: any) {
       setAvailableWorkers([]);
+      alert(`Failed to fetch workers: ${e.message}`);
     } finally {
       setAssigningWorkers(false);
     }

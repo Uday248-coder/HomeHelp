@@ -54,7 +54,7 @@ describe('isWorkerEligible', () => {
 
 describe('eligibleModes', () => {
   it('returns both modes for a fully verified both-worker', () => {
-    expect(eligibleModes({ workerType: 'both', aadhaarVerified: true, licenseVerified: true, isActive: true })).toEqual(['home_help', 'driver']);
+    expect(eligibleModes({ workerType: 'both', aadhaarVerified: true, licenseVerified: true, isActive: true })).toEqual(['home_help', 'driver', 'driver_outstation']);
   });
   it('returns only home_help for a both-worker missing license', () => {
     expect(eligibleModes({ workerType: 'both', aadhaarVerified: true, licenseVerified: false, isActive: true })).toEqual(['home_help']);
@@ -71,7 +71,7 @@ describe('canActivate', () => {
   it('blocks driver-only activation without license', () => {
     expect(canActivate({ workerType: 'driver', aadhaarVerified: true, licenseVerified: false }).ok).toBe(false);
   });
-  it('allows activation of a both-worker with only Aadhaar', () => {
-    expect(canActivate({ workerType: 'both', aadhaarVerified: true, licenseVerified: false }).ok).toBe(true);
+  it('rejects activation of a both-worker with only Aadhaar', () => {
+    expect(canActivate({ workerType: 'both', aadhaarVerified: true, licenseVerified: false }).ok).toBe(false);
   });
 });

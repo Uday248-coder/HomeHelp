@@ -7,6 +7,9 @@ export default defineConfig({
     env: {
       JWT_SECRET: 'test-secret',
       NODE_ENV: 'test',
+      YOUPI_API_URL: 'http://localhost:6100',
+      YOUPI_MERCHANT_ID: 'test-merchant-id',
+      YOUPI_WEBHOOK_SECRET: 'test-webhook-secret',
     },
   },
 });

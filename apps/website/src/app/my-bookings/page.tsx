@@ -1,10 +1,21 @@
 'use client';
 
+import { API_URL } from '@/lib/config';
+
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/Button';
 import { UpiPayment } from '@/components/UpiPayment';
 import { getToken, clearToken, login } from '@/lib/auth';
-import type { Booking, BookingStatus } from '@/lib/types';
+import type { Booking, BookingStatus, LatLng } from '@/lib/types';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useWorkerLocation } from '@/hooks/useWorkerLocation';
+import { useRoute } from '@/hooks/useRoute';
+
+const LiveMap = dynamic(() => import('@/components/map/LiveMap'), {
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full rounded-2xl skeleton" />,
+});
 
 const STEPS: { key: BookingStatus; label: string }[] = [
   { key: 'pending', label: 'Pending' },
@@ -106,7 +117,78 @@ function LoginView({ onOk }: { onOk: () => void }) {
   );
 }
 
-function BookingCard({ b, onCancel }: { b: Booking; onCancel: (id: string) => void }) {
+function TrackingMap({ booking, token }: { booking: Booking; token: string }) {
+  const [showMap, setShowMap] = useState(false);
+  const geo = useGeolocation();
+  const { workerLocation: liveWorkerLoc, connected } = useWorkerLocation(
+    showMap ? booking.id : null,
+    showMap ? token : null
+  );
+  
+  // Use live socket location if available, fall back to REST data
+  const workerLoc: LatLng | null = liveWorkerLoc ?? (
+    booking.worker?.currentLat != null && booking.worker?.currentLng != null
+      ? { lat: Number(booking.worker.currentLat), lng: Number(booking.worker.currentLng) }
+      : null
+  );
+
+  const customerLoc: LatLng | null = 
+    booking.customerLat != null && booking.customerLng != null
+      ? { lat: Number(booking.customerLat), lng: Number(booking.customerLng) }
+      : geo.position;
+
+  const { route, distance, duration } = useRoute(
+    showMap ? workerLoc : null,
+    showMap ? customerLoc : null
+  );
+
+  const isActive = booking.status === 'assigned' || booking.status === 'in_progress';
+  if (!isActive) return null;
+
+  return (
+    <div className="mt-4">
+      <button
+        onClick={() => setShowMap(!showMap)}
+        className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        {showMap ? 'Hide Map' : 'Track Worker'}
+        {connected && <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />}
+      </button>
+
+      {showMap && (
+        <div className="mt-3 animate-fade-in">
+          <LiveMap
+            userLocation={customerLoc}
+            otherLocation={workerLoc}
+            route={route}
+            routeDistance={distance}
+            routeDuration={duration}
+            showRecenterButton
+            userLabel="You"
+            otherLabel="Worker"
+            className="h-[300px]"
+          />
+          {!workerLoc && (
+            <p className="text-xs text-foreground-tertiary mt-2">
+              Worker location will appear when they start sharing their position.
+            </p>
+          )}
+          {geo.error && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+              Location access: {geo.error.message}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BookingCard({ b, onCancel, token }: { b: Booking; onCancel: (id: string) => void; token: string }) {
   const canCancel = b.status === 'pending' || b.status === 'assigned';
   const showPayment = b.status !== 'completed' && b.status !== 'cancelled';
   return (
@@ -146,6 +228,8 @@ function BookingCard({ b, onCancel }: { b: Booking; onCancel: (id: string) => vo
           </div>
         </div>
       )}
+
+      <TrackingMap booking={b} token={token} />
 
       {(b.startOtp || b.endOtp) && b.status !== 'completed' && b.status !== 'cancelled' && (
         <div className="mt-4 space-y-2">
@@ -194,7 +278,7 @@ export default function MyBookingsPage() {
       const t = getToken();
       if (!t) { setTokenState(null); setLoading(false); return; }
       setTokenState(t);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com'}/api/bookings`, {
+      const res = await fetch(`${API_URL}/api/bookings`, {
         headers: { Authorization: `Bearer ${t}` },
       });
       const data = await res.json();
@@ -210,7 +294,7 @@ export default function MyBookingsPage() {
   const handleCancel = async (id: string) => {
     if (!confirm('Cancel this booking?')) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com'}/api/bookings/${id}/cancel`, {
+      const res = await fetch(`${API_URL}/api/bookings/${id}/cancel`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -256,7 +340,7 @@ export default function MyBookingsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {bookings.map((b) => <BookingCard key={b.id} b={b} onCancel={handleCancel} />)}
+            {bookings.map((b) => <BookingCard key={b.id} b={b} onCancel={handleCancel} token={token!} />)}
           </div>
         )}
       </main>

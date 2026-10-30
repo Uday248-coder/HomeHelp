@@ -1,10 +1,11 @@
+import { API_URL } from '@/lib/config';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Forward the browser's push subscription to the backend for persistence.
 // The backend is the source of truth so push works whether the user is
 // logged in via the website or the mobile app.
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid subscription payload' }, { status: 400 });
     }
 
-    const res = await fetch(`${BACKEND}/api/push/subscribe`, {
+    const res = await fetch(`${API_URL}/api/push/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

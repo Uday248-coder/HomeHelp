@@ -20,7 +20,9 @@ function getId(req: Request): string {
 const BOOKING_SAFE_FIELDS = {
   id: true, userId: true, mode: true, serviceType: true, status: true,
   scheduledAt: true, startedAt: true, completedAt: true,
-  durationHours: true, hourlyRate: true, customerAddress: true,
+  durationHours: true, distanceKm: true, baseAmount: true, surgeMultiplier: true,
+  hourlyRate: true, totalAmount: true, customerAddress: true,
+  customerLat: true, customerLng: true,
   ratingByUser: true, reviewText: true, createdAt: true, updatedAt: true,
 } as const;
 
@@ -35,7 +37,7 @@ bookingsRouter.get('/', async (req: Request, res: Response) => {
       where: { userId: req.user!.userId },
       select: {
         ...CUSTOMER_FIELDS,
-        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true, currentLat: true, currentLng: true } },
         payment: { select: { id: true, amount: true, status: true, createdAt: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -65,17 +67,12 @@ const otpVerifyLimiter = rateLimit({
 
 bookingsRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { mode, serviceType, scheduledAt, customerAddress, customerLat, customerLng, durationHours } = req.body;
+    const { mode, serviceType, scheduledAt, customerAddress, customerLat, customerLng, durationHours, distanceKm } = req.body;
     if (!mode || !serviceType) {
       return res.status(400).json({ error: 'mode and serviceType are required' });
     }
-    if (!['home_help', 'driver'].includes(mode)) {
-      return res.status(400).json({ error: 'mode must be home_help or driver' });
-    }
-
-    const hourlyRate = RATE_TABLE[mode];
-    if (!hourlyRate) {
-      return res.status(400).json({ error: 'Invalid mode for pricing' });
+    if (!['home_help', 'driver', 'driver_outstation'].includes(mode)) {
+      return res.status(400).json({ error: 'mode must be home_help, driver, or driver_outstation' });
     }
 
     // Validate coordinates if provided (lat: -90..90, lng: -180..180)
@@ -89,12 +86,29 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
     }
 
     const duration = durationHours !== undefined && durationHours !== '' ? parseFloat(durationHours) : null;
+    const dist = distanceKm !== undefined && distanceKm !== '' ? parseFloat(distanceKm) : null;
+    
     if (duration !== null && (isNaN(duration) || duration <= 0)) {
       return res.status(400).json({ error: 'Invalid durationHours' });
     }
+    if (dist !== null && (isNaN(dist) || dist <= 0 || dist > 2000)) {
+      return res.status(400).json({ error: 'distanceKm must be between 0 and 2000' });
+    }
 
-    // Server-side total computed from the rate table — never trust client amounts.
-    const totalAmount = duration ? Math.round(hourlyRate * duration) : null;
+    // Outstation-specific validations
+    if (mode === 'driver_outstation') {
+      if (!duration || duration < 4) {
+        return res.status(400).json({ error: 'Outstation bookings require a minimum of 4 hours' });
+      }
+    }
+
+    // Calculate price dynamically
+    const { PricingEngine } = await import('../services/pricing/PricingEngine');
+    const pricing = await PricingEngine.calculatePrice({
+      mode: mode as any,
+      durationHours: duration,
+      distanceKm: dist,
+    });
 
     const booking = await prisma.booking.create({
       data: {
@@ -106,8 +120,11 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
         customerLat: lat,
         customerLng: lng,
         durationHours: duration,
-        hourlyRate,
-        totalAmount,
+        distanceKm: dist,
+        hourlyRate: pricing.hourlyRate,
+        baseAmount: pricing.baseAmount,
+        surgeMultiplier: pricing.surgeMultiplier,
+        totalAmount: pricing.totalAmount,
         status: 'pending',
       },
       select: {
@@ -117,9 +134,77 @@ bookingsRouter.post('/', async (req: Request, res: Response) => {
       },
     });
     return res.status(201).json({ booking });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[bookings] create booking error:', err);
-    return res.status(500).json({ error: 'Failed to create booking' });
+    return res.status(400).json({ error: err.message || 'Failed to create booking' });
+  }
+});
+
+bookingsRouter.patch('/:id', async (req: Request, res: Response) => {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.userId !== req.user!.userId && !req.user!.isAdmin) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending bookings can be edited' });
+    }
+
+    const { scheduledAt, customerAddress, customerLat, customerLng, durationHours, distanceKm } = req.body;
+    const updateData: any = {};
+
+    if (scheduledAt !== undefined) updateData.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+    if (customerAddress !== undefined) updateData.customerAddress = customerAddress;
+    
+    let lat = booking.customerLat ? Number(booking.customerLat) : null;
+    let lng = booking.customerLng ? Number(booking.customerLng) : null;
+    if (customerLat !== undefined) lat = customerLat === '' ? null : parseFloat(customerLat);
+    if (customerLng !== undefined) lng = customerLng === '' ? null : parseFloat(customerLng);
+    
+    if (lat !== null && (isNaN(lat) || lat < -90 || lat > 90)) return res.status(400).json({ error: 'Invalid latitude' });
+    if (lng !== null && (isNaN(lng) || lng < -180 || lng > 180)) return res.status(400).json({ error: 'Invalid longitude' });
+    updateData.customerLat = lat;
+    updateData.customerLng = lng;
+
+    const currentDuration = durationHours !== undefined ? (durationHours === '' ? null : parseFloat(durationHours)) : (booking.durationHours ? Number(booking.durationHours) : null);
+    const currentDistance = distanceKm !== undefined ? (distanceKm === '' ? null : parseFloat(distanceKm)) : (booking.distanceKm ? Number(booking.distanceKm) : null);
+
+    // If duration or distance changes, re-run pricing engine
+    if (durationHours !== undefined || distanceKm !== undefined) {
+      if (currentDuration !== null && (isNaN(currentDuration) || currentDuration <= 0)) {
+        return res.status(400).json({ error: 'Invalid durationHours' });
+      }
+
+      const { PricingEngine } = await import('../services/pricing/PricingEngine');
+      const pricing = await PricingEngine.calculatePrice({
+        mode: booking.mode as any,
+        durationHours: currentDuration,
+        distanceKm: currentDistance,
+      });
+
+      updateData.durationHours = currentDuration;
+      updateData.distanceKm = currentDistance;
+      updateData.hourlyRate = pricing.hourlyRate;
+      updateData.baseAmount = pricing.baseAmount;
+      updateData.surgeMultiplier = pricing.surgeMultiplier;
+      updateData.totalAmount = pricing.totalAmount;
+    }
+
+    const updatedBooking = await prisma.booking.update({
+      where: { id: req.params.id },
+      data: updateData,
+      select: {
+        ...BOOKING_SAFE_FIELDS,
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        payment: { select: { id: true, amount: true, status: true, createdAt: true } },
+      },
+    });
+
+    return res.json({ booking: updatedBooking });
+  } catch (err: any) {
+    console.error('[bookings] update booking error:', err);
+    return res.status(400).json({ error: err.message || 'Failed to update booking' });
   }
 });
 
@@ -245,7 +330,7 @@ bookingsRouter.get('/:id', async (req: Request, res: Response) => {
       where: { id: getId(req) },
       select: {
         ...CUSTOMER_FIELDS,
-        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true } },
+        worker: { select: { id: true, name: true, workerType: true, averageRating: true, photoUrl: true, currentLat: true, currentLng: true } },
         payment: { select: { id: true, amount: true, status: true, createdAt: true } },
         user: { select: { id: true, name: true } },
       },

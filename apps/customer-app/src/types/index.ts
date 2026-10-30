@@ -7,7 +7,7 @@ export interface User {
 
 export interface Booking {
   id: string;
-  mode: 'home_help' | 'driver';
+  mode: 'home_help' | 'driver' | 'driver_outstation';
   serviceType: string;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   scheduledAt?: string;
@@ -15,6 +15,9 @@ export interface Booking {
   completedAt?: string;
   customerAddress?: string;
   durationHours?: number;
+  distanceKm?: number;
+  baseAmount?: number;
+  surgeMultiplier?: number;
   hourlyRate?: number;
   totalAmount?: number;
   ratingByUser?: number;

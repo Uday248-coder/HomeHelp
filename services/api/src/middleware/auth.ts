@@ -7,6 +7,7 @@ export interface AuthPayload {
   userId: string;
   phoneNumber?: string;
   email?: string;
+  isAdmin?: boolean;
 }
 
 declare global {

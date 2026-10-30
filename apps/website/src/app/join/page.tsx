@@ -1,8 +1,10 @@
 'use client';
 
+import { API_URL } from '@/lib/config';
+
 import { useState, useEffect } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 
 function ProgressIndicator({ step }: { step: number }) {
   const steps = [

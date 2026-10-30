@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import crypto from 'crypto';
 import express from 'express';
 import request from 'supertest';
@@ -55,7 +55,7 @@ describe('auth routes', () => {
 
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ email: 'a@b.com', password: 'secret123', name: 'A' });
+      .send({ email: 'a@b.com', password: 'secret123', name: 'A', termsAccepted: true });
 
     expect(res.status).toBe(200);
     expect(res.body.token).toBeTruthy();
@@ -146,6 +146,14 @@ describe('auth routes', () => {
   describe('password reset', () => {
     const hashToken = (token: string) =>
       crypto.createHash('sha256').update(token).digest('hex');
+
+    beforeEach(() => {
+      process.env.DEBUG_AUTH = 'true';
+    });
+
+    afterEach(() => {
+      delete process.env.DEBUG_AUTH;
+    });
 
     it('sends a reset link for an existing account (dev url in non-prod)', async () => {
       prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com' });

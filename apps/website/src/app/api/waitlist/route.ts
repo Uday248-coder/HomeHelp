@@ -1,6 +1,7 @@
+import { API_URL } from '@/lib/config';
 import { NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 
 export async function POST(request: Request) {
   try {

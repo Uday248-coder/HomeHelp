@@ -66,6 +66,17 @@ export function setupSocket(httpServer: HttpServer) {
           return;
         }
         io.to(`booking:${bookingId}`).emit('worker_location', { location, ts: Date.now() });
+
+        // Persist the latest position so REST fetches (before socket connects) show it.
+        try {
+          await (await import('./lib/prisma')).prisma.worker.updateMany({
+            where: { userId },
+            data: { currentLat: location.lat, currentLng: location.lng },
+          });
+        } catch (persistErr) {
+          console.error('[socket] persist worker location error:', persistErr);
+        }
+
         if (typeof ack === 'function') ack({ ok: true });
       } catch (err) {
         console.error('[socket] update_booking_location error:', err);

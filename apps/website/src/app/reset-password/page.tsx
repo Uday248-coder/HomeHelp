@@ -1,10 +1,12 @@
 'use client';
 
+import { API_URL } from '@/lib/config';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 
 export default function ResetPasswordPage() {
   const router = useRouter();

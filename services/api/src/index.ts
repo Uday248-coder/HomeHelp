@@ -15,6 +15,7 @@ import { waitlistRouter } from './routes/waitlist';
 import { payoutsRouter } from './routes/payouts';
 import { usersRouter } from './routes/users';
 import { pushRouter } from './routes/push';
+import { kycRouter } from './routes/kyc';
 import { requestLogger } from './middleware/validation';
 import { setupSocket } from './socket';
 import { getAllowedOrigins } from './lib/origins';
@@ -54,7 +55,12 @@ app.use(cors({
   origin: getAllowedOrigins(),
   credentials: true,
 }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ 
+  limit: '1mb',
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  }
+}));
 app.use(cookieParser());
 app.use(requestLogger);
 
@@ -65,9 +71,15 @@ app.use('/api/workers', workersRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/waitlist', waitlistRouter);
+import { startPayoutCron } from './cron/payouts';
+
 app.use('/api/payouts', payoutsRouter);
+
+// Start Cron Jobs
+startPayoutCron();
 app.use('/api/users', usersRouter);
 app.use('/api/push', pushRouter);
+app.use('/api/kyc', kycRouter);
 
 Sentry.setupExpressErrorHandler(app);
 

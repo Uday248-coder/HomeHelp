@@ -1,6 +1,6 @@
 import { WorkerType } from '@prisma/client';
 
-export type BookingMode = 'home_help' | 'driver';
+export type BookingMode = 'home_help' | 'driver' | 'driver_outstation';
 
 export interface WorkerEligibilityFields {
   workerType: WorkerType;
@@ -12,7 +12,7 @@ export interface WorkerEligibilityFields {
 
 // Does the worker's type cover this booking mode?
 export function modeMatchesType(mode: BookingMode, workerType: WorkerType): boolean {
-  if (mode === 'driver') return workerType === 'driver' || workerType === 'both';
+  if (mode === 'driver' || mode === 'driver_outstation') return workerType === 'driver' || workerType === 'both';
   return workerType === 'home_help' || workerType === 'both';
 }
 
@@ -22,7 +22,7 @@ export function hasRequiredVerification(
   w: Pick<WorkerEligibilityFields, 'aadhaarVerified' | 'licenseVerified'>,
 ): boolean {
   if (!w.aadhaarVerified) return false;
-  if (mode === 'driver' && !w.licenseVerified) return false;
+  if ((mode === 'driver' || mode === 'driver_outstation') && !w.licenseVerified) return false;
   return true;
 }
 
@@ -42,7 +42,10 @@ export function isWorkerEligible(
 export function eligibleModes(w: WorkerEligibilityFields): BookingMode[] {
   const modes: BookingMode[] = [];
   if (isWorkerEligible('home_help', w)) modes.push('home_help');
-  if (isWorkerEligible('driver', w)) modes.push('driver');
+  if (isWorkerEligible('driver', w)) {
+    modes.push('driver');
+    modes.push('driver_outstation'); // If they can drive locally, they can drive outstation
+  }
   return modes;
 }
 

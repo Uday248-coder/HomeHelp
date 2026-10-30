@@ -15,7 +15,6 @@ function hashToken(token: string): string {
 }
 
 const isProduction = process.env.NODE_ENV === 'production';
-const isDebugAuth = process.env.DEBUG_AUTH === 'true';
 
 export const authRouter = Router();
 
@@ -61,7 +60,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     });
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, isAdmin: user.isAdmin },
       JWT_SECRET,
       { expiresIn: '7d' },
     );
@@ -101,7 +100,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, isAdmin: user.isAdmin },
       JWT_SECRET,
       { expiresIn: '7d' },
     );
@@ -169,7 +168,7 @@ authRouter.post('/forgot-password', async (req: Request, res: Response) => {
       const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
       await sendPasswordResetEmail(email, resetUrl);
 
-      if (!isProduction && isDebugAuth) {
+      if (!isProduction && process.env.DEBUG_AUTH === 'true') {
         console.log(`[auth] password reset link for ${email}: ${resetUrl}`);
         return res.json({ ...generic, devResetUrl: resetUrl });
       }

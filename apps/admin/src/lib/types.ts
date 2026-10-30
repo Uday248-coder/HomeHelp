@@ -12,16 +12,23 @@ export interface Booking {
   id: string;
   userId: string;
   workerId?: string;
-  mode: 'home_help' | 'driver';
+  mode: 'home_help' | 'driver' | 'driver_outstation';
   serviceType: string;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   scheduledAt?: string;
   startedAt?: string;
   completedAt?: string;
   durationHours?: number;
+  distanceKm?: number;
+  baseAmount?: number;
+  surgeMultiplier?: number;
   hourlyRate?: number;
   totalAmount?: number;
   customerAddress?: string;
+  customerLat?: number;
+  customerLng?: number;
+  startOtp?: string;
+  endOtp?: string;
   ratingByUser?: number;
   reviewText?: string;
   createdAt: string;
@@ -43,7 +50,17 @@ export interface Worker {
   isAvailable: boolean;
   isActive: boolean;
   deactivationReason?: string | null;
-  distanceKm?: number | null;
+  distanceKm?: number | null; // Computed field from GET /workers/available (Haversine distance)
+  kycVerifications?: Array<{
+    verificationType: string;
+    status: 'not_started' | 'pending' | 'in_progress' | 'verified' | 'failed' | 'manual_review' | 'expired';
+    provider?: string | null;
+    maskedIdentifier?: string | null;
+    failureReason?: string | null;
+    reviewNotes?: string | null;
+    verifiedAt?: string | null;
+    updatedAt: string;
+  }>;
 }
 
 export interface WeeklyRevenue {
@@ -55,13 +72,16 @@ export interface WeeklyRevenue {
 export interface Payout {
   id: string;
   workerId: string;
-  workerName: string;
   amount: number;
-  status: 'pending' | 'completed' | 'processed' | 'failed';
-  weekStart: string;
-  weekEnd: string;
-  paidAt?: string;
+  status: 'pending' | 'processed' | 'failed';
+  weekStartDate: string;
+  weekEndDate: string;
+  processedAt?: string;
+  razorpayPayoutId?: string;
+  cashfreeTransferId?: string;
+  youpiPayoutId?: string;
   createdAt: string;
+  worker?: { id: string; name: string; phoneNumber?: string };
 }
 
 export interface PaginatedResponse<T> {
@@ -73,9 +93,10 @@ export interface PaginatedResponse<T> {
 
 export interface AdminUser {
   id: string;
-  phoneNumber: string;
+  email: string;
+  phoneNumber?: string;
   name?: string;
-  role: 'admin' | 'superadmin';
+  isAdmin: boolean;
   createdAt: string;
 }
 

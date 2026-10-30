@@ -63,11 +63,9 @@ HomeHelp is an on-demand platform with two booking modes: **home help** (cleaner
 - **FAQ section** — 6-item accordion with smooth expand/collapse
 - **Sticky header** with backdrop blur
 - **Worker Registration** (`/join`) — 2-step progress indicator, email + password + experience fields, terms acceptance, **email/password auth** (Firebase fully removed); success links to the Worker Portal
-- **Booking flow** (`/book`) — multi-step (choose service → details → account → confirm); email/password login or register inline; creates a booking via `POST /api/bookings`; success links to tracking
-- **Customer tracking** (`/my-bookings`) — authed page listing the customer's bookings with a 4-step status timeline (Pending → Assigned → In Progress → Completed; Cancelled separate), worker card, price, schedule/address, cancel, and the **Start/End OTPs surfaced to the customer** to share with the worker
-- **Worker Portal** (`/worker`) — authed page: browse **Available Jobs** by mode, **Accept** (self-assign), **Start** (enter Start OTP), **Complete** (enter End OTP + rating + review)
-- **Password reset** — `/forgot-password` (request link) and `/reset-password` (set new password); both link from the booking login and the admin login
-- **Design system** — Newsreader (display serif) + Inter (body sans) via next/font/google; palette: neutral slate + emerald accent + warm clay accent
+- **Booking flow** (`/book`) — multi-step (choose service → details → account → confirm); email/password login or register inline; features a **live location picker** using MapLibre/Geolocation; creates a booking via `POST /api/bookings`; success links to tracking
+- **Customer tracking** (`/my-bookings`) — authed page listing the customer's bookings with a 4-step status timeline, **live worker tracking map** via Socket.io/MapLibre, worker card, price, schedule, cancel, and Start/End OTPs surfaced to share with worker
+- **Worker Portal** (`/worker`) — authed page: browse **Available Jobs** by mode, **Accept** (self-assign), **Start** (enter Start OTP), **Complete** (enter End OTP + rating). Includes an **active navigation map** overlay and live coordinate emission back to the customer via Socket.io
 - **Hero** — dark pine split layout (headline + live-status card showing workers/drivers/rating)
 - **Reduced-motion support**; dark mode added back (system preference + manual toggle)
 - **Kolkata-specific** copy throughout
@@ -210,10 +208,13 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 | Layer | Technology |
 |-------|-----------|
 | Backend | Node.js + Express + TypeScript |
+| Emails | Resend |
+| Payments | **YouPI-PG Sovereign Zero-Fee UPI Gateway / Direct UPI** |
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma |
 | OTP/Cache | Upstash Redis |
 | Auth | **Email/password (bcrypt) + JWT (custom/httpOnly cookies)** |
+| Mapping/Routing | **MapLibre GL JS + MapTiler + OSRM (free tier/open source)** |
 | Error tracking | Sentry (wired, no DSN) |
 | Deploy (API) | Render |
 | Deploy (web) | Vercel |
@@ -258,11 +259,13 @@ These are stored as env vars on Render. For local dev, add to `services/api/.env
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash dashboard → REST API tab | ✅ Set on Render |
 | `JWT_SECRET` | Generate any random string | ✅ Set on Render |
 | `SENTRY_DSN` | Sentry → create project → client key | ❌ Not set |
-| `RAZORPAY_KEY_ID` | Razorpay dashboard | ❌ Not set (only for later migration) |
-| `RAZORPAY_KEY_SECRET` | Razorpay dashboard | ❌ Not set (only for later migration) |
+| YOUPI_API_URL | Self-hosted YouPI-PG Gateway (http://localhost:6100 or production) | ✅ Configured |
+| YOUPI_MERCHANT_ID | Merchant UUID in YouPI-PG | ✅ Configured |
+| YOUPI_WEBHOOK_SECRET | HMAC-SHA256 signature secret for webhooks | ✅ Configured |
+| YOUPI_PORTAL_URL | YouPI checkout portal URL (http://localhost:7000) | ✅ Configured |
 | `UPI_VPA` | Your UPI ID (e.g. `name@oksbi`) | ❌ Not set — required for fee-free payments |
 | `UPI_NAME` | UPI display name | ✅ Optional (defaults `HomeHelp`) |
-| `GOOGLE_MAPS_API_KEY` | Google Cloud Console | ❌ Not set |
+| `NEXT_PUBLIC_MAPTILER_API_KEY` | MapTiler dashboard | ✅ Set for free/open-source mapping |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | Unused — can be deleted | — |
 | `FCM_SERVER_KEY` | Unused — can be deleted | — |
 
@@ -326,11 +329,12 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 
 ### Phase 0 — Polish & Production (In Progress)
 1. ~~Firebase Phone Auth~~ — Removed. Auth is email/password only; no Firebase dependency remains.
-2. Set Sentry DSN — ✅ Code wired, set `SENTRY_DSN` on Render (optional)
+2. **Set Sentry DSN** — ✅ Code wired, you must paste the DSN into Render's env vars.
 3. Loading skeleton polish for admin dashboard — ✅ Done in Session 6
 4. **Set `NEXT_PUBLIC_API_URL` env vars on Vercel for admin & website** ✅
-5. **Set strong `JWT_SECRET` on Render** — required (generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
-6. **Create first admin** — `npm run create-admin -- admin@homehelp.ai <password>` (scripts/create-admin.ts upserts an admin user from scratch)
+5. **Mobile app env vars** — ✅ `EXPO_PUBLIC_API_URL` set to Render API in `.env` files for both apps.
+6. **Set strong `JWT_SECRET`** — ✅ Secure 256-bit hex secret generated and added to local `.env` (make sure to copy it to Render too).
+7. **Create first admin** — You must run `npm run create-admin -- admin@homehelp.ai <password>` in the **Render Shell**, as local `DATABASE_URL` is safely empty.
 
 ### Phase 1 — Mobile apps (2+ weeks)
 7. Customer Expo app (React Native) with mode switcher
@@ -339,16 +343,17 @@ No special setup needed. The workspace config, TypeScript, Prisma, and all depen
 10. Push notifications via FCM
 
 ### Phase 2 — Platform features (1-2 weeks)
-11. Aadhaar verification flow for workers
-12. Admin panel for reviewing/approving workers
-13. Weekly payout automation for workers
-14. Surge pricing engine
-15. Mode-aware pricing calculator
+11. **Aadhaar verification flow for workers** ✅ (Done via KYC Provider Abstraction)
+12. **Admin panel for reviewing/approving workers** ✅ (Done via KycReviewPanel)
+13. **Weekly payout automation for workers** ✅ (Done via node-cron job)
+14. **Surge pricing engine** ✅ (Done via PricingEngine MVP)
+15. **Mode-aware pricing calculator** ✅ (Done)
+16. **Booking editing** ✅ (Done via PATCH /bookings/:id)
 
 ### Phase 3 — Driver mode (2+ weeks)
-16. License verification
-17. Outstation booking flow
-18. Mode-aware pricing engine
+17. **License verification** ✅ (Done via KYC Provider Abstraction)
+18. **Outstation booking flow** ✅ (Done via driver_outstation mode)
+19. **Mode-aware pricing engine** ✅ (Done)
 
 ## Deployment Notes
 
@@ -430,7 +435,7 @@ The native `react-native-razorpay` was dropped because its Kotlin/Java native mo
 
 Before making any changes to `services/api/`, read **`services/api/SECURITY_CHECKLIST.md`** — it contains the standing security requirements every route change must satisfy. Failure to follow these rules will reintroduce the same vulnerabilities this session fixed.
 
-## Worker Verification Gate (Phase 2 — current behavior)
+## Worker Verification Gate (Phase 2 & 3 — KYC Implemented)
 
 - **Policy:** Aadhaar required for all work; **driving License additionally required for driver jobs** (`home_help`/`driver`/`both` types).
 - Enforcement lives in `services/api/src/lib/eligibility.ts` (`isWorkerEligible`, `eligibleModes`, `canActivate`) and is applied in:
@@ -438,8 +443,12 @@ Before making any changes to `services/api/`, read **`services/api/SECURITY_CHEC
   - `PATCH /api/bookings/:id/assign` — self-serve (must also be `isAvailable`) and admin assignment both gated.
   - `GET /api/workers/available/:mode` — only returns Aadhaar(+License)-verified, active, available workers (this is the admin assign-modal list).
   - `PATCH /api/workers/:id` — rejects `isActive:true` unless `canActivate` passes; sets/clears `deactivationReason`.
+- **KYC System:** A robust system orchestrates external KYC providers (`mock`, `sandbox` via Surepass/Setu, `production`) via `KycService`.
+  - The boolean flags `aadhaarVerified` and `licenseVerified` are synced automatically whenever a `KycVerification` record transitions to `verified`.
+  - Worker KYC state transitions between `not_started`, `pending`, `manual_review`, `verified`, and `failed`.
 - `Worker.deactivationReason` archives why a worker was deactivated; re-activation is server-blocked until conditions are met.
-- **Web worker portal** shows a pending-verification/pending-approval banner (no jobs shown until eligible). **Admin Workers page** has a status filter + Eligibility column; inline Verify/Activate actions are the approval UI.
+- **Web worker portal** integrates `KycDashboard`, allowing workers to self-serve Aadhaar (OTP/DigiLocker) and License verification flows.
+- **Admin Workers page** integrates `KycReviewPanel` enabling admins to review manual cases, approve, reject, or request re-upload.
 
 ## Security Posture & Sessions (read before auth changes)
 
