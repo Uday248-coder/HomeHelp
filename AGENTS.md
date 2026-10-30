@@ -209,7 +209,7 @@ All animations use `cubic-bezier(0.16, 1, 0.3, 1)` — a spring-like ease-out cu
 |-------|-----------|
 | Backend | Node.js + Express + TypeScript |
 | Emails | Resend |
-| Payments | **Cashfree (Sandbox) / UPI Fallback** |
+| Payments | **YouPI-PG Sovereign Zero-Fee UPI Gateway / Direct UPI** |
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma |
 | OTP/Cache | Upstash Redis |
@@ -259,9 +259,10 @@ These are stored as env vars on Render. For local dev, add to `services/api/.env
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash dashboard → REST API tab | ✅ Set on Render |
 | `JWT_SECRET` | Generate any random string | ✅ Set on Render |
 | `SENTRY_DSN` | Sentry → create project → client key | ❌ Not set |
-| `CASHFREE_APP_ID` | Cashfree dashboard | ❌ Not set (fallback to UPI) |
-| `CASHFREE_SECRET_KEY` | Cashfree dashboard | ❌ Not set |
-| `CASHFREE_ENVIRONMENT` | 'SANDBOX' or 'PRODUCTION' | ❌ Not set |
+| YOUPI_API_URL | Self-hosted YouPI-PG Gateway (http://localhost:6100 or production) | ✅ Configured |
+| YOUPI_MERCHANT_ID | Merchant UUID in YouPI-PG | ✅ Configured |
+| YOUPI_WEBHOOK_SECRET | HMAC-SHA256 signature secret for webhooks | ✅ Configured |
+| YOUPI_PORTAL_URL | YouPI checkout portal URL (http://localhost:7000) | ✅ Configured |
 | `UPI_VPA` | Your UPI ID (e.g. `name@oksbi`) | ❌ Not set — required for fee-free payments |
 | `UPI_NAME` | UPI display name | ✅ Optional (defaults `HomeHelp`) |
 | `NEXT_PUBLIC_MAPTILER_API_KEY` | MapTiler dashboard | ✅ Set for free/open-source mapping |

@@ -1,5 +1,6 @@
-import { API_URL } from '@/lib/config';
 'use client';
+
+import { API_URL } from '@/lib/config';
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';

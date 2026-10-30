@@ -1,6 +1,6 @@
-import { API_URL } from '@/lib/config';
 'use client';
 
+import { API_URL } from '@/lib/config';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 
 interface AdminUser {
@@ -103,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within AuthProvider');

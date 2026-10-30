@@ -43,7 +43,6 @@ export function LocationMarker({ map, position, color = '#10b981', label, pulse 
 
       markerRef.current = new maplibregl.Marker({ 
         element: el,
-        // @ts-ignore
         subpixelPositioning: true 
       })
         .setLngLat([position.lng, position.lat])

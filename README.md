@@ -44,7 +44,7 @@ On-demand platform with two booking modes: **home help** (cleaners, domestic wor
 - **Booking CRUD**: Create, list, detail, cancel, assign worker, start (OTP-gated), complete (OTP+rating), generate OTP — all working with proper null-safety checks
 - **Workers**: CRUD with auth-gated POST/PATCH, availability filter by mode, worker self-service endpoints (`/me`, `/me/availability`)
 - **KYC System**: Aadhaar, DigiLocker, and Driving Licence verification API via robust provider abstraction (`mock`, `sandbox`, `production`), audit logging, and automated worker state syncing.
-- **Payments**: Fee-free UPI QR by default, Cashfree payment gateway integration (Sandbox mode) via v6 SDK.
+- **Payments**: YouPI-PG sovereign zero-fee UPI payment gateway (https://github.com/gxurav1710/YouPI-PG) with direct-to-bank settlement, bank SMS/Gmail observation, and HMAC-SHA256 webhooks.
 - **Payouts**: Full payouts route (`GET /api/payouts` paginated admin, `GET /:id`, `GET /me` for workers)
 - **Stats**: Dashboard stats + weekly revenue, admin-only
 - **Waitlist**: DB-persisted signups via Prisma
@@ -154,7 +154,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 
 ### Phase 0 — Production Readiness (Completed locally)
 - [x] **Set Sentry DSN** — Code is wired for error monitoring. (You must manually set `SENTRY_DSN` in Render).
-- [ ] **Razorpay/Cashfree live keys** — (Deferred) Kept Cashfree in Sandbox mode for now per request.
+- [x] **Zero-Fee UPI Gateway (YouPI-PG)** — Rolled back third-party aggregators and integrated self-hosted YouPI-PG.
 - [x] **Mobile app env vars** — Created `.env` files for both mobile apps with `EXPO_PUBLIC_API_URL` pointing to the live API.
 - [x] **Secure JWT Secret** — Generated a highly secure 256-bit token and updated local `.env`.
 - [x] **Create first admin** — Script tested and ready. (Run `npm run create-admin -- admin@homehelp.ai <pass>` in the Render dashboard shell).
@@ -191,7 +191,7 @@ User → Website/Admin (Next.js) → API (Express) → Prisma → PostgreSQL
 | Integration | What for | Status |
 |-------------|----------|--------|
 | **Firebase Auth** | Phone OTP + Google Sign-In | ❌ **Removed** — migrated to email/password |
-| **Cashfree Payment Gateway** | Real payment processing | ✅ Implemented (Sandbox mode, fallback to manual UPI) |
+| **YouPI-PG Sovereign UPI Gateway** | Zero-fee direct-to-bank UPI payment processing | ✅ Implemented (https://github.com/gxurav1710/YouPI-PG) |
 | **MapTiler + MapLibre** | Free/open-source mapping, tracking, routing | ✅ Implemented (MapLibre GL JS on website) |
 | **Sentry DSN** | Error tracking and monitoring | 🔌 Wired, no key |
 | **Firebase Cloud Messaging** | Push notifications to mobile apps | ❌ Not connected |
@@ -262,9 +262,9 @@ Set these on Render (API) and Vercel (website + admin):
 | `JWT_SECRET` | ✅ | Token signing |
 | `NEXT_PUBLIC_API_URL` | ✅ | Frontend → API URL |
 | `UPI_VPA` | ❌ | Fee-free UPI payment collection (your UPI ID) |
-| `CASHFREE_APP_ID` | ❌ | Live payments via Cashfree |
-| `CASHFREE_SECRET_KEY` | ❌ | Live payments via Cashfree |
-| `CASHFREE_ENVIRONMENT` | ❌ | e.g. SANDBOX |
+| YOUPI_API_URL | ❌ | Base URL of self-hosted YouPI-PG instance |
+| YOUPI_MERCHANT_ID | ❌ | Merchant ID configured in YouPI |
+| YOUPI_WEBHOOK_SECRET | ❌ | HMAC-SHA256 webhook signing secret |
 | `SENTRY_DSN` | ❌ | Error tracking |
 | `NEXT_PUBLIC_MAPTILER_API_KEY` | ✅ | Free/open-source map tiles |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | ❌ | Removed — Firebase auth no longer used |

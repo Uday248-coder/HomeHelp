@@ -1,5 +1,6 @@
-import { API_URL } from '@/lib/config';
 'use client';
+
+import { API_URL } from '@/lib/config';
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';

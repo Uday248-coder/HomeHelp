@@ -1,84 +1,74 @@
 import { Router, Request } from 'express';
-import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { RATE_TABLE } from '../lib/constants';
+import { youpiClient, YoupiClient } from '../services/youpi/YoupiClient';
 
 export const paymentsRouter = Router();
 
-const cashfreeEnv = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
-  ? CFEnvironment.PRODUCTION 
-  : CFEnvironment.SANDBOX;
-
-const cashfreeAppId = process.env.CASHFREE_APP_ID || '';
-const cashfreeSecretKey = process.env.CASHFREE_SECRET_KEY || '';
-const hasCashfreeKeys = !!(cashfreeAppId && cashfreeSecretKey);
-
-let cashfree: Cashfree | null = null;
-if (hasCashfreeKeys) {
-  cashfree = new Cashfree(cashfreeEnv, cashfreeAppId, cashfreeSecretKey);
-}
-
 const upiVpa = process.env.UPI_VPA || '';
 const upiName = process.env.UPI_NAME || 'HomeHelp';
-
-function buildUpiLink(bookingId: string, amount: number): string | null {
-  if (!upiVpa) return null;
-  const note = `HomeHelp Booking ${bookingId.slice(0, 8)}`;
-  const params = new URLSearchParams({
-    pa: upiVpa,
-    pn: upiName,
-    am: amount.toFixed(2),
-    cu: 'INR',
-    tn: note,
-  });
-  return `upi://pay?${params.toString()}`;
-}
 
 function computeWorkerPayout(amount: number): number {
   const platformFee = parseFloat((amount * 0.15).toFixed(2));
   return parseFloat((amount - platformFee).toFixed(2));
 }
 
-// Webhook endpoint (unauthenticated, requires raw signature)
+// YouPI-PG Webhook endpoint (unauthenticated, requires HMAC-SHA256 signature in X-Gateway-Signature)
 paymentsRouter.post('/webhook', async (req: Request & { rawBody?: string }, res) => {
   try {
-    const signature = req.headers['x-webhook-signature'] as string;
-    const timestamp = req.headers['x-webhook-timestamp'] as string;
-    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const signature = (req.headers['x-gateway-signature'] || req.headers['x-webhook-signature']) as string;
+    const rawBody = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
 
-    if (!cashfree) {
-       return res.status(400).json({ error: 'Cashfree not configured' });
+    if (!youpiClient.isConfigured()) {
+      return res.status(400).json({ error: 'YouPI PG is not configured on this server' });
     }
 
-    try {
-      cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp);
-    } catch (err) {
-      console.error('[Payments] Webhook signature invalid', err);
-      return res.status(401).json({ error: 'Invalid webhook signature' });
+    const verification = youpiClient.verifyWebhook(rawBody, signature);
+    if (!verification.isValid) {
+      console.error('[Payments] YouPI webhook verification failed:', verification.error);
+      return res.status(401).json({ error: 'Invalid webhook signature', details: verification.error });
     }
 
-    const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    
-    if (payload.type === 'PAYMENT_SUCCESS_WEBHOOK') {
-      const orderId = payload.data?.order?.order_id;
-      if (!orderId) return res.status(400).json({ error: 'Missing order_id' });
+    const payload = verification.event;
+    console.log(`[Payments] Webhook received event=${payload.event} for orderId=${payload.orderId}`);
 
+    // In YouPI PG: OBSERVED_SUCCESS, RECONCILED, or SUCCESS (COD/Counter/Direct)
+    if (['RECONCILED', 'OBSERVED_SUCCESS', 'SUCCESS'].includes(payload.event)) {
+      const orderId = payload.orderId;
+      const paymentId = payload.paymentId;
+      const utr = payload.utr;
+
+      if (!orderId && !paymentId) {
+        return res.status(400).json({ error: 'Missing orderId or paymentId in webhook payload' });
+      }
+
+      // Look up payment by youpiOrderId, youpiPaymentId, or fallback to cashfreeOrderId
       const payment = await prisma.payment.findFirst({
-        where: { cashfreeOrderId: orderId }
+        where: {
+          OR: [
+            ...(orderId ? [{ youpiOrderId: orderId }, { cashfreeOrderId: orderId }] : []),
+            ...(paymentId ? [{ youpiPaymentId: paymentId }] : []),
+          ],
+        },
       });
 
       if (payment && (payment.status === 'pending' || payment.status === 'captured')) {
-         const recomputed = computeWorkerPayout(Number(payment.amount));
-         await prisma.payment.update({
-           where: { id: payment.id },
-           data: { status: 'paid', workerPayout: recomputed }
-         });
-         console.log(`[Payments] Webhook processed. Payment ${payment.id} marked as PAID.`);
+        const recomputed = computeWorkerPayout(Number(payment.amount));
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'paid',
+            workerPayout: recomputed,
+            utr: utr || payment.utr,
+            youpiPaymentId: paymentId || payment.youpiPaymentId,
+          },
+        });
+        console.log(`[Payments] YouPI Webhook processed. Payment ${payment.id} marked as PAID with UTR ${utr || 'N/A'}.`);
       }
     }
-    
-    return res.status(200).json({ status: 'OK' });
+
+    return res.status(200).json({ status: 'OK', received: true });
   } catch (err) {
     console.error('[Payments] Webhook processing error:', err);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -94,9 +84,9 @@ paymentsRouter.post('/create-order', async (req, res) => {
       return res.status(400).json({ error: 'bookingId is required' });
     }
 
-    const booking = await prisma.booking.findUnique({ 
+    const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { user: true } 
+      include: { user: true },
     });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
@@ -122,39 +112,43 @@ paymentsRouter.post('/create-order', async (req, res) => {
       return res.status(409).json({ error: 'Payment already completed for this booking', payment });
     }
 
-    let cashfreeOrderId: string | null = null;
-    let cashfreeSessionId: string | null = null;
+    let youpiPaymentId: string | null = null;
+    let youpiOrderId: string | null = null;
+    let checkoutUrl: string | null = null;
     let method = 'upi';
 
+    const generatedOrderId = `booking_${bookingId.replace(/-/g, '').slice(0, 15)}_${Date.now()}`;
+
     if (!payment) {
-      if (cashfree) {
+      if (youpiClient.isConfigured()) {
         try {
-          const generatedOrderId = `booking_${bookingId.replace(/-/g, '').slice(0, 15)}_${Date.now()}`;
-          const response = await cashfree.PGCreateOrder({
-            order_id: generatedOrderId,
-            order_amount: amount,
-            order_currency: "INR",
-            customer_details: {
-              customer_id: req.user!.userId.replace(/-/g, '').slice(0, 20),
-              customer_phone: booking.user?.phoneNumber || "9999999999",
-              customer_email: booking.user?.email || "customer@homehelp.local",
+          const youpiRes = await youpiClient.createPayment({
+            orderId: generatedOrderId,
+            amount,
+            currency: 'INR',
+            returnUrl: `${process.env.FRONTEND_URL || 'https://homehelp-website.vercel.app'}/my-bookings?order_id=${generatedOrderId}`,
+            customer: {
+              name: booking.user?.name || 'Customer',
+              phoneNumber: booking.user?.phoneNumber || '9999999999',
+              email: booking.user?.email || 'customer@homehelp.local',
             },
-            order_meta: {
-              return_url: `${process.env.FRONTEND_URL || 'https://homehelp-website.vercel.app'}/my-bookings?order_id={order_id}`,
-              notify_url: `${process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com'}/api/payments/webhook`
-            }
+            metadata: {
+              bookingId,
+              userId: req.user!.userId,
+            },
           });
-          cashfreeOrderId = response.data.order_id || null;
-          cashfreeSessionId = response.data.payment_session_id || null;
-          method = 'cashfree';
+
+          youpiPaymentId = youpiRes.paymentId || null;
+          youpiOrderId = youpiRes.orderId || generatedOrderId;
+          checkoutUrl = youpiRes.checkoutUrl || null;
+          method = 'youpi';
         } catch (err: any) {
-          console.error('[Payments] Cashfree order creation failed:', err.response?.data || err);
-          throw new Error('Cashfree order creation failed');
+          console.warn('[Payments] YouPI session creation failed, falling back to direct UPI:', err.message);
+          youpiOrderId = generatedOrderId;
+          method = 'upi';
         }
       } else {
-        console.warn('[Payments] Cashfree not configured - using UPI manual collection');
-        cashfreeOrderId = null;
-        cashfreeSessionId = null;
+        youpiOrderId = generatedOrderId;
         method = 'upi';
       }
 
@@ -166,50 +160,69 @@ paymentsRouter.post('/create-order', async (req, res) => {
           workerPayout,
           status: 'pending',
           paymentMethod: method,
-          cashfreeOrderId,
-          cashfreeSessionId
+          youpiPaymentId,
+          youpiOrderId,
         },
       });
-    } else if (
-      payment.paymentMethod === 'cashfree' &&
-      cashfree &&
-      !payment.cashfreeOrderId &&
-      payment.status === 'pending'
-    ) {
-      const generatedOrderId = `booking_${bookingId.replace(/-/g, '').slice(0, 15)}_${Date.now()}`;
-      const response = await cashfree.PGCreateOrder({
-        order_id: generatedOrderId,
-        order_amount: Math.round(Number(payment.amount)),
-        order_currency: "INR",
-        customer_details: {
-          customer_id: req.user!.userId.replace(/-/g, '').slice(0, 20),
-          customer_phone: booking.user?.phoneNumber || "9999999999",
-          customer_email: booking.user?.email || "customer@homehelp.local",
+    } else if (payment.status === 'pending') {
+      youpiPaymentId = payment.youpiPaymentId;
+      youpiOrderId = payment.youpiOrderId || generatedOrderId;
+      method = payment.paymentMethod || 'upi';
+
+      if (!youpiPaymentId && youpiClient.isConfigured()) {
+        try {
+          const youpiRes = await youpiClient.createPayment({
+            orderId: youpiOrderId,
+            amount: Number(payment.amount),
+            currency: 'INR',
+            returnUrl: `${process.env.FRONTEND_URL || 'https://homehelp-website.vercel.app'}/my-bookings?order_id=${youpiOrderId}`,
+            customer: {
+              name: booking.user?.name || 'Customer',
+              phoneNumber: booking.user?.phoneNumber || '9999999999',
+              email: booking.user?.email || 'customer@homehelp.local',
+            },
+            metadata: {
+              bookingId,
+              userId: req.user!.userId,
+            },
+          });
+          youpiPaymentId = youpiRes.paymentId || null;
+          checkoutUrl = youpiRes.checkoutUrl || null;
+          method = 'youpi';
+
+          payment = await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              youpiPaymentId,
+              paymentMethod: method,
+            },
+          });
+        } catch (err: any) {
+          console.warn('[Payments] YouPI session retry failed:', err.message);
         }
-      });
-      payment = await prisma.payment.update({
-        where: { id: payment.id },
-        data: { 
-          cashfreeOrderId: response.data.order_id || null, 
-          cashfreeSessionId: response.data.payment_session_id || null 
-        },
-      });
+      }
     }
 
-    const upiLink = payment.paymentMethod === 'upi' ? buildUpiLink(bookingId, Number(payment.amount)) : null;
+    const upiLinks = YoupiClient.buildDirectUpiLinks(upiVpa, upiName, Number(payment.amount), bookingId);
 
     return res.json({
       payment,
-      cashfreeOrderId: payment.cashfreeOrderId,
-      paymentSessionId: payment.cashfreeSessionId,
-      upi: upiLink
+      youpiPaymentId: payment.youpiPaymentId,
+      youpiOrderId: payment.youpiOrderId,
+      checkoutUrl,
+      portalUrl: youpiClient.getPortalUrl(),
+      upi: upiLinks
         ? {
             pa: upiVpa,
             pn: upiName,
             am: Number(payment.amount),
             cu: 'INR',
             tn: `HomeHelp Booking ${bookingId.slice(0, 8)}`,
-            link: upiLink,
+            link: upiLinks.standard,
+            gpay: upiLinks.gpay,
+            phonepe: upiLinks.phonepe,
+            paytm: upiLinks.paytm,
+            cred: upiLinks.cred,
           }
         : null,
     });
@@ -222,6 +235,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
 paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+    const { utr } = req.body || {};
     const payment = await prisma.payment.findUnique({ where: { id } });
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
 
@@ -233,7 +247,11 @@ paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
 
     const updated = await prisma.payment.update({
       where: { id },
-      data: { status: 'paid', workerPayout: recomputed },
+      data: {
+        status: 'paid',
+        workerPayout: recomputed,
+        ...(utr ? { utr } : {}),
+      },
     });
 
     console.log(`[Payments] Payment ${id} marked paid by admin ${req.user!.userId}`);
@@ -246,15 +264,14 @@ paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
 
 paymentsRouter.post('/verify', async (req, res) => {
   try {
-    const { paymentId } = req.body;
-
+    const { paymentId, utr } = req.body;
     if (!paymentId) {
       return res.status(400).json({ error: 'paymentId is required' });
     }
 
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
-      include: { booking: true }
+      include: { booking: true },
     });
 
     if (!payment) {
@@ -268,40 +285,48 @@ paymentsRouter.post('/verify', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    if (!cashfree || payment.paymentMethod !== 'cashfree') {
-      return res.status(400).json({
-        error: 'Cashfree is not configured or this is not a Cashfree payment. Use the admin mark-paid endpoint to confirm manual payments.',
+    // If UTR is provided by user, attach it to the payment record for reconciliation
+    if (utr && utr !== payment.utr) {
+      await prisma.payment.update({
+        where: { id: paymentId },
+        data: { utr },
       });
+      payment.utr = utr;
     }
 
-    if (!payment.cashfreeOrderId) {
-      return res.status(400).json({ error: 'No Cashfree order ID found for this payment' });
+    // If already marked paid, return payment
+    if (payment.status === 'paid' || payment.status === 'captured') {
+      return res.json({ payment });
     }
 
-    const response = await cashfree.PGOrderFetchPayments(payment.cashfreeOrderId);
-    const paymentsList = response.data;
-    
-    const successfulPayment = paymentsList?.find((p: any) => p.payment_status === 'SUCCESS');
-
-    if (successfulPayment) {
-      if (payment.status === 'pending') {
-        const recomputed = computeWorkerPayout(Number(payment.amount));
-        const updatedPayment = await prisma.payment.update({
-          where: { id: paymentId },
-          data: {
-            status: 'paid',
-            workerPayout: recomputed,
-          },
-        });
-        return res.json({ payment: updatedPayment });
-      } else {
-        return res.json({ payment });
+    // If YouPI payment session exists and YouPI is configured, query status from YouPI-PG
+    if (payment.youpiPaymentId && youpiClient.isConfigured()) {
+      try {
+        const details = await youpiClient.getPayment(payment.youpiPaymentId);
+        if (['SUCCESS', 'OBSERVED_SUCCESS', 'RECONCILED'].includes(details.status)) {
+          const recomputed = computeWorkerPayout(Number(payment.amount));
+          const updated = await prisma.payment.update({
+            where: { id: paymentId },
+            data: {
+              status: 'paid',
+              workerPayout: recomputed,
+              utr: details.utr || payment.utr || utr,
+            },
+          });
+          return res.json({ payment: updated, verified: true });
+        }
+      } catch (err: any) {
+        console.warn(`[Payments] Could not query YouPI status for ${payment.youpiPaymentId}:`, err.message);
       }
-    } else {
-      return res.status(400).json({ error: 'Payment has not been completed successfully yet' });
     }
+
+    // If payment is pending without gateway confirmation
+    return res.status(400).json({
+      error: 'Payment has not been completed or verified yet. If you completed the transfer, wait a moment for bank observation or have an admin confirm.',
+      payment,
+    });
   } catch (err: any) {
-    console.error('[payments] verify error:', err.response?.data || err);
+    console.error('[payments] verify error:', err);
     return res.status(500).json({ error: 'Failed to verify payment status' });
   }
 });

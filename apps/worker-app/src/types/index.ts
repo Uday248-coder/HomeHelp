@@ -42,5 +42,6 @@ export interface Payout {
   processedAt?: string;
   razorpayPayoutId?: string;
   cashfreeTransferId?: string;
+  youpiPayoutId?: string;
   createdAt: string;
 }

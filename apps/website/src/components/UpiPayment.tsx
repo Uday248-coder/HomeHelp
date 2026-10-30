@@ -1,16 +1,23 @@
-import { API_URL } from '@/lib/config';
 'use client';
+
+import { API_URL } from '@/lib/config';
 
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getToken } from '@/lib/auth';
-// @ts-expect-error cashfree-js lacks types
-import { load } from '@cashfreepayments/cashfree-js';
 
-
-const CASHFREE_ENV = process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === 'PRODUCTION' ? 'production' : 'sandbox';
-
-type UpiInfo = { pa: string; pn: string; am: number; cu: string; tn: string; link: string } | null;
+type UpiInfo = {
+  pa: string;
+  pn: string;
+  am: number;
+  cu: string;
+  tn: string;
+  link: string;
+  gpay?: string;
+  phonepe?: string;
+  paytm?: string;
+  cred?: string;
+} | null;
 
 export function UpiPayment({ bookingId, compact = false }: { bookingId: string; compact?: boolean }) {
   const [upi, setUpi] = useState<UpiInfo>(null);
@@ -18,8 +25,11 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
   const [amount, setAmount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [utrInput, setUtrInput] = useState<string>('');
+  const [submittingUtr, setSubmittingUtr] = useState(false);
+  const [utrMessage, setUtrMessage] = useState<string>('');
 
   useEffect(() => {
     const token = getToken();
@@ -42,8 +52,11 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
           setStatus(data.payment?.status || '');
           setAmount(Number(data.payment?.amount) || 0);
           setUpi(data.upi || null);
-          setPaymentSessionId(data.paymentSessionId || null);
           setPaymentId(data.payment?.id || null);
+          setCheckoutUrl(data.checkoutUrl || null);
+          if (data.payment?.utr) {
+            setUtrInput(data.payment.utr);
+          }
         }
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load payment');
@@ -51,38 +64,47 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [bookingId]);
 
-  const handleCashfreePayment = async () => {
-    if (!paymentSessionId) return;
-    try {
-      const cashfree = await load({ mode: CASHFREE_ENV });
-      cashfree.checkout({ paymentSessionId });
-    } catch (e: any) {
-      console.error('Cashfree checkout failed', e);
-      setError('Failed to initialize payment gateway.');
-    }
+  const handleOpenYoupiCheckout = () => {
+    if (!checkoutUrl) return;
+    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleRefreshStatus = async () => {
+  const handleVerifyOrSubmitUtr = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const token = getToken();
     if (!token || !paymentId) return;
     try {
-      setLoading(true);
+      setSubmittingUtr(true);
+      setUtrMessage('');
       const res = await fetch(`${API_URL}/api/payments/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ paymentId }),
+        body: JSON.stringify({
+          paymentId,
+          utr: utrInput.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (res.ok && data.payment) {
         setStatus(data.payment.status);
+        if (data.payment.status === 'paid' || data.payment.status === 'captured') {
+          setUtrMessage('Payment verified successfully!');
+        } else {
+          setUtrMessage(utrInput.trim() ? 'UTR recorded. Awaiting bank observer confirmation.' : 'Status refreshed.');
+        }
+      } else {
+        setUtrMessage(data.error || 'Verification check in progress. Please check back shortly.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to verify payment', e);
+      setUtrMessage('Network error checking payment status');
     } finally {
-      setLoading(false);
+      setSubmittingUtr(false);
     }
   };
 
@@ -95,12 +117,20 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
   if (isPaid) {
     return (
       <div className="mt-4 flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3">
-        <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <svg
+          className="w-5 h-5 text-emerald-600 dark:text-emerald-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2.5"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
         <div className="flex-1">
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Payment successful</p>
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">₹{amount} confirmed</p>
+          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Payment confirmed</p>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+            ₹{amount} direct settlement &bull; 0% transaction fees
+          </p>
         </div>
       </div>
     );
@@ -110,64 +140,125 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
     return <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>;
   }
 
-  if (paymentSessionId) {
-    return (
-      <div className="mt-4 bg-surface-secondary rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-foreground">Secure Payment via Cashfree</p>
-          <span className="text-[10px] uppercase tracking-wider text-foreground-tertiary card-base rounded-full px-2 py-0.5">Online</span>
-        </div>
-        <p className="text-sm text-foreground-secondary mb-4">Amount due: <strong>₹{amount}</strong></p>
-        <div className="flex gap-2">
-          <button
-            onClick={handleCashfreePayment}
-            className="btn-base btn-primary flex-1 text-sm font-semibold py-2.5 rounded-xl"
-          >
-            Pay Now
-          </button>
-          <button
-            onClick={handleRefreshStatus}
-            className="btn-base bg-surface border border-border px-4 py-2.5 rounded-xl text-sm font-medium text-foreground-secondary"
-          >
-            Refresh Status
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!upi) {
-    return (
-      <div className="mt-4 bg-surface-secondary rounded-xl p-4">
-        <p className="text-sm font-medium text-foreground">Amount due: ₹{amount}</p>
-        <p className="text-xs text-foreground-tertiary mt-1">Payment is being set up. Our team will share payment details shortly.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-4 bg-surface-secondary rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-foreground">Pay ₹{amount} via UPI</p>
-        <span className="text-[10px] uppercase tracking-wider text-foreground-tertiary card-base rounded-full px-2 py-0.5">Scan &amp; pay</span>
-      </div>
-      <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="bg-surface p-3 rounded-xl border border-border">
-          <QRCodeSVG value={upi.link} size={compact ? 132 : 156} level="M" />
+    <div className="mt-4 bg-surface-secondary rounded-2xl p-5 border border-border">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-base font-semibold text-foreground">Pay ₹{amount} via YouPI Gateway</p>
+          <p className="text-xs text-foreground-tertiary">Direct-to-bank settlement &bull; Zero mediator fees</p>
         </div>
-        <div className="flex-1 w-full">
-          <p className="text-xs text-foreground-tertiary mb-2">Scan with any UPI app (GPay, PhonePe, Paytm). The amount is pre-filled.</p>
-          <a
-            href={upi.link}
-            className="btn-base btn-primary w-full rounded-xl text-sm font-semibold"
-          >
-            Pay ₹{amount} in UPI app
-          </a>
-          <p className="text-[11px] text-foreground-tertiary mt-2 leading-relaxed">
-            After paying, an admin confirms the transfer and your booking is activated. No gateway fees — paid directly to HomeHelp.
+        <span className="text-[10px] uppercase font-bold tracking-wider text-accent bg-accent/10 border border-accent/20 rounded-full px-2.5 py-1">
+          0% Fee UPI
+        </span>
+      </div>
+
+      {checkoutUrl && (
+        <div className="mb-5 p-4 rounded-xl bg-accent/5 border border-accent/20">
+          <p className="text-xs text-foreground-secondary mb-3">
+            Open the sovereign YouPI hosted checkout portal for instant mobile app switcher &amp; real-time observation:
           </p>
+          <button
+            onClick={handleOpenYoupiCheckout}
+            className="btn-base btn-primary w-full py-2.5 text-sm font-semibold rounded-xl flex items-center justify-center gap-2"
+          >
+            Launch YouPI Checkout Portal &rarr;
+          </button>
         </div>
-      </div>
+      )}
+
+      {upi ? (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-center gap-5 bg-surface p-4 rounded-xl border border-border">
+            <div className="bg-white p-2.5 rounded-xl border border-border shadow-sm">
+              <QRCodeSVG value={upi.link} size={compact ? 130 : 150} level="M" />
+            </div>
+            <div className="flex-1 w-full space-y-2">
+              <p className="text-xs text-foreground-tertiary leading-relaxed">
+                Scan with any UPI app (GPay, PhonePe, Paytm, CRED). Amount <strong>₹{amount}</strong> and note are pre-filled.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {upi.gpay && (
+                  <a
+                    href={upi.gpay}
+                    className="btn-base bg-surface-secondary hover:bg-surface-tertiary border border-border py-2 text-xs font-semibold rounded-lg text-center"
+                  >
+                    Google Pay
+                  </a>
+                )}
+                {upi.phonepe && (
+                  <a
+                    href={upi.phonepe}
+                    className="btn-base bg-surface-secondary hover:bg-surface-tertiary border border-border py-2 text-xs font-semibold rounded-lg text-center"
+                  >
+                    PhonePe
+                  </a>
+                )}
+                {upi.paytm && (
+                  <a
+                    href={upi.paytm}
+                    className="btn-base bg-surface-secondary hover:bg-surface-tertiary border border-border py-2 text-xs font-semibold rounded-lg text-center"
+                  >
+                    Paytm
+                  </a>
+                )}
+                {upi.cred && (
+                  <a
+                    href={upi.cred}
+                    className="btn-base bg-surface-secondary hover:bg-surface-tertiary border border-border py-2 text-xs font-semibold rounded-lg text-center"
+                  >
+                    CRED
+                  </a>
+                )}
+              </div>
+
+              <a
+                href={upi.link}
+                className="btn-base btn-primary w-full py-2.5 rounded-xl text-xs font-semibold text-center block mt-2"
+              >
+                Open Default UPI App
+              </a>
+            </div>
+          </div>
+
+          <form onSubmit={handleVerifyOrSubmitUtr} className="pt-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter 12-digit UPI UTR / Ref No. (Optional)"
+                value={utrInput}
+                onChange={(e) => setUtrInput(e.target.value)}
+                maxLength={16}
+                className="input-base text-xs flex-1 font-mono"
+              />
+              <button
+                type="submit"
+                disabled={submittingUtr}
+                className="btn-base bg-surface hover:bg-surface-secondary border border-border px-4 py-2 text-xs font-medium rounded-xl whitespace-nowrap"
+              >
+                {submittingUtr ? 'Checking...' : 'Verify Status'}
+              </button>
+            </div>
+            {utrMessage && (
+              <p className="text-[11px] text-foreground-secondary mt-1.5 px-1">{utrMessage}</p>
+            )}
+          </form>
+        </div>
+      ) : (
+        <div className="bg-surface p-4 rounded-xl border border-border text-center">
+          <p className="text-sm font-medium text-foreground">Direct Bank UPI Setting Up</p>
+          <p className="text-xs text-foreground-tertiary mt-1">
+            Payment details are being synchronized with the gateway.
+          </p>
+          <button
+            onClick={() => handleVerifyOrSubmitUtr()}
+            disabled={submittingUtr}
+            className="btn-base btn-primary mt-3 text-xs py-2 px-4 rounded-xl"
+          >
+            {submittingUtr ? 'Checking...' : 'Refresh Status'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

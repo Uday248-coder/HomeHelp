@@ -79,6 +79,7 @@ export interface Payout {
   processedAt?: string;
   razorpayPayoutId?: string;
   cashfreeTransferId?: string;
+  youpiPayoutId?: string;
   createdAt: string;
   worker?: { id: string; name: string; phoneNumber?: string };
 }
